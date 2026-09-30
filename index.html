@@ -1,0 +1,2487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DHRUVA SETU | AAA Polar Ocean & CAD X-Ray Simulator | SIH 26065</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Chart.js & Three.js Stack -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- Tween.js for AAA cinematic smooth camera transitions -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+  <style>
+    /* Theme Variables */
+    :root {
+      --bg-dark: #040812;
+      --hud-cyan: #00f0ff;
+      --hud-blue: #0077ff;
+      --hud-gold: #ffaa00;
+      --hud-purple: #bb00ff;
+      --hud-green: #00ff88;
+      --hud-red: #ff2a5f;
+      --hud-glass: rgba(6, 15, 30, 0.82);
+      --hud-border: rgba(0, 240, 255, 0.28);
+      --hud-glow: rgba(0, 240, 255, 0.5);
+      --font-display: 'Orbitron', sans-serif;
+      --font-body: 'Rajdhani', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    body.theme-neon {
+      --hud-cyan: #ff007f;
+      --hud-blue: #7928ca;
+      --hud-gold: #00f0ff;
+      --hud-border: rgba(255, 0, 127, 0.35);
+      --hud-glow: rgba(255, 0, 127, 0.6);
+    }
+
+    body.theme-emerald {
+      --hud-cyan: #00ff88;
+      --hud-blue: #059669;
+      --hud-gold: #f59e0b;
+      --hud-border: rgba(0, 255, 136, 0.35);
+      --hud-glow: rgba(0, 255, 136, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: #fff;
+      font-family: var(--font-body);
+      height: 100vh;
+      overflow: hidden;
+      transition: all 0.4s ease;
+    }
+
+    /* Fullscreen 3D Viewport */
+    #sim-canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+
+    #three-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Marvel / Sci-Fi HUD Overlay System */
+    .hud-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+      overflow: hidden;
+    }
+
+    .interactive-element {
+      pointer-events: auto;
+    }
+
+    /* Minimal Top Navigation Header */
+    header.hud-header {
+      background: rgba(6, 15, 30, 0.88);
+      border: 1px solid var(--hud-border);
+      border-radius: 14px;
+      backdrop-filter: blur(20px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      width: 100%;
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      background: linear-gradient(90deg, #fff, var(--hud-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-title::before {
+      content: '';
+      width: 8px;
+      height: 20px;
+      background: var(--hud-cyan);
+      box-shadow: 0 0 12px var(--hud-cyan);
+      border-radius: 2px;
+    }
+
+    /* 3 Clean Main Tabs */
+    .top-nav-tabs {
+      display: flex;
+      gap: 12px;
+    }
+
+    .nav-tab-btn {
+      background: rgba(0, 240, 255, 0.05);
+      border: 1px solid rgba(0, 240, 255, 0.2);
+      color: #cbd5e1;
+      padding: 8px 22px;
+      border-radius: 8px;
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .nav-tab-btn:hover {
+      background: rgba(0, 240, 255, 0.15);
+      color: #fff;
+      border-color: var(--hud-cyan);
+      box-shadow: 0 0 15px var(--hud-glow);
+    }
+
+    .nav-tab-btn.active {
+      background: linear-gradient(90deg, rgba(0,240,255,0.35), rgba(0,119,255,0.35));
+      border-color: var(--hud-cyan);
+      color: #fff;
+      box-shadow: 0 0 20px var(--hud-cyan);
+    }
+
+    /* PUBG-style Eye Legend Floating Trigger */
+    .legend-eye-btn {
+      position: absolute;
+      top: 90px;
+      right: 24px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(6, 15, 30, 0.88);
+      border: 1px solid var(--hud-cyan);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--hud-cyan);
+      font-size: 18px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 100;
+    }
+
+    .legend-eye-btn:hover {
+      background: var(--hud-cyan);
+      color: #040812;
+      box-shadow: 0 0 25px var(--hud-cyan);
+      transform: scale(1.08);
+    }
+
+    .legend-eye-btn.active {
+      background: var(--hud-cyan);
+      color: #040812;
+      box-shadow: 0 0 30px var(--hud-cyan);
+    }
+
+    /* Tooltip on hover */
+    .legend-tooltip {
+      position: absolute;
+      right: 58px;
+      background: rgba(6, 15, 30, 0.95);
+      border: 1px solid var(--hud-cyan);
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateX(8px);
+      transition: all 0.25s ease;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    }
+
+    .legend-eye-btn:hover .legend-tooltip {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    /* ===== COMPACT RIGHT-SIDE LEGEND DROPDOWN (PUBG-style) ===== */
+    .legend-dropdown {
+      position: absolute;
+      top: 148px;
+      right: 24px;
+      width: 280px;
+      background: rgba(4, 10, 22, 0.94);
+      border: 1px solid var(--hud-border);
+      border-radius: 14px;
+      backdrop-filter: blur(24px);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 30px rgba(0, 240, 255, 0.1);
+      padding: 14px;
+      z-index: 99;
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      opacity: 0;
+      transform: translateY(-12px) scale(0.96);
+      visibility: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .legend-dropdown.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      visibility: visible;
+    }
+
+    .legend-dropdown .legend-section-label {
+      font-family: var(--font-display);
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--hud-cyan);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 4px 0 2px 4px;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.12);
+      margin-top: 4px;
+    }
+
+    .legend-dropdown .legend-section-label:first-child {
+      margin-top: 0;
+    }
+
+    .legend-option-btn {
+      background: rgba(0, 240, 255, 0.04);
+      border: 1px solid rgba(0, 240, 255, 0.12);
+      color: #cbd5e1;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .legend-option-btn:hover {
+      background: rgba(0, 240, 255, 0.14);
+      color: #fff;
+      border-color: var(--hud-cyan);
+      box-shadow: 0 0 14px rgba(0, 240, 255, 0.2);
+      transform: translateX(-3px);
+    }
+
+    .legend-option-btn.active {
+      background: linear-gradient(90deg, rgba(0,240,255,0.3), rgba(0,119,255,0.3));
+      border-color: var(--hud-cyan);
+      color: #fff;
+      box-shadow: 0 0 18px rgba(0, 240, 255, 0.25);
+    }
+
+    .legend-option-btn i {
+      font-size: 14px;
+      color: var(--hud-cyan);
+      width: 20px;
+      text-align: center;
+    }
+
+    .legend-option-btn .legend-opt-label {
+      flex: 1;
+      text-align: left;
+    }
+
+    .legend-option-btn .legend-opt-icon {
+      font-size: 13px;
+      opacity: 0.6;
+    }
+
+    /* Winch sub-buttons (compact row) */
+    .winch-sub-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .winch-sub-btn {
+      flex: 1;
+      background: rgba(0, 240, 255, 0.04);
+      border: 1px solid rgba(0, 240, 255, 0.1);
+      color: #94a3b8;
+      padding: 7px 4px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .winch-sub-btn:hover {
+      background: rgba(0, 240, 255, 0.15);
+      color: #fff;
+      border-color: var(--hud-cyan);
+    }
+
+    /* ===== ALWAYS-VISIBLE BOTTOM TELEMETRY ===== */
+    .sim-bottom-bar {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      pointer-events: auto;
+      background: var(--hud-glass);
+      border: 1px solid var(--hud-border);
+      border-radius: 12px;
+      backdrop-filter: blur(20px);
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1.5fr;
+      gap: 16px;
+      padding: 14px 20px;
+      z-index: 15;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.4s ease;
+    }
+
+    .sim-bottom-bar.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ===== FLOATING CAMERA BAR (center bottom) ===== */
+    .floating-cam-bar {
+      position: absolute;
+      bottom: 260px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(6, 15, 30, 0.85);
+      border: 1px solid var(--hud-border);
+      border-radius: 30px;
+      padding: 8px 16px;
+      backdrop-filter: blur(12px);
+      display: flex;
+      gap: 12px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.8);
+      z-index: 20;
+      pointer-events: auto;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .floating-cam-bar.visible {
+      opacity: 1;
+    }
+
+    /* ===== FLOATING RIGHT INSPECTOR (appears on 3D click) ===== */
+    .floating-inspector {
+      position: absolute;
+      top: 148px;
+      right: 320px;
+      width: 340px;
+      background: var(--hud-glass);
+      border: 1px solid var(--hud-border);
+      border-radius: 12px;
+      backdrop-filter: blur(20px);
+      padding: 16px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      z-index: 18;
+      pointer-events: auto;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      animation: inspectorSlideIn 0.3s ease forwards;
+    }
+
+    .floating-inspector.visible {
+      display: flex;
+    }
+
+    @keyframes inspectorSlideIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Info & Credits Fullscreen Modal Views */
+    .view-modal {
+      position: absolute;
+      top: 86px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100vw - 48px);
+      max-width: 1200px;
+      height: calc(100vh - 110px);
+      background: rgba(4, 10, 22, 0.94);
+      border: 1px solid var(--hud-border);
+      border-radius: 16px;
+      backdrop-filter: blur(28px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 240, 255, 0.15);
+      z-index: 90;
+      padding: 32px;
+      overflow-y: auto;
+      display: none;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .view-modal.active {
+      display: flex;
+      animation: modalFadeIn 0.3s ease forwards;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: translate(-50%, 15px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+
+    .sih-badge-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: rgba(249, 115, 22, 0.2);
+      color: #ff9d00;
+      border: 1px solid #ff9d00;
+      padding: 4px 10px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+    }
+
+    /* Top Quick Stats */
+    .top-telemetry-strip {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .stat-box {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--hud-border);
+      padding: 6px 14px;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: #8fa0c0;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    .stat-val {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--hud-cyan);
+    }
+
+    .panel-section-title {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--hud-cyan);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--hud-border);
+      padding-bottom: 8px;
+    }
+
+    .btn-sci-fi {
+      background: rgba(0, 240, 255, 0.05);
+      border: 1px solid var(--hud-border);
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-sci-fi:hover {
+      background: rgba(0, 240, 255, 0.2);
+      border-color: var(--hud-cyan);
+      box-shadow: 0 0 20px var(--hud-glow);
+      transform: translateX(4px);
+    }
+
+    .btn-sci-fi.active {
+      background: linear-gradient(90deg, rgba(0,240,255,0.4), rgba(0,119,255,0.4));
+      border-color: var(--hud-cyan);
+      box-shadow: 0 0 25px var(--hud-cyan);
+    }
+
+    .btn-sci-fi i {
+      font-size: 16px;
+      color: var(--hud-cyan);
+    }
+
+    .cam-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #c0d0e0;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.25s;
+    }
+
+    .cam-chip:hover, .cam-chip.active {
+      background: var(--hud-cyan);
+      color: #000;
+      box-shadow: 0 0 15px var(--hud-cyan);
+    }
+
+    /* Component Detailed Card */
+    .component-inspect-card {
+      background: rgba(0, 240, 255, 0.05);
+      border: 1px solid var(--hud-cyan);
+      border-radius: 8px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      animation: glowPulse 2s infinite alternate;
+    }
+
+    @keyframes glowPulse {
+      from { box-shadow: 0 0 10px rgba(0, 240, 255, 0.2); }
+      to { box-shadow: 0 0 25px rgba(0, 240, 255, 0.5); }
+    }
+
+    .comp-name {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--hud-cyan);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .comp-spec-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+    }
+
+    .spec-item {
+      background: rgba(0, 0, 0, 0.5);
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .spec-item-val {
+      color: var(--hud-green);
+      font-weight: 700;
+    }
+
+    /* Bottom Telemetry HUD Bar - now uses .sim-bottom-bar class */
+
+    /* Chart Container */
+    .chart-box {
+      width: 100%;
+      height: 140px;
+      position: relative;
+    }
+
+    /* Console Terminal */
+    .terminal-console {
+      background: rgba(2, 6, 14, 0.95);
+      border: 1px solid var(--hud-border);
+      border-radius: 6px;
+      padding: 10px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--hud-green);
+      height: 140px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    /* 3D Click Tooltip Anchor */
+    /* GTA / CYBERPUNK REAL-TIME 3D HOVER HUD TOOLTIP */
+    .gta-hud-tooltip {
+      position: fixed;
+      display: none;
+      pointer-events: none;
+      z-index: 10000;
+      background: rgba(4, 13, 26, 0.94);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--hud-cyan);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.35), inset 0 0 10px rgba(0, 240, 255, 0.15);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #fff;
+      font-family: var(--font-body);
+      min-width: 210px;
+      max-width: 290px;
+      transform: translate(15px, -50%);
+      transition: opacity 0.15s ease;
+    }
+
+    .gta-hud-tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--hud-gold);
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid var(--hud-gold);
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .gta-hud-title {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--hud-cyan);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .gta-hud-cost {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--hud-green);
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    .gta-hud-subtext {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+      line-height: 1.3;
+    }
+
+    /* REGION SWITCHER & DISASTER HUD CARD */
+    .region-switch-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 6px;
+      margin-bottom: 10px;
+    }
+
+    .region-opt-btn {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--hud-border);
+      color: #94a3b8;
+      padding: 7px;
+      border-radius: 6px;
+      font-family: var(--font-display);
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+    }
+
+    .region-opt-btn:hover {
+      border-color: var(--hud-cyan);
+      color: #fff;
+    }
+
+    .region-opt-btn.active {
+      background: rgba(0, 240, 255, 0.18);
+      border-color: var(--hud-cyan);
+      color: var(--hud-cyan);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
+    }
+
+    .disaster-card {
+      position: absolute;
+      top: 75px;
+      left: 20px;
+      background: rgba(4, 13, 26, 0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--hud-border);
+      border-left: 4px solid var(--hud-green);
+      border-radius: 8px;
+      padding: 12px 16px;
+      max-width: 360px;
+      z-index: 90;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      font-family: var(--font-body);
+      transition: all 0.3s ease;
+    }
+
+    .disaster-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .region-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--hud-cyan);
+      background: rgba(0, 240, 255, 0.1);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--hud-border);
+    }
+
+    .disaster-status-tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--hud-green);
+      background: rgba(0, 255, 136, 0.12);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--hud-green);
+    }
+
+    .disaster-title {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.3;
+    }
+
+    .disaster-desc {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    .inspect-img-box {
+      margin-top: 8px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--hud-cyan);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
+    }
+
+    .inspect-img-box img {
+      width: 100%;
+      height: 130px;
+      object-fit: cover;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fullscreen 3D Canvas -->
+  <div id="sim-canvas-container">
+    <canvas id="three-canvas"></canvas>
+  </div>
+
+  <!-- GTA / CYBERPUNK REAL-TIME 3D HOVER HUD TOOLTIP -->
+  <div class="gta-hud-tooltip" id="tooltip-3d">
+    <div class="gta-hud-tag" id="gta-tag">SURFACE GATEWAY</div>
+    <div class="gta-hud-title" id="gta-title"><i class="fa-solid fa-microchip"></i> ESP32-S3 Surface Master</div>
+    <div class="gta-hud-cost" id="gta-cost">COST: ₹650</div>
+    <div class="gta-hud-subtext" id="gta-sub">Click for full engineering specs</div>
+  </div>
+
+  <!-- Sci-Fi HUD Layer -->
+  <div class="hud-layer">
+    
+    <!-- Top Header: 3 Exclusive Option Clickable Labels -->
+    <header class="hud-header interactive-element">
+      <div class="brand-title">
+        DHRUVA SETU
+        <span class="sih-badge-tag">SIH 26065</span>
+      </div>
+
+      <!-- 3 Primary Navigation Labels -->
+      <nav class="top-nav-tabs">
+        <button class="nav-tab-btn active" id="tab-btn-sim" onclick="switchMainTab('simulation')">
+          <i class="fa-solid fa-gamepad"></i> 1. SIMULATION
+        </button>
+        <button class="nav-tab-btn" id="tab-btn-info" onclick="switchMainTab('information')">
+          <i class="fa-solid fa-circle-info"></i> 2. INFORMATION
+        </button>
+        <button class="nav-tab-btn" id="tab-btn-credits" onclick="switchMainTab('credits')">
+          <i class="fa-solid fa-users"></i> 3. TEAM CREDITS
+        </button>
+      </nav>
+
+      <!-- Quick Status Badge -->
+      <div style="font-family: var(--font-mono); font-size: 11px; color: var(--hud-cyan); display: flex; align-items: center; gap: 8px;">
+        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--hud-green); box-shadow: 0 0 10px var(--hud-green);"></span>
+        <span>POLAR REAL-TIME LINK</span>
+      </div>
+    </header>
+
+    <!-- PUBG-Style Floating Eye Legend Button -->
+    <div class="legend-eye-btn interactive-element" id="btn-legend-eye" onclick="toggleSimLegendHUD()">
+      <i class="fa-solid fa-eye" id="icon-legend-eye"></i>
+      <span class="legend-tooltip">LEGEND / CONTROLS</span>
+    </div>
+
+    <!-- ===== COMPACT LEGEND DROPDOWN (PUBG-style, under Eye) ===== -->
+    <div class="legend-dropdown interactive-element" id="legend-dropdown">
+      <div class="legend-section-label"><i class="fa-solid fa-earth-oceania"></i> DEPLOYMENT REGION</div>
+      <div class="region-switch-row">
+        <button class="region-opt-btn active" id="btn-region-polar" onclick="switchDeploymentRegion('polar')">
+          <i class="fa-solid fa-snowflake"></i> POLAR MARGIN
+        </button>
+        <button class="region-opt-btn" id="btn-region-southern" onclick="switchDeploymentRegion('southern')">
+          <i class="fa-solid fa-water"></i> SOUTHERN OCEAN
+        </button>
+      </div>
+
+      <div class="legend-section-label"><i class="fa-solid fa-cube"></i> VIEW MODES</div>
+      <button class="legend-option-btn" id="btn-xray" onclick="toggleXRayCutaway()">
+        <i class="fa-solid fa-expand"></i>
+        <span class="legend-opt-label">EXPLODED VIEW</span>
+        <i class="fa-solid fa-toggle-off legend-opt-icon" id="icon-xray-toggle"></i>
+      </button>
+
+      <div class="legend-section-label"><i class="fa-solid fa-snowflake"></i> ENVIRONMENT</div>
+      <button class="legend-option-btn" id="btn-hibernation" onclick="toggleHibernation()">
+        <i class="fa-solid fa-moon"></i>
+        <span class="legend-opt-label">POLAR NIGHT</span>
+        <i class="fa-solid fa-toggle-off legend-opt-icon" id="icon-hibernation-toggle"></i>
+      </button>
+      <button class="legend-option-btn" id="btn-blizzard" onclick="toggleBlizzard()">
+        <i class="fa-solid fa-wind"></i>
+        <span class="legend-opt-label">ICE BLIZZARD</span>
+        <i class="fa-solid fa-toggle-off legend-opt-icon" id="icon-blizzard-toggle"></i>
+      </button>
+
+      <div class="legend-section-label"><i class="fa-solid fa-arrows-up-down"></i> WINCH DEPTH</div>
+      <div class="winch-sub-row">
+        <button class="winch-sub-btn" onclick="triggerWinchTarget(0)">0M</button>
+        <button class="winch-sub-btn" onclick="triggerWinchTarget(100)">-100M</button>
+        <button class="winch-sub-btn" onclick="triggerWinchTarget(200)">-200M</button>
+      </div>
+    </div>
+
+    <!-- ===== FLOATING REGION & DISASTER MITIGATION HUD CARD ===== -->
+    <div class="disaster-card interactive-element" id="disaster-mitigation-card">
+      <div class="disaster-hdr">
+        <span class="region-badge" id="region-badge-name"><i class="fa-solid fa-snowflake"></i> POLAR MARGIN (-1.8°C)</span>
+        <span class="disaster-status-tag"><i class="fa-solid fa-shield-halved"></i> DISASTER PREVENTED</span>
+      </div>
+      <div class="disaster-title" id="disaster-title-text">Prevented: Battery Plating & Sub-Zero Freeze-Out</div>
+      <div class="disaster-desc" id="disaster-desc-text">
+        Automatic 12V Kapton PTC Heater Pad triggers thermal pulses @ -1.8°C seawater to prevent permanent battery degradation during 6-month polar night.
+      </div>
+    </div>
+
+    <!-- ===== FLOATING CAMERA BAR (always visible in simulation mode) ===== -->
+    <div class="floating-cam-bar interactive-element" id="floating-cam-bar">
+      <div class="cam-chip active" id="chip-cam-buoy" onclick="switchCameraTarget('buoy')">
+        <i class="fa-solid fa-satellite-dish"></i> BUOY
+      </div>
+      <div class="cam-chip" id="chip-cam-xray" onclick="switchCameraTarget('xray')">
+        <i class="fa-solid fa-microchip"></i> MCU
+      </div>
+      <div class="cam-chip" id="chip-cam-pod" onclick="switchCameraTarget('pod')">
+        <i class="fa-solid fa-dharmachakra"></i> CTD POD
+      </div>
+      <div class="cam-chip" id="chip-cam-seal" onclick="switchCameraTarget('seal')">
+        <i class="fa-solid fa-otter"></i> SEAL
+      </div>
+    </div>
+
+    <!-- ===== FLOATING INSPECTOR (appears on 3D click) ===== -->
+    <div class="floating-inspector interactive-element" id="floating-inspector">
+      <div class="panel-section-title">
+        <i class="fa-solid fa-hand-pointer"></i> Component Inspector
+        <span style="margin-left: auto; cursor: pointer; font-size: 14px; color: #64748b;" onclick="document.getElementById('floating-inspector').classList.remove('visible')">
+          <i class="fa-solid fa-xmark"></i>
+        </span>
+      </div>
+      <div class="component-inspect-card">
+        <div class="comp-name">
+          <span id="inspect-title">ESP32-S3 WROOM-2</span>
+          <i class="fa-solid fa-microchip" style="color: var(--hud-cyan);"></i>
+        </div>
+        <!-- Real-World Hardware Sensor Photo Preview -->
+        <div class="inspect-img-box" id="inspect-img-box" style="display: none;">
+          <img id="inspect-img" src="" alt="Hardware Sensor Photo">
+        </div>
+        <div style="font-size: 12px; color: #a0b0d0; line-height: 1.4;" id="inspect-desc">
+          Click any component in the 3D scene to inspect its specifications.
+        </div>
+        <div class="comp-spec-grid" id="inspect-specs">
+          <div class="spec-item">Processor: <span class="spec-item-val">Dual-Core + ULP</span></div>
+          <div class="spec-item">Memory: <span class="spec-item-val">32MB Flash</span></div>
+          <div class="spec-item">OS / RTOS: <span class="spec-item-val">FreeRTOS</span></div>
+          <div class="spec-item">Comms: <span class="spec-item-val">433MHz LoRa + Wi-Fi</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== BOTTOM TELEMETRY BAR (always visible in simulation) ===== -->
+    <div class="sim-bottom-bar interactive-element" id="sim-bottom-bar">
+      <div>
+        <div class="panel-section-title">
+          <i class="fa-solid fa-chart-line"></i> Real-time CTD Sensor Cast
+        </div>
+        <div class="chart-box">
+          <canvas id="liveCtdChart"></canvas>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel-section-title">
+          <i class="fa-solid fa-bolt"></i> Thermal & Power Profiling
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px; font-family: var(--font-mono); font-size: 12px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: #8fa0c0;">Kapton Heater Pad:</span>
+            <span id="stat-heater" style="color: var(--hud-green); font-weight: 700;">OFF (Seawater > -1.8°C)</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: #8fa0c0;">PET Solar Strips:</span>
+            <span id="stat-solar" style="color: var(--hud-gold); font-weight: 700;">14.2V (MPPT Active)</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: #8fa0c0;">LTO Battery Pack:</span>
+            <span style="color: var(--hud-cyan); font-weight: 700;">98% (Sub-Zero Safe)</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: #8fa0c0;">RS485 Tether Loop:</span>
+            <span style="color: var(--hud-green); font-weight: 700;">DIFFERENTIAL LINK OK</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel-section-title">
+          <i class="fa-solid fa-terminal"></i> ESP-IDF / FreeRTOS System Logs
+        </div>
+        <div class="terminal-console" id="terminal-log">
+          <!-- Dynamic Log Lines -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden elements for JS compatibility -->
+    <span id="campaign-progress" style="display:none;">0%</span>
+    <span id="current-mission-desc" style="display:none;"></span>
+    <span id="chip-ach-1" style="display:none;"></span>
+    <span id="chip-ach-2" style="display:none;"></span>
+    <span id="chip-ach-3" style="display:none;"></span>
+    <span id="chip-ach-4" style="display:none;"></span>
+    <span id="btn-audio" style="display:none;"></span>
+    <span id="icon-audio" style="display:none;"></span>
+    <span id="hud-xp-val" style="display:none;">0 XP</span>
+    <span id="hud-depth-val" style="display:none;">15.0 M</span>
+    <span id="hud-env-state" style="display:none;">ANTARCTIC MARGIN (-1.8°C)</span>
+    <span id="hud-mission-status" style="display:none;">0/4 COMPLETED</span>
+
+    <!-- 2. INFORMATION MODAL VIEW -->
+    <div class="view-modal interactive-element" id="modal-information">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--hud-border); padding-bottom: 16px; margin-bottom: 16px;">
+        <div style="font-family: var(--font-display); font-size: 24px; font-weight: 900; color: var(--hud-cyan); letter-spacing: 2px;">
+          <i class="fa-solid fa-circle-info"></i> PROJECT DHRUVA SETU SPECIFICATIONS & HARDWARE BOM
+        </div>
+        <button class="btn-sci-fi" onclick="switchMainTab('simulation')" style="padding: 6px 14px;">
+          <i class="fa-solid fa-xmark"></i> CLOSE
+        </button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 20px; font-family: var(--font-body);">
+        <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid var(--hud-border); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px;">
+          <h3 style="font-family: var(--font-display); color: var(--hud-cyan); font-size: 18px;"><i class="fa-solid fa-microchip"></i> Indigenous Sub-Zero Polar Station Architecture (SIH PS 26065)</h3>
+          <p style="color: #cbd5e1; font-size: 14px; line-height: 1.6;">
+            <strong>DHRUVA SETU</strong> is an indigenous, sub-zero autonomous polar ocean profiling buoy and marine mammal telemetry gateway designed for Southern Ocean & Antarctic deployment (-40°C air, -1.8°C seawater).
+          </p>
+        </div>
+
+        <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid var(--hud-border); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px;">
+          <h3 style="font-family: var(--font-display); color: var(--hud-gold); font-size: 18px;"><i class="fa-solid fa-coins"></i> Commercial-Grade Hardware Bill of Materials (BOM)</h3>
+          <p style="color: #94a3b8; font-size: 13px;">
+            Commercial polar CTD profiling floats cost <strong>₹12,00,000+ ($15,000 USD)</strong>. Project Dhruva Setu delivers full polar-grade CTD profiling & dual-hop animal telemetry for <strong>~₹19,000 (~$225 USD)</strong> — achieving an <strong>98% cost reduction</strong>.
+          </p>
+
+          <table style="width: 100%; border-collapse: collapse; margin-top: 8px; font-family: var(--font-mono); font-size: 13px; color: #cbd5e1;">
+            <thead>
+              <tr style="background: rgba(0, 240, 255, 0.15); color: var(--hud-cyan); text-align: left; border-bottom: 2px solid var(--hud-cyan);">
+                <th style="padding: 10px; border: 1px solid var(--hud-border);">Subsystem</th>
+                <th style="padding: 10px; border: 1px solid var(--hud-border);">Core Components</th>
+                <th style="padding: 10px; border: 1px solid var(--hud-border); text-align: right;">Cost (INR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 10px; border: 1px solid var(--hud-border); color: var(--hud-gold); font-weight: bold;">Hull & Winch</td>
+                <td style="padding: 10px; border: 1px solid var(--hud-border);">Spherical HDPE shell, 16.1kg MS ballast, 50mm machined HDPE pod (Silicone foul-release coated), 12V worm-gear motor, ABS spool, 6-wire slip ring.</td>
+                <td style="padding: 10px; border: 1px solid var(--hud-border); color: var(--hud-green); font-weight: bold; text-align: right;">₹4,850</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid var(--hud-border); color: var(--hud-gold); font-weight: bold;">Surface Gateway</td>
+                <td style="padding: 10px; border: 1px solid var(--hud-border);">ESP32-S3 WROOM, SPI MicroSD logger (conformal coated), 433MHz LoRa module, NEO-6M GPS, BNO085 IMU, SHT45 & TMP117.</td>
+                <td style="padding: 10px; border: 1px solid var(--hud-border); color: var(--hud-green); font-weight: bold; text-align: right;">₹3,500</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid var(--hud-border); color: var(--hud-gold); font-weight: bold;">Deep-Water Pod</td>
+                <td style="padding: 10px; border: 1px solid var(--hud-border);">TI MSP430G2553 (Bare silicon), GY-MS5837 (Depth), DS18B20 (Temp), Analog TDS (Salinity), MAX485 (x2).</td>
+                <td style="padding: 10px; border: 1px solid var(--hud-border); color: var(--hud-green); font-weight: bold; text-align: right;">₹3,200</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; border: 1px solid var(--hud-border); color: var(--hud-gold); font-weight: bold;">Power & Tether</td>
+                <td style="padding: 10px; border: 1px solid var(--hud-border);">200m Kevlar PU cable, 12V 25Ah Li-ion (300Wh), Flexible PET Solar Strips, TP5100 MPPT, 12V Kapton heater.</td>
+                <td style="padding: 10px; border: 1px solid var(--hud-border); color: var(--hud-green); font-weight: bold; text-align: right;">₹7,450</td>
+              </tr>
+              <tr style="background: rgba(0, 255, 136, 0.1); font-weight: bold;">
+                <td style="padding: 10px; border: 1px solid var(--hud-border); color: var(--hud-cyan);" colspan="2">Total Estimate (Commercial-Grade Autonomous Buoy Platform)</td>
+                <td style="padding: 10px; border: 1px solid var(--hud-border); color: var(--hud-green); font-size: 15px; text-align: right;">~₹19,000</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. TEAM CREDITS MODAL VIEW -->
+    <div class="view-modal interactive-element" id="modal-credits">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--hud-border); padding-bottom: 16px;">
+        <div style="font-family: var(--font-display); font-size: 24px; font-weight: 900; color: var(--hud-cyan); letter-spacing: 2px;">
+          <i class="fa-solid fa-users"></i> TEAM CREDITS | SMART INDIA HACKATHON
+        </div>
+        <button class="btn-sci-fi" onclick="switchMainTab('simulation')" style="padding: 6px 14px;">
+          <i class="fa-solid fa-xmark"></i> CLOSE
+        </button>
+      </div>
+
+      <div style="text-align: center; margin-bottom: 16px;">
+        <h2 style="font-family: var(--font-display); color: #fff; font-size: 28px; letter-spacing: 2px;">TEAM DHRUVA_1</h2>
+        <div style="color: var(--hud-gold); font-family: var(--font-mono); font-size: 14px; margin-top: 4px;">
+          PROBLEM STATEMENT ID: 26065 | MINISTRY OF EARTH SCIENCES (MoES)
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+        <div style="background: rgba(6, 15, 30, 0.8); border: 1px solid var(--hud-border); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="font-size: 32px; color: var(--hud-cyan);"><i class="fa-solid fa-user-astronaut"></i></div>
+          <h4 style="font-family: var(--font-display); color: #fff; font-size: 16px;">Firmware & Embedded RTOS</h4>
+          <p style="color: #94a3b8; font-size: 13px;">ESP-IDF, FreeRTOS dual-core tasks, power duty cycling, Kapton heater trigger logic.</p>
+        </div>
+
+        <div style="background: rgba(6, 15, 30, 0.8); border: 1px solid var(--hud-border); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="font-size: 32px; color: var(--hud-green);"><i class="fa-solid fa-compass-drafting"></i></div>
+          <h4 style="font-family: var(--font-display); color: #fff; font-size: 16px;">Mechanical & CAD Engineering</h4>
+          <p style="color: #94a3b8; font-size: 13px;">Ductile HDPE shell design, watertight IP68 seals, 200m Kevlar-spool worm-gear winch.</p>
+        </div>
+
+        <div style="background: rgba(6, 15, 30, 0.8); border: 1px solid var(--hud-border); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="font-size: 32px; color: var(--hud-purple);"><i class="fa-solid fa-network-wired"></i></div>
+          <h4 style="font-family: var(--font-display); color: #fff; font-size: 16px;">Bio-Telemetry & RF Comms</h4>
+          <p style="color: #94a3b8; font-size: 13px;">433MHz LoRa link, Weddell seal tag ingestion protocol, and Iridium satellite uplink.</p>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; text-align: center; color: #64748b; font-family: var(--font-mono); font-size: 12px;">
+        Designed & Engineered for Smart India Hackathon | Project Dhruva Setu Simulator © 2026
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    /* -------------------------------------------------------------------------
+       MARVEL / GAME-GRADE 3D GRAPHICS ENGINE (THREE.JS + TWEEN.JS)
+       ------------------------------------------------------------------------- */
+    
+    let scene, camera, renderer, controls;
+    let buoyShellMesh, buoyInternalGroup, ctdPodGroup, tetherLine, sealGroup;
+    let oceanMesh, oceanGeometry, snowfallParticles;
+    let raycaster, mouse;
+    
+    // Component Registry for Click-to-Inspect System
+    const clickableComponents = [];
+
+    // State Variables
+    let isXRayMode = false;
+    let isHibernation = false;
+    let isBlizzard = false;
+    let targetDepth = 15;
+    let currentDepth = 15;
+    let waveTime = 0;
+
+    function init3D() {
+      const container = document.getElementById('sim-canvas-container');
+      const canvas = document.getElementById('three-canvas');
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x020712);
+      scene.fog = new THREE.FogExp2(0x020712, 0.008);
+
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(18, 12, 28);
+
+      renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.2;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.maxPolarAngle = Math.PI / 2 + 0.35;
+
+      raycaster = new THREE.Raycaster();
+      mouse = new THREE.Vector2();
+
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0xdff0ff, 0.7);
+      scene.add(ambientLight);
+
+      const sunLight = new THREE.DirectionalLight(0xffffff, 1.8);
+      sunLight.position.set(40, 60, 20);
+      sunLight.castShadow = true;
+      scene.add(sunLight);
+
+      // Sci-Fi Point Lights
+      const cyanGlowLight = new THREE.PointLight(0x00f0ff, 3, 20);
+      cyanGlowLight.position.set(0, 1, 0);
+      scene.add(cyanGlowLight);
+
+      // Create Scene Elements
+      createCinematicOcean();
+      createDetailedBuoy();
+      createCTDPod();
+      createTether();
+      createBioTaggedSeal();
+      createSnowParticles();
+
+      // Mouse click event listener for 3D inspection
+      window.addEventListener('click', on3DClick, false);
+      window.addEventListener('mousemove', on3DMouseMove, false);
+      window.addEventListener('resize', onWindowResize, false);
+
+      // Start Loop
+      animate();
+    }
+
+    /* -------------------------------------------------------------------------
+       HIGH-FIDELITY OCEAN SHADER MESH
+       ------------------------------------------------------------------------- */
+    function createCinematicOcean() {
+      oceanGeometry = new THREE.PlaneGeometry(400, 400, 100, 100);
+      oceanGeometry.rotateX(-Math.PI / 2);
+
+      const oceanMat = new THREE.MeshStandardMaterial({
+        color: 0x0055aa,
+        roughness: 0.1,
+        metalness: 0.85,
+        transparent: true,
+        opacity: 0.85
+      });
+
+      oceanMesh = new THREE.Mesh(oceanGeometry, oceanMat);
+      scene.add(oceanMesh);
+
+      // Underwater Grid Floor
+      const grid = new THREE.GridHelper(300, 60, 0x00f0ff, 0x003366);
+      grid.position.y = -65;
+      scene.add(grid);
+    }
+
+    let esp32MeshRef, sdLoggerMeshRef, loraMeshRef, gpsMeshRef, imuMeshRef, tempEnvMeshRef, mpptMeshRef, rs485MeshRef, kaptonMeshRef, batMeshRef, winchMeshRef, ballastMeshRef, solarMeshRef, domeMeshRef;
+    let podHousingMeshRef, msp430MeshRef, ms5837MeshRef, rtdTempMeshRef, toroidSalMeshRef, podRs485MeshRef, fluoroMeshRef;
+
+    /* -------------------------------------------------------------------------
+       HIGH-FIDELITY 3D HARDWARE MODEL BUILDERS (ESP32-S3, MS5837, TOROID SALINITY)
+       ------------------------------------------------------------------------- */
+    function buildESP323DModel() {
+      const group = new THREE.Group();
+
+      const userData = {
+        subsystem: 'SURFACE GATEWAY',
+        name: 'ESP32-S3 WROOM Surface Master',
+        desc: 'Dual-core 240MHz MCU running ESP-IDF FreeRTOS. Controls Winch, LoRa, MPPT telemetry, & Closed-Hull Wi-Fi AP.',
+        specs: { Core: 'Dual-Core LX7 @ 240MHz', Flash: '32MB SPI Flash', OS: 'FreeRTOS Dual-Task', Cost: '₹650' },
+        img: 'esp32_hardware.jpg'
+      };
+
+      // 1. Dark Emerald PCB Substrate
+      const pcbGeo = new THREE.BoxGeometry(0.75, 0.05, 1.15);
+      const pcbMat = new THREE.MeshStandardMaterial({ color: 0x064e3b, roughness: 0.35, metalness: 0.3 });
+      const pcbMesh = new THREE.Mesh(pcbGeo, pcbMat);
+      group.add(pcbMesh);
+
+      // 2. Metal RF Shielding Can (WROOM metal cover)
+      const canGeo = new THREE.BoxGeometry(0.52, 0.08, 0.65);
+      const canMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.15, metalness: 0.95 });
+      const canMesh = new THREE.Mesh(canGeo, canMat);
+      canMesh.position.set(0, 0.05, -0.05);
+      group.add(canMesh);
+
+      // Engraved Text Relief / Logo plate on metal cover
+      const plateGeo = new THREE.PlaneGeometry(0.44, 0.52);
+      const plateMat = new THREE.MeshStandardMaterial({ color: 0xc0c6d0, metalness: 0.9, roughness: 0.2 });
+      const plateMesh = new THREE.Mesh(plateGeo, plateMat);
+      plateMesh.rotation.x = -Math.PI / 2;
+      plateMesh.position.set(0, 0.092, -0.05);
+      group.add(plateMesh);
+
+      // 3. 2.4GHz PCB Serpentine Meander Antenna (Gold copper trace on top edge)
+      const antGeo = new THREE.BoxGeometry(0.58, 0.02, 0.22);
+      const antMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.2 });
+      const antMesh = new THREE.Mesh(antGeo, antMat);
+      antMesh.position.set(0, 0.03, 0.42);
+      group.add(antMesh);
+
+      // Meander trace ridges
+      for (let x = -0.22; x <= 0.22; x += 0.09) {
+        const traceGeo = new THREE.BoxGeometry(0.03, 0.025, 0.15);
+        const traceMesh = new THREE.Mesh(traceGeo, antMat);
+        traceMesh.position.set(x, 0.035, 0.42);
+        group.add(traceMesh);
+      }
+
+      // 4. USB-C Connector Port (Metallic silver housing on bottom edge)
+      const usbGeo = new THREE.BoxGeometry(0.24, 0.07, 0.16);
+      const usbMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 });
+      const usbMesh = new THREE.Mesh(usbGeo, usbMat);
+      usbMesh.position.set(0, 0.035, -0.52);
+      group.add(usbMesh);
+
+      // 5. Dual Row Gold-Plated Header Pins
+      const pinMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.95, roughness: 0.1 });
+      const pinHdrMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5 });
+      
+      for (let z = -0.45; z <= 0.45; z += 0.09) {
+        // Left Pin
+        const hdrL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.08, 0.06), pinHdrMat);
+        hdrL.position.set(-0.33, 0.03, z);
+        group.add(hdrL);
+
+        const pinL = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.18, 6), pinMat);
+        pinL.position.set(-0.33, -0.04, z);
+        group.add(pinL);
+
+        // Right Pin
+        const hdrR = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.08, 0.06), pinHdrMat);
+        hdrR.position.set(0.33, 0.03, z);
+        group.add(hdrR);
+
+        const pinR = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.18, 6), pinMat);
+        pinR.position.set(0.33, -0.04, z);
+        group.add(pinR);
+      }
+
+      // 6. SMD Micro LEDs
+      const ledPwrMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.8 });
+      const ledPwr = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.04), ledPwrMat);
+      ledPwr.position.set(-0.18, 0.035, -0.38);
+      group.add(ledPwr);
+
+      const ledStatMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00f0ff, emissiveIntensity: 0.8 });
+      const ledStat = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.04), ledStatMat);
+      ledStat.position.set(-0.1, 0.035, -0.38);
+      group.add(ledStat);
+
+      // Register all child meshes into raycasting
+      group.traverse((child) => {
+        if (child.isMesh) {
+          child.userData = userData;
+          clickableComponents.push(child);
+        }
+      });
+
+      return group;
+    }
+
+    function buildMS58373DModel() {
+      const group = new THREE.Group();
+      const userData = {
+        subsystem: 'DEEP-WATER POD',
+        name: 'GY-MS5837 High-Res Pressure Cell',
+        desc: 'Gel-filled piezoresistive pressure sensor with 24-bit resolution (±1.5cm depth precision down to 300m).',
+        specs: { MaxDepth: '300m (30 Bar)', Resolution: '0.2 mbar (24-bit)', Output: 'I2C Hermetic Gel', Cost: '₹1,100' },
+        img: 'ms5837_sensor.jpg'
+      };
+
+      const pcb = new THREE.Mesh(
+        new THREE.BoxGeometry(0.35, 0.05, 0.35),
+        new THREE.MeshStandardMaterial({ color: 0x1d4ed8, metalness: 0.5, roughness: 0.3 })
+      );
+      group.add(pcb);
+
+      const cap = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.12, 0.12, 0.22, 16),
+        new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.95, roughness: 0.15 })
+      );
+      cap.position.set(0, 0.12, 0);
+      group.add(cap);
+
+      const gel = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.08, 0.03, 16),
+        new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00f0ff, emissiveIntensity: 0.6, transparent: true, opacity: 0.85 })
+      );
+      gel.position.set(0, 0.22, 0);
+      group.add(gel);
+
+      group.traverse(c => {
+        if (c.isMesh) {
+          c.userData = userData;
+          clickableComponents.push(c);
+        }
+      });
+      return group;
+    }
+
+    function buildToroidSalinity3DModel() {
+      const group = new THREE.Group();
+      const userData = {
+        subsystem: 'DEEP-WATER POD',
+        name: 'Analog TDS Inductive Salinity Cell',
+        desc: 'Inductive electrode-less toroid measuring seawater salinity (0-42 PSU) without bio-fouling.',
+        specs: { Range: '0-70 mS/cm (42 PSU)', Technology: 'Electrode-less Toroid', Accuracy: '±0.05 PSU', Cost: '₹850' },
+        img: 'salinity_toroid.jpg'
+      };
+
+      const ring1 = new THREE.Mesh(
+        new THREE.TorusGeometry(0.24, 0.07, 16, 24),
+        new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.7, roughness: 0.25 })
+      );
+      ring1.rotation.x = Math.PI / 2;
+      group.add(ring1);
+
+      const ring2 = new THREE.Mesh(
+        new THREE.TorusGeometry(0.18, 0.05, 16, 24),
+        new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00f0ff, emissiveIntensity: 0.4 })
+      );
+      ring2.rotation.x = Math.PI / 2;
+      group.add(ring2);
+
+      const bracket = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04, 0.04, 0.45, 12),
+        new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 })
+      );
+      bracket.position.set(0, 0, 0.22);
+      bracket.rotation.x = Math.PI / 2;
+      group.add(bracket);
+
+      group.traverse(c => {
+        if (c.isMesh) {
+          c.userData = userData;
+          clickableComponents.push(c);
+        }
+      });
+      return group;
+    }
+
+    /* -------------------------------------------------------------------------
+       DETAILED SPHERICAL BUOY WITH INDIVIDUAL HARDWARE SENSORS & EXPLODED CAD KINEMATICS
+       ------------------------------------------------------------------------- */
+    function createDetailedBuoy() {
+      const buoyGroup = new THREE.Group();
+
+      // 1. OUTER SHATTER-PROOF HDPE SPHERICAL SHELL (SLICES OPEN IN EXPLODED VIEW)
+      const shellGeo = new THREE.SphereGeometry(2.4, 32, 32);
+      const shellMat = new THREE.MeshStandardMaterial({
+        color: 0xff7700, // Marine Safety Orange
+        roughness: 0.25,
+        metalness: 0.1,
+        transparent: true,
+        opacity: 1.0 // Slices down to 0.22 in Exploded mode
+      });
+      buoyShellMesh = new THREE.Mesh(shellGeo, shellMat);
+      buoyShellMesh.castShadow = true;
+      buoyGroup.add(buoyShellMesh);
+
+      buoyShellMesh.userData = {
+        subsystem: 'HULL & WINCH',
+        name: 'Spherical HDPE Outer Shell',
+        desc: 'Shatter-proof -40°C rated High-Density Polyethylene buoyant sphere housing surface gateway electronics, winch, and battery pack.',
+        specs: { Material: 'Ductile HDPE', Diameter: '500mm', Rating: '-40°C Hermetic', Cost: '₹1,850' }
+      };
+      clickableComponents.push(buoyShellMesh);
+
+      // 2. INTERNAL ELECTRONICS STACK (EXPLODES OUT IN CAD VIEW)
+      buoyInternalGroup = new THREE.Group();
+
+      // REAL 3D MODEL: ESP32-S3 WROOM Surface Master MCU
+      esp32MeshRef = buildESP323DModel();
+      esp32MeshRef.position.set(0, 1.0, 0);
+      buoyInternalGroup.add(esp32MeshRef);
+
+      // SPI MicroSD Logger
+      const sdGeo = new THREE.BoxGeometry(0.3, 0.05, 0.35);
+      const sdMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, metalness: 0.7 });
+      sdLoggerMeshRef = new THREE.Mesh(sdGeo, sdMat);
+      sdLoggerMeshRef.position.set(-0.4, 1.08, 0.2);
+      sdLoggerMeshRef.userData = {
+        subsystem: 'SURFACE GATEWAY',
+        name: 'SPI MicroSD Flash Logger',
+        desc: 'Conformal-coated vibration-proof 32MB internal flash & MicroSD logger for continuous high-rate environmental recording.',
+        specs: { Interface: 'SPI Protocol', Storage: '32MB Flash / 16GB SD', Coating: 'Acrylic Conformal', Cost: '₹350' }
+      };
+      buoyInternalGroup.add(sdLoggerMeshRef);
+      clickableComponents.push(sdLoggerMeshRef);
+
+      // 433MHz LoRa Module (SX1278)
+      const loraGeo = new THREE.BoxGeometry(0.35, 0.06, 0.45);
+      const loraMat = new THREE.MeshStandardMaterial({ color: 0x8b5cf6, metalness: 0.8 });
+      loraMeshRef = new THREE.Mesh(loraGeo, loraMat);
+      loraMeshRef.position.set(0.4, 1.08, 0.2);
+      loraMeshRef.userData = {
+        subsystem: 'SURFACE GATEWAY',
+        name: '433MHz LoRa Transceiver (SX1278)',
+        desc: 'Long-range SX1278 LoRa transceiver receiving telemetry pings from seal-mounted bio-tags up to 15km.',
+        specs: { Frequency: '433 MHz', Range: '15 km LoRa Link', Protocol: 'MEOP Bio-Tag', Cost: '₹550' }
+      };
+      buoyInternalGroup.add(loraMeshRef);
+      clickableComponents.push(loraMeshRef);
+
+      // NEO-6M GPS Engine
+      const gpsGeo = new THREE.BoxGeometry(0.35, 0.06, 0.35);
+      const gpsMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9 });
+      gpsMeshRef = new THREE.Mesh(gpsGeo, gpsMat);
+      gpsMeshRef.position.set(-0.35, 1.08, -0.3);
+      gpsMeshRef.userData = {
+        subsystem: 'SURFACE GATEWAY',
+        name: 'NEO-6M GPS Engine',
+        desc: 'High-sensitivity GPS engine providing surface drift location coordinates & UTC time synchronization.',
+        specs: { Channels: '50-Channel', Accuracy: '2.5m CEP', TimeSync: '<1us Pulse', Cost: '₹450' }
+      };
+      buoyInternalGroup.add(gpsMeshRef);
+      clickableComponents.push(gpsMeshRef);
+
+      // BNO085 9-DOF IMU Motion Sensor
+      const imuGeo = new THREE.BoxGeometry(0.28, 0.05, 0.28);
+      const imuMat = new THREE.MeshStandardMaterial({ color: 0xd946ef, emissive: 0xd946ef, emissiveIntensity: 0.3 });
+      imuMeshRef = new THREE.Mesh(imuGeo, imuMat);
+      imuMeshRef.position.set(0.35, 1.08, -0.3);
+      imuMeshRef.userData = {
+        subsystem: 'SURFACE GATEWAY',
+        name: 'BNO085 9-DOF Wave & Motion IMU',
+        desc: '9-axis fused motion sensor measuring wave height, pitch, roll, and ocean surface dynamics.',
+        specs: { Sensors: 'Accel + Gyro + Mag', Resolution: '0.1m Wave Height', Output: 'I2C Fused Quaternion', Cost: '₹850' }
+      };
+      buoyInternalGroup.add(imuMeshRef);
+      clickableComponents.push(imuMeshRef);
+
+      // SHT45 & TMP117 Surface Met Sensors
+      const metGeo = new THREE.BoxGeometry(0.22, 0.05, 0.22);
+      const metMat = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.4 });
+      tempEnvMeshRef = new THREE.Mesh(metGeo, metMat);
+      tempEnvMeshRef.position.set(0, 1.15, 0);
+      tempEnvMeshRef.userData = {
+        subsystem: 'SURFACE GATEWAY',
+        name: 'SHT45 & TMP117 Surface Met Sensors',
+        desc: 'High-precision surface air temperature & humidity dual-sensor array for polar weather logging.',
+        specs: { TempAccuracy: '±0.1°C (TMP117)', Humidity: '±1.0% RH (SHT45)', Cost: '₹650' }
+      };
+      buoyInternalGroup.add(tempEnvMeshRef);
+      clickableComponents.push(tempEnvMeshRef);
+
+      // TP5100 MPPT Solar Charge Controller
+      const mpptGeo = new THREE.BoxGeometry(0.45, 0.06, 0.5);
+      const mpptMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, metalness: 0.8 });
+      mpptMeshRef = new THREE.Mesh(mpptGeo, mpptMat);
+      mpptMeshRef.position.set(0, 0.4, 0);
+      mpptMeshRef.userData = {
+        subsystem: 'POWER & TETHER',
+        name: 'TP5100 MPPT Solar Controller',
+        desc: 'Maximum Power Point Tracking buck converter maximizing solar energy harvest at low polar sun angles.',
+        specs: { Efficiency: '96%', Voltage: '2A Dual-Cell', Function: 'MPPT Solar Step-Down', Cost: '₹450' }
+      };
+      buoyInternalGroup.add(mpptMeshRef);
+      clickableComponents.push(mpptMeshRef);
+
+      // Kapton Sub-Zero Battery Heater Pad
+      const kaptonGeo = new THREE.CylinderGeometry(1.2, 1.2, 0.05, 24);
+      const kaptonMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9, emissive: 0xd97706, emissiveIntensity: 0.2 });
+      kaptonMeshRef = new THREE.Mesh(kaptonGeo, kaptonMat);
+      kaptonMeshRef.position.set(0, -0.2, 0);
+      kaptonMeshRef.userData = {
+        subsystem: 'POWER & TETHER',
+        name: '12V Kapton PTC Heater Pad',
+        desc: 'Automatic PTC thermal heater pad maintaining battery temperature > -1.8°C to prevent lithium plating.',
+        specs: { Power: '12V / 5W', Heater: 'Kapton PTC', 'Cut-in': '-1.8°C Seawater', Cost: '₹450' }
+      };
+      buoyInternalGroup.add(kaptonMeshRef);
+      clickableComponents.push(kaptonMeshRef);
+
+      // LTO / Sub-Zero 12V 25Ah Battery Array (300Wh)
+      const batGeo = new THREE.CylinderGeometry(1.0, 1.0, 0.6, 16);
+      const batMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.6 });
+      batMeshRef = new THREE.Mesh(batGeo, batMat);
+      batMeshRef.position.set(0, -0.6, 0);
+      batMeshRef.userData = {
+        subsystem: 'POWER & TETHER',
+        name: '12V 25Ah Li-ion Battery Pack (300Wh)',
+        desc: 'High energy density battery pack providing 300Wh capacity for 6-month polar night hibernation.',
+        specs: { Capacity: '25Ah / 300Wh', Chemistry: 'Sub-Zero Li-ion', Lifespan: '2000+ Cycles', Cost: '₹2,850' }
+      };
+      buoyInternalGroup.add(batMeshRef);
+      clickableComponents.push(batMeshRef);
+
+      // 16.1kg MS Ballast & Counterweight
+      const ballastGeo = new THREE.CylinderGeometry(1.1, 1.1, 0.2, 24);
+      const ballastMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.95, roughness: 0.3 });
+      ballastMeshRef = new THREE.Mesh(ballastGeo, ballastMat);
+      ballastMeshRef.position.set(0, -1.1, 0);
+      ballastMeshRef.userData = {
+        subsystem: 'HULL & WINCH',
+        name: '16.1kg MS Counterweight Ballast',
+        desc: 'Heavy mild-steel bottom ring providing self-righting stability in 65 Kt Antarctic storm waves.',
+        specs: { Weight: '16.1 kg MS', Function: 'Passive Self-Righting', WaveResistance: 'Sea State 7', Cost: '₹1,200' }
+      };
+      buoyInternalGroup.add(ballastMeshRef);
+      clickableComponents.push(ballastMeshRef);
+
+      // 12V 40RPM Worm-Gear Winch & Spool
+      const winchGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.75, 16);
+      const winchMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.9 });
+      winchMeshRef = new THREE.Mesh(winchGeo, winchMat);
+      winchMeshRef.position.set(0, -1.7, 0);
+      winchMeshRef.userData = {
+        subsystem: 'HULL & WINCH',
+        name: '12V Worm-Gear Motor & Spool',
+        desc: 'Self-locking 40RPM worm-gear motor housing ABS spool and 6-wire continuous slip ring.',
+        specs: { Motor: '12V DC 40RPM', SlipRing: '6-Wire Gold-Contact', Spool: '200m Kevlar', Cost: '₹950' }
+      };
+      buoyInternalGroup.add(winchMeshRef);
+      clickableComponents.push(winchMeshRef);
+
+      buoyGroup.add(buoyInternalGroup);
+
+      // 3. TOP FLEXIBLE PET SOLAR PANELS & MAST ASSEMBLY
+      const solarGeo = new THREE.CylinderGeometry(1.8, 2.05, 0.25, 24);
+      const solarMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.9, emissive: 0x0284c7, emissiveIntensity: 0.1 });
+      solarMeshRef = new THREE.Mesh(solarGeo, solarMat);
+      solarMeshRef.position.y = 1.35;
+      solarMeshRef.userData = {
+        subsystem: 'POWER & TETHER',
+        name: 'Flexible PET Solar Panels',
+        desc: 'Curved top-mounted flexible PET monocrystalline solar array for polar summer power recharge.',
+        specs: { Efficiency: '22.5%', Array: 'PET Monocrystalline', Protection: 'UV / Salt-Resistant', Cost: '₹1,500' }
+      };
+      buoyGroup.add(solarMeshRef);
+      clickableComponents.push(solarMeshRef);
+
+      // Antenna Mast
+      const mastGeo = new THREE.CylinderGeometry(0.06, 0.06, 3.8, 12);
+      const mastMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9 });
+      const mastMesh = new THREE.Mesh(mastGeo, mastMat);
+      mastMesh.position.y = 2.6;
+      buoyGroup.add(mastMesh);
+
+      // 433MHz LoRa & Iridium Satellite Dome
+      const domeGeo = new THREE.SphereGeometry(0.35, 16, 16);
+      const domeMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00f0ff, emissiveIntensity: 0.4 });
+      domeMeshRef = new THREE.Mesh(domeGeo, domeMat);
+      domeMeshRef.position.y = 4.5;
+      domeMeshRef.userData = {
+        subsystem: 'SURFACE GATEWAY',
+        name: 'LoRa Bio-Gateway & Satellite Dome',
+        desc: 'Receives ping telemetry from marine mammal bio-tags and uplinks stored profiles via Iridium satellite constellation.',
+        specs: { Freq: '433MHz LoRa SX1278', Satellite: 'Iridium Short Burst Data', Range: '15km LoRa', Cost: '₹1,800' }
+      };
+      buoyGroup.add(domeMeshRef);
+      clickableComponents.push(domeMeshRef);
+
+      buoyGroup.name = 'BUOY_ROOT';
+      scene.add(buoyGroup);
+    }
+
+    /* -------------------------------------------------------------------------
+       SUB-SURFACE CTD PROFILING POD WITH INDIVIDUAL CLICKABLE SENSOR ARRAYS
+       ------------------------------------------------------------------------- */
+    function createCTDPod() {
+      ctdPodGroup = new THREE.Group();
+
+      // 1. 50mm Machined HDPE Pod Housing
+      const podBodyGeo = new THREE.CylinderGeometry(0.65, 0.65, 2.4, 24);
+      const podMat = new THREE.MeshStandardMaterial({ 
+        color: 0x0284c7, 
+        roughness: 0.2, 
+        metalness: 0.85,
+        transparent: true,
+        opacity: 0.75 
+      });
+      podHousingMeshRef = new THREE.Mesh(podBodyGeo, podMat);
+      ctdPodGroup.add(podHousingMeshRef);
+
+      podHousingMeshRef.userData = {
+        subsystem: 'HULL & WINCH',
+        name: '50mm Machined HDPE CTD Housing',
+        desc: 'Machined HDPE probe pod with silicone foul-release coating for sub-zero bio-fouling protection.',
+        specs: { Material: 'Machined HDPE', Coating: 'Silicone Foul-Release', Rating: '30 Bar / 300m', Cost: '₹850' }
+      };
+      clickableComponents.push(podHousingMeshRef);
+
+      // 2. TI MSP430 Bare Silicon Low-Power Acquisition Brain
+      const mspGeo = new THREE.BoxGeometry(0.35, 0.05, 0.35);
+      const mspMat = new THREE.MeshStandardMaterial({ color: 0x059669, metalness: 0.8 });
+      msp430MeshRef = new THREE.Mesh(mspGeo, mspMat);
+      msp430MeshRef.position.set(0, 0.6, 0);
+      msp430MeshRef.userData = {
+        subsystem: 'DEEP-WATER POD',
+        name: 'TI MSP430G2553 Acquisition Brain',
+        desc: 'Ultra-low power 16-bit RISC microcontroller managing underwater sensor acquisition and RS485 packetizing.',
+        specs: { Core: '16-bit RISC', ActivePower: '230 uA/MHz', ADC: '10-bit 200ksps', Cost: '₹400' }
+      };
+      ctdPodGroup.add(msp430MeshRef);
+      clickableComponents.push(msp430MeshRef);
+
+      // 3. REAL 3D MODEL: GY-MS5837 Piezoresistive Depth/Pressure Sensor
+      ms5837MeshRef = buildMS58373DModel();
+      ms5837MeshRef.position.set(0, -1.3, 0.3);
+      ctdPodGroup.add(ms5837MeshRef);
+
+      // 4. DS18B20 316L Stainless Steel Temp Probe
+      const tempGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.6, 12);
+      const tempMat = new THREE.MeshStandardMaterial({ color: 0x00ff88, metalness: 0.95, emissive: 0x00ff88, emissiveIntensity: 0.4 });
+      rtdTempMeshRef = new THREE.Mesh(tempGeo, tempMat);
+      rtdTempMeshRef.position.set(-0.35, -1.45, 0);
+      rtdTempMeshRef.userData = {
+        subsystem: 'DEEP-WATER POD',
+        name: 'DS18B20 316L Sub-Zero Temp Probe',
+        desc: 'Fast-response stainless steel digital temperature probe measuring ocean thermoclines.',
+        specs: { Accuracy: '±0.05°C', Probe: '316L Stainless Steel', Range: '-55°C to +125°C', Cost: '₹450' }
+      };
+      ctdPodGroup.add(rtdTempMeshRef);
+      clickableComponents.push(rtdTempMeshRef);
+
+      // 5. REAL 3D MODEL: Analog TDS / Inductive Toroidal Salinity Cell
+      toroidSalMeshRef = buildToroidSalinity3DModel();
+      toroidSalMeshRef.position.set(0.35, -1.35, -0.1);
+      ctdPodGroup.add(toroidSalMeshRef);
+
+      // 6. MAX485 Dual Differential Transceivers
+      const podRsGeo = new THREE.BoxGeometry(0.25, 0.06, 0.35);
+      const podRsMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.8 });
+      podRs485MeshRef = new THREE.Mesh(podRsGeo, podRsMat);
+      podRs485MeshRef.position.set(0, 0.68, 0.2);
+      podRs485MeshRef.userData = {
+        subsystem: 'DEEP-WATER POD',
+        name: 'MAX485 Dual RS485 Transceivers',
+        desc: 'Noise-immune differential transceivers linking deep pod data to surface gateway over 200m tether.',
+        specs: { Speed: '2.5 Mbps', LineProtection: 'ESD Protected', Isolation: 'Differential Loop', Cost: '₹400' }
+      };
+      ctdPodGroup.add(podRs485MeshRef);
+      clickableComponents.push(podRs485MeshRef);
+
+      // 7. Optical Turbidity & Fluorometer Window
+      const optGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.15, 16);
+      const optMat = new THREE.MeshStandardMaterial({ color: 0xa855f7, emissive: 0xa855f7, emissiveIntensity: 0.5 });
+      fluoroMeshRef = new THREE.Mesh(optGeo, optMat);
+      fluoroMeshRef.position.set(0, -1.25, -0.4);
+      fluoroMeshRef.userData = {
+        subsystem: 'DEEP-WATER POD',
+        name: 'Optical Turbidity & Fluorometer Window',
+        desc: '470nm blue excitation LED with optical filter measuring polar algae blooms and suspended matter.',
+        specs: { Excitation: '470nm LED', Measurement: '0-500 NTU / Chlorophyll-a', Cost: '₹1,450' }
+      };
+      ctdPodGroup.add(fluoroMeshRef);
+      clickableComponents.push(fluoroMeshRef);
+
+      ctdPodGroup.position.set(0, -currentDepth, 0);
+      scene.add(ctdPodGroup);
+    }
+
+    function createTether() {
+      const points = [new THREE.Vector3(0, -2.2, 0), new THREE.Vector3(0, -currentDepth, 0)];
+      const tetherGeo = new THREE.BufferGeometry().setFromPoints(points);
+      const tetherMat = new THREE.LineBasicMaterial({ color: 0x00f0ff, linewidth: 2 });
+      tetherLine = new THREE.Line(tetherGeo, tetherMat);
+      scene.add(tetherLine);
+    }
+
+    function createBioTaggedSeal() {
+      sealGroup = new THREE.Group();
+
+      const bodyGeo = new THREE.ConeGeometry(1.2, 4.5, 16);
+      bodyGeo.rotateX(Math.PI / 2);
+      const sealMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
+      const sealBody = new THREE.Mesh(bodyGeo, sealMat);
+      sealGroup.add(sealBody);
+
+      // Bio-Tag
+      const tagGeo = new THREE.BoxGeometry(0.4, 0.25, 0.6);
+      const tagMat = new THREE.MeshStandardMaterial({ color: 0xbb00ff, emissive: 0xbb00ff, emissiveIntensity: 0.5 });
+      const tagMesh = new THREE.Mesh(tagGeo, tagMat);
+      tagMesh.position.set(0, 1.1, 0.5);
+      tagMesh.userData = {
+        subsystem: 'BIO-TELEMETRY',
+        name: 'Animal-Borne Bio-Tag (433MHz LoRa)',
+        desc: 'Ultra-low power bio-logger attached to Weddell Seal. Transmits dive depth, motion, & temperature to Buoy Gateway.',
+        specs: { Frequency: '433MHz LoRa', Weight: '<120g', Battery: 'Coin-Cell 2 Yr', Protocol: 'MEOP Standard', Cost: '₹2,500' }
+      };
+      sealGroup.add(tagMesh);
+      clickableComponents.push(tagMesh);
+
+      sealGroup.position.set(20, -10, 15);
+      scene.add(sealGroup);
+    }
+
+    function createSnowParticles() {
+      const snowGeo = new THREE.BufferGeometry();
+      const count = 1500;
+      const pos = new Float32Array(count * 3);
+
+      for (let i = 0; i < count * 3; i += 3) {
+        pos[i] = (Math.random() - 0.5) * 200;
+        pos[i+1] = Math.random() * 100;
+        pos[i+2] = (Math.random() - 0.5) * 200;
+      }
+
+      snowGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const snowMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.5, transparent: true, opacity: 0.8 });
+      snowfallParticles = new THREE.Points(snowGeo, snowMat);
+      scene.add(snowfallParticles);
+    }
+
+    /* -------------------------------------------------------------------------
+       GTA / CYBERPUNK REAL-TIME 3D HOVER INTERACTION & CLICK-TO-INSPECT SYSTEM
+       ------------------------------------------------------------------------- */
+    function on3DMouseMove(event) {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      let intersects = raycaster.intersectObjects(clickableComponents);
+
+      if (isXRayMode && intersects.length > 1) {
+        const internalHits = intersects.filter(hit => hit.object !== buoyShellMesh && hit.object !== podHousingMeshRef);
+        if (internalHits.length > 0) {
+          intersects = internalHits;
+        }
+      }
+
+      const tooltip = document.getElementById('tooltip-3d');
+      if (intersects.length > 0) {
+        document.body.style.cursor = 'pointer';
+        const comp = intersects[0].object.userData;
+        if (tooltip && comp) {
+          tooltip.style.display = 'block';
+          tooltip.style.left = (event.clientX + 10) + 'px';
+          tooltip.style.top = event.clientY + 'px';
+
+          const tagEl = document.getElementById('gta-tag');
+          const titleEl = document.getElementById('gta-title');
+          const costEl = document.getElementById('gta-cost');
+          const subEl = document.getElementById('gta-sub');
+
+          if (tagEl) tagEl.innerText = comp.subsystem || 'HARDWARE SENSOR';
+          if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-microchip"></i> ${comp.name || 'Component'}`;
+          if (costEl) costEl.innerText = `COST: ${comp.specs && comp.specs.Cost ? comp.specs.Cost : 'Included'}`;
+          if (subEl) subEl.innerText = comp.desc ? comp.desc.substring(0, 75) + '...' : 'Click component for full engineering breakdown.';
+        }
+      } else {
+        document.body.style.cursor = 'default';
+        if (tooltip) tooltip.style.display = 'none';
+      }
+    }
+
+    function on3DClick(event) {
+      // Don't trigger if clicked on HUD interactive elements
+      if (event.target.closest('.interactive-element')) return;
+
+      raycaster.setFromCamera(mouse, camera);
+      let intersects = raycaster.intersectObjects(clickableComponents);
+
+      if (isXRayMode && intersects.length > 1) {
+        const internalHits = intersects.filter(hit => hit.object !== buoyShellMesh && hit.object !== podHousingMeshRef);
+        if (internalHits.length > 0) {
+          intersects = internalHits;
+        }
+      }
+
+      if (intersects.length > 0) {
+        const comp = intersects[0].object.userData;
+        updateComponentInspector(comp);
+        const inspector = document.getElementById('floating-inspector');
+        if (inspector) inspector.classList.add('visible');
+      }
+    }
+
+    function inspectDirectSensor(sensorName) {
+      const targetObj = clickableComponents.find(c => c.userData && c.userData.name === sensorName);
+      if (targetObj) {
+        updateComponentInspector(targetObj.userData);
+        const inspector = document.getElementById('floating-inspector');
+        if (inspector) inspector.classList.add('visible');
+        if (sensorName.includes('MS5837') || sensorName.includes('Temp') || sensorName.includes('Salinity') || sensorName.includes('Fluorometer') || sensorName.includes('CTD')) {
+          switchCameraTarget('pod');
+        } else {
+          switchCameraTarget('xray');
+        }
+      }
+    }
+
+    function updateComponentInspector(comp) {
+      if (!comp || !comp.name) return;
+      
+      playSoundFX('click');
+
+      const titleEl = document.getElementById('inspect-title');
+      const descEl = document.getElementById('inspect-desc');
+      const specsEl = document.getElementById('inspect-specs');
+      const imgBox = document.getElementById('inspect-img-box');
+      const imgEl = document.getElementById('inspect-img');
+
+      if (titleEl) titleEl.innerText = comp.name;
+      if (descEl) descEl.innerText = comp.desc;
+
+      if (comp.img) {
+        if (imgEl) imgEl.src = comp.img;
+        if (imgBox) imgBox.style.display = 'block';
+      } else {
+        if (imgBox) imgBox.style.display = 'none';
+      }
+
+      if (specsEl) {
+        specsEl.innerHTML = '';
+        if (comp.subsystem) {
+          specsEl.innerHTML += `<div class="spec-item">Subsystem: <span class="spec-item-val" style="color:var(--hud-gold); font-weight:bold;">${comp.subsystem}</span></div>`;
+        }
+        if (comp.specs) {
+          for (const [key, val] of Object.entries(comp.specs)) {
+            specsEl.innerHTML += `<div class="spec-item">${key}: <span class="spec-item-val">${val}</span></div>`;
+          }
+        }
+      }
+
+      if (comp.name.includes('ESP32-S3')) {
+        grantAchievement('chip-ach-1');
+      } else if (comp.name.includes('Bio-Tag')) {
+        grantAchievement('chip-ach-4');
+      }
+
+      addLog('CAD_INSPECT', `Inspected: ${comp.name} [${comp.subsystem || 'SIH BOM'}]`);
+    }
+
+    /* -------------------------------------------------------------------------
+       EXPLODED CAD X-RAY MODE & MECHANICAL EXPANSION (TWEEN.JS)
+       ------------------------------------------------------------------------- */
+    function toggleXRayCutaway() {
+      isXRayMode = !isXRayMode;
+      playSoundFX('xray');
+      const btn = document.getElementById('btn-xray');
+      const icon = document.getElementById('icon-xray-toggle');
+
+      const dur = 900;
+      const ease = TWEEN.Easing.Back.Out;
+
+      if (isXRayMode) {
+        if (btn) btn.classList.add('active');
+        if (icon) icon.className = 'fa-solid fa-toggle-on legend-opt-icon';
+        if (buoyShellMesh) buoyShellMesh.material.opacity = 0.22;
+        addLog('CAD_XRAY', 'Exploded Mechanical CAD View Engaged! All 16 sensors & sub-assemblies expanded.');
+        switchCameraTarget('xray');
+
+        // Animate Buoy Internal Explosion (Vertical & Radial expansion)
+        if (esp32MeshRef) new TWEEN.Tween(esp32MeshRef.position).to({ x: 0, y: 2.2, z: 0 }, dur).easing(ease).start();
+        if (sdLoggerMeshRef) new TWEEN.Tween(sdLoggerMeshRef.position).to({ x: -1.2, y: 2.3, z: 0.8 }, dur).easing(ease).start();
+        if (loraMeshRef) new TWEEN.Tween(loraMeshRef.position).to({ x: 1.2, y: 2.3, z: 0.8 }, dur).easing(ease).start();
+        if (gpsMeshRef) new TWEEN.Tween(gpsMeshRef.position).to({ x: -1.2, y: 2.3, z: -0.8 }, dur).easing(ease).start();
+        if (imuMeshRef) new TWEEN.Tween(imuMeshRef.position).to({ x: 1.2, y: 2.3, z: -0.8 }, dur).easing(ease).start();
+        if (tempEnvMeshRef) new TWEEN.Tween(tempEnvMeshRef.position).to({ x: 0, y: 2.7, z: 0 }, dur).easing(ease).start();
+        if (mpptMeshRef) new TWEEN.Tween(mpptMeshRef.position).to({ x: 0, y: 1.1, z: 0 }, dur).easing(ease).start();
+        if (kaptonMeshRef) new TWEEN.Tween(kaptonMeshRef.position).to({ x: 0, y: 0.1, z: 0 }, dur).easing(ease).start();
+        if (batMeshRef) new TWEEN.Tween(batMeshRef.position).to({ x: 0, y: -0.9, z: 0 }, dur).easing(ease).start();
+        if (ballastMeshRef) new TWEEN.Tween(ballastMeshRef.position).to({ x: 0, y: -2.0, z: 0 }, dur).easing(ease).start();
+        if (winchMeshRef) new TWEEN.Tween(winchMeshRef.position).to({ x: 0, y: -3.1, z: 0 }, dur).easing(ease).start();
+        if (solarMeshRef) new TWEEN.Tween(solarMeshRef.position).to({ x: 0, y: 3.4, z: 0 }, dur).easing(ease).start();
+        if (domeMeshRef) new TWEEN.Tween(domeMeshRef.position).to({ x: 0, y: 6.5, z: 0 }, dur).easing(ease).start();
+
+        // Animate CTD Pod Sensors Explosion
+        if (podHousingMeshRef) podHousingMeshRef.material.opacity = 0.35;
+        if (msp430MeshRef) new TWEEN.Tween(msp430MeshRef.position).to({ x: 0, y: 1.5, z: 0 }, dur).easing(ease).start();
+        if (podRs485MeshRef) new TWEEN.Tween(podRs485MeshRef.position).to({ x: 0, y: 1.5, z: 1.0 }, dur).easing(ease).start();
+        if (ms5837MeshRef) new TWEEN.Tween(ms5837MeshRef.position).to({ x: 0, y: -2.4, z: 1.2 }, dur).easing(ease).start();
+        if (rtdTempMeshRef) new TWEEN.Tween(rtdTempMeshRef.position).to({ x: -1.2, y: -2.4, z: 0 }, dur).easing(ease).start();
+        if (toroidSalMeshRef) new TWEEN.Tween(toroidSalMeshRef.position).to({ x: 1.2, y: -2.4, z: -0.5 }, dur).easing(ease).start();
+        if (fluoroMeshRef) new TWEEN.Tween(fluoroMeshRef.position).to({ x: 0, y: -2.2, z: -1.3 }, dur).easing(ease).start();
+
+      } else {
+        if (btn) btn.classList.remove('active');
+        if (icon) icon.className = 'fa-solid fa-toggle-off legend-opt-icon';
+        if (buoyShellMesh) buoyShellMesh.material.opacity = 1.0;
+        addLog('CAD_XRAY', 'Exploded Mechanical CAD View Closed. Assembly locked.');
+        switchCameraTarget('buoy');
+
+        // Retract Buoy Assembly
+        if (esp32MeshRef) new TWEEN.Tween(esp32MeshRef.position).to({ x: 0, y: 1.0, z: 0 }, dur).easing(ease).start();
+        if (sdLoggerMeshRef) new TWEEN.Tween(sdLoggerMeshRef.position).to({ x: -0.4, y: 1.08, z: 0.2 }, dur).easing(ease).start();
+        if (loraMeshRef) new TWEEN.Tween(loraMeshRef.position).to({ x: 0.4, y: 1.08, z: 0.2 }, dur).easing(ease).start();
+        if (gpsMeshRef) new TWEEN.Tween(gpsMeshRef.position).to({ x: -0.35, y: 1.08, z: -0.3 }, dur).easing(ease).start();
+        if (imuMeshRef) new TWEEN.Tween(imuMeshRef.position).to({ x: 0.35, y: 1.08, z: -0.3 }, dur).easing(ease).start();
+        if (tempEnvMeshRef) new TWEEN.Tween(tempEnvMeshRef.position).to({ x: 0, y: 1.15, z: 0 }, dur).easing(ease).start();
+        if (mpptMeshRef) new TWEEN.Tween(mpptMeshRef.position).to({ x: 0, y: 0.4, z: 0 }, dur).easing(ease).start();
+        if (kaptonMeshRef) new TWEEN.Tween(kaptonMeshRef.position).to({ x: 0, y: -0.2, z: 0 }, dur).easing(ease).start();
+        if (batMeshRef) new TWEEN.Tween(batMeshRef.position).to({ x: 0, y: -0.6, z: 0 }, dur).easing(ease).start();
+        if (ballastMeshRef) new TWEEN.Tween(ballastMeshRef.position).to({ x: 0, y: -1.1, z: 0 }, dur).easing(ease).start();
+        if (winchMeshRef) new TWEEN.Tween(winchMeshRef.position).to({ x: 0, y: -1.7, z: 0 }, dur).easing(ease).start();
+        if (solarMeshRef) new TWEEN.Tween(solarMeshRef.position).to({ x: 0, y: 1.35, z: 0 }, dur).easing(ease).start();
+        if (domeMeshRef) new TWEEN.Tween(domeMeshRef.position).to({ x: 0, y: 4.5, z: 0 }, dur).easing(ease).start();
+
+        // Retract CTD Pod Assembly
+        if (podHousingMeshRef) podHousingMeshRef.material.opacity = 0.75;
+        if (msp430MeshRef) new TWEEN.Tween(msp430MeshRef.position).to({ x: 0, y: 0.6, z: 0 }, dur).easing(ease).start();
+        if (podRs485MeshRef) new TWEEN.Tween(podRs485MeshRef.position).to({ x: 0, y: 0.68, z: 0.2 }, dur).easing(ease).start();
+        if (ms5837MeshRef) new TWEEN.Tween(ms5837MeshRef.position).to({ x: 0, y: -1.3, z: 0.3 }, dur).easing(ease).start();
+        if (rtdTempMeshRef) new TWEEN.Tween(rtdTempMeshRef.position).to({ x: -0.35, y: -1.45, z: 0 }, dur).easing(ease).start();
+        if (toroidSalMeshRef) new TWEEN.Tween(toroidSalMeshRef.position).to({ x: 0.35, y: -1.35, z: -0.1 }, dur).easing(ease).start();
+        if (fluoroMeshRef) new TWEEN.Tween(fluoroMeshRef.position).to({ x: 0, y: -1.25, z: -0.4 }, dur).easing(ease).start();
+      }
+    }
+
+    function switchCameraTarget(mode) {
+      document.querySelectorAll('.cam-chip').forEach(c => c.classList.remove('active'));
+
+      let targetPos = { x: 18, y: 12, z: 28 };
+      let lookTarget = { x: 0, y: 0, z: 0 };
+
+      if (mode === 'buoy') {
+        const chip = document.getElementById('chip-cam-buoy');
+        if (chip) chip.classList.add('active');
+        targetPos = { x: 8, y: 5, z: 12 };
+      } else if (mode === 'xray') {
+        const chip = document.getElementById('chip-cam-xray');
+        if (chip) chip.classList.add('active');
+        targetPos = { x: 0, y: 1, z: 6 };
+      } else if (mode === 'pod') {
+        const chip = document.getElementById('chip-cam-pod');
+        if (chip) chip.classList.add('active');
+        targetPos = { x: 6, y: ctdPodGroup ? ctdPodGroup.position.y : -15, z: 8 };
+        lookTarget = { x: 0, y: ctdPodGroup ? ctdPodGroup.position.y : -15, z: 0 };
+      } else if (mode === 'seal') {
+        const chip = document.getElementById('chip-cam-seal');
+        if (chip) chip.classList.add('active');
+        if (sealGroup) {
+          targetPos = { x: sealGroup.position.x + 8, y: sealGroup.position.y + 2, z: sealGroup.position.z + 8 };
+          lookTarget = { x: sealGroup.position.x, y: sealGroup.position.y, z: sealGroup.position.z };
+        }
+      }
+
+      // Smooth Tween Camera
+      new TWEEN.Tween(camera.position)
+        .to(targetPos, 1200)
+        .easing(TWEEN.Easing.Cubic.Out)
+        .start();
+
+      new TWEEN.Tween(controls.target)
+        .to(lookTarget, 1200)
+        .easing(TWEEN.Easing.Cubic.Out)
+        .start();
+
+      addLog('CAMERA', `Camera focus -> ${mode.toUpperCase()}`);
+    }
+
+    /* -------------------------------------------------------------------------
+       PHYSICS ANIMATION & RENDER LOOP
+       ------------------------------------------------------------------------- */
+    function animate(time) {
+      requestAnimationFrame(animate);
+      TWEEN.update();
+
+      waveTime += isBlizzard ? 0.08 : 0.03;
+
+      // 1. Ocean Wave Animation
+      if (oceanGeometry) {
+        const pos = oceanGeometry.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+          const u = pos.getX(i);
+          const v = pos.getZ(i);
+          const z = Math.sin(u * 0.08 + waveTime) * Math.cos(v * 0.08 + waveTime) * (isBlizzard ? 2.5 : 0.8);
+          pos.setY(i, z);
+        }
+        pos.needsUpdate = true;
+      }
+
+      // 2. Buoy Buoyancy Pitch & Roll
+      const buoyY = Math.sin(waveTime) * (isBlizzard ? 1.5 : 0.4);
+      const buoyRoot = scene ? scene.getObjectByName('BUOY_ROOT') : null;
+      if (buoyRoot) {
+        buoyRoot.position.y = buoyY;
+        buoyRoot.rotation.z = Math.sin(waveTime * 0.8) * (isBlizzard ? 0.25 : 0.08);
+      }
+
+      // 3. Winch Pod Depth Interpolation
+      if (Math.abs(currentDepth - targetDepth) > 0.1) {
+        currentDepth += (targetDepth - currentDepth) * 0.04;
+        updateDepthHUD();
+      }
+
+      if (ctdPodGroup) {
+        ctdPodGroup.position.set(Math.sin(waveTime * 0.5) * 0.4, buoyY - currentDepth, Math.cos(waveTime * 0.5) * 0.4);
+      }
+
+      // Tether Update
+      if (tetherLine && ctdPodGroup) {
+        const tetherPos = tetherLine.geometry.attributes.position;
+        tetherPos.setXYZ(0, 0, buoyY - 2.2, 0);
+        tetherPos.setXYZ(1, ctdPodGroup.position.x, ctdPodGroup.position.y + 1.1, ctdPodGroup.position.z);
+        tetherPos.needsUpdate = true;
+      }
+
+      // 4. Seal Swim Circle
+      if (sealGroup) {
+        const sealTime = (time || 0) * 0.0008;
+        sealGroup.position.x = Math.cos(sealTime) * 22;
+        sealGroup.position.z = Math.sin(sealTime) * 22;
+        sealGroup.position.y = -10 + Math.sin(sealTime * 2) * 4;
+        sealGroup.rotation.y = -sealTime - Math.PI / 2;
+      }
+
+      // 5. Snowfall Animation
+      if (snowfallParticles) {
+        const snowPos = snowfallParticles.geometry.attributes.position;
+        for (let i = 1; i < snowPos.count * 3; i += 3) {
+          snowPos.array[i] -= isBlizzard ? 1.8 : 0.5;
+          if (snowPos.array[i] < -20) snowPos.array[i] = 80;
+        }
+        snowfallParticles.geometry.attributes.position.needsUpdate = true;
+      }
+
+      if (controls) controls.update();
+      if (renderer && scene && camera) renderer.render(scene, camera);
+    }
+
+    function onWindowResize() {
+      if (camera && renderer) {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+    }
+
+    /* -------------------------------------------------------------------------
+       GAMIFICATION, MISSION SYSTEM & WEB AUDIO SYNTHESIZER
+       ------------------------------------------------------------------------- */
+    let audioEnabled = true;
+    let audioCtx = null;
+    let currentXP = 0;
+    const unlockedAchievements = new Set();
+    const currentThemeIdx = 0;
+    const themes = ['', 'theme-neon', 'theme-emerald'];
+
+    const missionList = [
+      { id: 'chip-ach-1', title: 'Hardware Inspector', desc: 'Inspect ESP32 MCU inside the Buoy.', xp: 250 },
+      { id: 'chip-ach-2', title: 'Sub-Zero Survivor', desc: 'Engage 6-Month Polar Night Hibernation Test.', xp: 350 },
+      { id: 'chip-ach-3', title: 'Deep Sea Diver', desc: 'Deploy CTD winch probe to 150m+ deep seabed.', xp: 400 },
+      { id: 'chip-ach-4', title: 'Bio-Tag Tracker', desc: 'Click & inspect Weddell Seal Bio-Tag telemetry.', xp: 500 }
+    ];
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playSoundFX(type) {
+      if (!audioEnabled) return;
+      try {
+        initAudio();
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'click') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(800, now);
+          osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } else if (type === 'unlock') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.setValueAtTime(659.25, now + 0.1);
+          osc.frequency.setValueAtTime(783.99, now + 0.2);
+          osc.frequency.setValueAtTime(1046.50, now + 0.3);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+          osc.start(now);
+          osc.stop(now + 0.5);
+        } else if (type === 'xray') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.exponentialRampToValueAtTime(1200, now + 0.25);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        }
+      } catch (e) {
+        console.log('Audio FX error:', e);
+      }
+    }
+
+    function toggleAudioFX() {
+      audioEnabled = !audioEnabled;
+      const btn = document.getElementById('btn-audio');
+      if (btn) {
+        if (audioEnabled) {
+          btn.innerHTML = `<i class="fa-solid fa-volume-high" id="icon-audio"></i> Sound: ON`;
+          playSoundFX('click');
+        } else {
+          btn.innerHTML = `<i class="fa-solid fa-volume-xmark" id="icon-audio"></i> Sound: OFF`;
+        }
+      }
+    }
+
+    let themeIndex = 0;
+    function cycleHUDTheme() {
+      themeIndex = (themeIndex + 1) % themes.length;
+      document.body.className = themes[themeIndex];
+      playSoundFX('click');
+      addLog('UI_THEME', `HUD Theme switched to: ${themes[themeIndex] || 'CYBER_CYAN'}`);
+    }
+
+    function grantAchievement(achId) {
+      if (unlockedAchievements.has(achId)) return;
+      unlockedAchievements.add(achId);
+
+      const missionObj = missionList.find(m => m.id === achId);
+      if (!missionObj) return;
+
+      currentXP += missionObj.xp;
+      const xpValEl = document.getElementById('hud-xp-val');
+      if (xpValEl) xpValEl.innerText = currentXP + ' XP';
+
+      const chip = document.getElementById(achId);
+      if (chip) chip.classList.add('unlocked');
+
+      playSoundFX('unlock');
+      addLog('MISSION_ACHIEVED', `🏆 UNLOCKED: ${missionObj.title} (+${missionObj.xp} XP)!`);
+
+      const pct = Math.round((unlockedAchievements.size / missionList.length) * 100);
+      const campaignEl = document.getElementById('campaign-progress');
+      const statusEl = document.getElementById('hud-mission-status');
+      if (campaignEl) campaignEl.innerText = pct + '%';
+      if (statusEl) statusEl.innerText = `${unlockedAchievements.size}/${missionList.length} COMPLETED`;
+
+      const nextMission = missionList.find(m => !unlockedAchievements.has(m.id));
+      const descEl = document.getElementById('current-mission-desc');
+      if (descEl) {
+        if (nextMission) {
+          descEl.innerText = `Next Objective: ${nextMission.desc}`;
+        } else {
+          descEl.innerHTML = `<span style="color:var(--hud-green); font-weight:bold;">🎉 ALL POLAR EXPEDITION MISSIONS COMPLETED! MASTER RANK ACHIEVED.</span>`;
+        }
+      }
+    }
+
+    /* -------------------------------------------------------------------------
+       SIMULATION HUD LOGIC & CONTROLS
+       ------------------------------------------------------------------------- */
+    function triggerWinchTarget(depth) {
+      targetDepth = depth;
+      playSoundFX('click');
+      addLog('WINCH_MOTOR', `Actuating 12V worm-gear winch. Target depth: -${depth}m`);
+      if (depth >= 150) {
+        grantAchievement('chip-ach-3');
+      }
+    }
+
+    function updateDepthHUD() {
+      const depthValEl = document.getElementById('hud-depth-val');
+      if (depthValEl) depthValEl.innerText = currentDepth.toFixed(1) + ' M';
+      updateChart(currentDepth);
+    }
+
+    function toggleHibernation() {
+      isHibernation = !isHibernation;
+      playSoundFX('click');
+      const btn = document.getElementById('btn-hibernation');
+      const icon = document.getElementById('icon-hibernation-toggle');
+      const envState = document.getElementById('hud-env-state');
+      const heaterStat = document.getElementById('stat-heater');
+
+      if (isHibernation) {
+        if (btn) btn.classList.add('active');
+        if (icon) icon.className = 'fa-solid fa-toggle-on legend-opt-icon';
+        if (envState) {
+          envState.innerText = '6-MONTH POLAR NIGHT (HIBERNATION)';
+          envState.style.color = 'var(--hud-gold)';
+        }
+        if (heaterStat) {
+          heaterStat.innerText = 'ACTIVE (PTC Thermal Pulse @ -1.8°C)';
+          heaterStat.style.color = 'var(--hud-gold)';
+        }
+        addLog('POWER_RTOS', '6-Month Polar Night protocol triggered. 0W solar input. 7-day sampling duty cycle enabled.');
+        grantAchievement('chip-ach-2');
+      } else {
+        if (btn) btn.classList.remove('active');
+        if (icon) icon.className = 'fa-solid fa-toggle-off legend-opt-icon';
+        if (envState) {
+          envState.innerText = 'ANTARCTIC MARGIN (-1.8°C)';
+          envState.style.color = 'var(--hud-cyan)';
+        }
+        if (heaterStat) {
+          heaterStat.innerText = 'OFF (Seawater > -1.8°C)';
+          heaterStat.style.color = 'var(--hud-green)';
+        }
+        addLog('POWER_RTOS', 'Resumed Polar Summer MPPT solar charging.');
+      }
+    }
+
+    function toggleBlizzard() {
+      isBlizzard = !isBlizzard;
+      playSoundFX('click');
+      const btn = document.getElementById('btn-blizzard');
+      const icon = document.getElementById('icon-blizzard-toggle');
+      if (isBlizzard) {
+        if (btn) btn.classList.add('active');
+        if (icon) icon.className = 'fa-solid fa-toggle-on legend-opt-icon';
+        addLog('SAFETY_SYS', 'CRISIS STRESS TEST: Blizzard 65 Kts. Waves 4.5m. Vibration-proof 32MB Flash logging active.');
+      } else {
+        if (btn) btn.classList.remove('active');
+        if (icon) icon.className = 'fa-solid fa-toggle-off legend-opt-icon';
+        addLog('SAFETY_SYS', 'Blizzard subsided.');
+      }
+    }
+
+    let currentRegion = 'polar';
+    function switchDeploymentRegion(region) {
+      currentRegion = region;
+      playSoundFX('click');
+
+      const btnPolar = document.getElementById('btn-region-polar');
+      const btnSouthern = document.getElementById('btn-region-southern');
+      const badgeEl = document.getElementById('region-badge-name');
+      const titleEl = document.getElementById('disaster-title-text');
+      const descEl = document.getElementById('disaster-desc-text');
+
+      if (region === 'polar') {
+        if (btnPolar) btnPolar.classList.add('active');
+        if (btnSouthern) btnSouthern.classList.remove('active');
+
+        if (scene) {
+          scene.background = new THREE.Color(0x020712);
+          scene.fog = new THREE.FogExp2(0x020712, 0.008);
+        }
+        if (oceanMesh) {
+          oceanMesh.material.color.setHex(0x0055aa);
+        }
+        if (snowfallParticles) {
+          snowfallParticles.visible = true;
+        }
+
+        if (badgeEl) badgeEl.innerHTML = `<i class="fa-solid fa-snowflake"></i> POLAR MARGIN (-1.8°C)`;
+        if (titleEl) titleEl.innerText = `Prevented: Lithium Battery Plating & Freeze-Out`;
+        if (descEl) descEl.innerText = `Automatic 12V Kapton PTC Heater Pad triggers thermal pulses @ -1.8°C seawater to prevent permanent battery degradation & dendrite short circuits during 6-month polar night.`;
+
+        addLog('REGION', 'Deployment Region set to POLAR MARGIN (-1.8°C Antarctic Icy Shelf).');
+
+      } else if (region === 'southern') {
+        if (btnSouthern) btnSouthern.classList.add('active');
+        if (btnPolar) btnPolar.classList.remove('active');
+
+        if (scene) {
+          scene.background = new THREE.Color(0x041829);
+          scene.fog = new THREE.FogExp2(0x041829, 0.012);
+        }
+        if (oceanMesh) {
+          oceanMesh.material.color.setHex(0x033e66);
+        }
+        if (snowfallParticles) {
+          snowfallParticles.visible = false;
+        }
+
+        if (badgeEl) badgeEl.innerHTML = `<i class="fa-solid fa-water"></i> SOUTHERN OCEAN (Sea State 7)`;
+        if (titleEl) titleEl.innerText = `Prevented: Sea State 7 Capsizing & Electrode Bio-Drift`;
+        if (descEl) descEl.innerText = `16.1kg MS Ballast Counterweight provides 100% self-righting stability in 65-knot storm swells. Electrode-less Toroidal Salinity cell prevents salt crust sensor drift.`;
+
+        addLog('REGION', 'Deployment Region set to SOUTHERN OCEAN (Roaring Forties / Sea State 7 Swells).');
+      }
+    }
+
+    function addLog(sys, msg) {
+      const logBox = document.getElementById('terminal-log');
+      if (!logBox) return;
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0] + '.' + Math.floor(now.getMilliseconds() / 10);
+      logBox.innerHTML += `<div><span style="color:#64748b;">[${timeStr}]</span> <span style="color:var(--hud-cyan); font-weight:700;">${sys}:</span> ${msg}</div>`;
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    /* -------------------------------------------------------------------------
+       TAB CONTROLLER & PUBG-STYLE LEGEND HUD TOGGLE
+       ------------------------------------------------------------------------- */
+    let currentMainTab = 'simulation';
+    let isLegendVisible = false;
+
+    function switchMainTab(tab) {
+      currentMainTab = tab;
+      playSoundFX('click');
+
+      // Update Tab Buttons
+      document.getElementById('tab-btn-sim').classList.toggle('active', tab === 'simulation');
+      document.getElementById('tab-btn-info').classList.toggle('active', tab === 'information');
+      document.getElementById('tab-btn-credits').classList.toggle('active', tab === 'credits');
+
+      // Modals & UI Elements
+      const infoModal = document.getElementById('modal-information');
+      const creditsModal = document.getElementById('modal-credits');
+      const legendBtn = document.getElementById('btn-legend-eye');
+      const legendDropdown = document.getElementById('legend-dropdown');
+      const camBar = document.getElementById('floating-cam-bar');
+      const bottomBar = document.getElementById('sim-bottom-bar');
+      const inspector = document.getElementById('floating-inspector');
+
+      if (tab === 'simulation') {
+        infoModal.classList.remove('active');
+        creditsModal.classList.remove('active');
+        if (legendBtn) legendBtn.style.display = 'flex';
+        if (camBar) camBar.style.display = 'flex';
+        if (bottomBar) bottomBar.style.display = 'grid';
+        if (legendDropdown) legendDropdown.classList.toggle('visible', isLegendVisible);
+      } else if (tab === 'information') {
+        infoModal.classList.add('active');
+        creditsModal.classList.remove('active');
+        if (legendBtn) legendBtn.style.display = 'none';
+        if (camBar) camBar.style.display = 'none';
+        if (bottomBar) bottomBar.style.display = 'none';
+        if (inspector) inspector.classList.remove('visible');
+        if (legendDropdown) legendDropdown.classList.remove('visible');
+      } else if (tab === 'credits') {
+        creditsModal.classList.add('active');
+        infoModal.classList.remove('active');
+        if (legendBtn) legendBtn.style.display = 'none';
+        if (camBar) camBar.style.display = 'none';
+        if (bottomBar) bottomBar.style.display = 'none';
+        if (inspector) inspector.classList.remove('visible');
+        if (legendDropdown) legendDropdown.classList.remove('visible');
+      }
+    }
+
+    function toggleSimLegendHUD() {
+      isLegendVisible = !isLegendVisible;
+      playSoundFX('click');
+      const legendDropdown = document.getElementById('legend-dropdown');
+      const eyeBtn = document.getElementById('btn-legend-eye');
+      const eyeIcon = document.getElementById('icon-legend-eye');
+
+      if (isLegendVisible) {
+        if (legendDropdown) legendDropdown.classList.add('visible');
+        if (eyeBtn) eyeBtn.classList.add('active');
+        if (eyeIcon) eyeIcon.className = 'fa-solid fa-eye-slash';
+        addLog('HUD', 'Simulation Legend & Controls Deck opened.');
+      } else {
+        if (legendDropdown) legendDropdown.classList.remove('visible');
+        if (eyeBtn) eyeBtn.classList.remove('active');
+        if (eyeIcon) eyeIcon.className = 'fa-solid fa-eye';
+        addLog('HUD', 'Simulation Legend & Controls Deck docked.');
+      }
+    }
+    let ctdChart;
+    function initChart() {
+      const ctx = document.getElementById('liveCtdChart').getContext('2d');
+      ctdChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['0m', '25m', '50m', '100m', '150m', '200m'],
+          datasets: [
+            { label: 'Temp (°C)', data: [-1.5, -1.8, -2.1, -2.4, -2.7, -2.9], borderColor: '#00ff88', borderWidth: 2, tension: 0.4 },
+            { label: 'Salinity (PSU)', data: [34.1, 34.4, 34.7, 35.0, 35.2, 35.4], borderColor: '#00f0ff', borderWidth: 2, tension: 0.4 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#8fa0c0', font: { family: 'Rajdhani', size: 10 } } } },
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#00f0ff' } }
+          }
+        }
+      });
+    }
+
+    function updateChart(depth) {
+      if (!ctdChart) return;
+      const idx = Math.min(5, Math.floor(depth / 40));
+      ctdChart.data.datasets[0].data[idx] = (-1.8 - depth * 0.005).toFixed(2);
+      ctdChart.update('none');
+    }
+
+    window.addEventListener('load', () => {
+      init3D();
+      initChart();
+      addLog('BOOT', 'Project Dhruva Setu AAA Marvel-Grade Gamified Simulator loaded.');
+      addLog('MISSION', 'Campaign Active! Complete objectives to earn XP and unlock Expedition Badges.');
+    });
+  </script>
+</body>
+</html>
