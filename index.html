@@ -92,6 +92,129 @@
       transition: all 0.4s ease;
     }
 
+    
+    /* =====================================================
+       NEW INDUSTRIAL MODE SELECTORS & LIVE 1Hz TELEMETRY HUD
+       ===================================================== */
+    .mode-selectors-bar {
+      position: fixed;
+      top: 66px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      background: rgba(4, 14, 32, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-mid);
+      border-radius: 8px;
+      padding: 6px 12px;
+      z-index: 1000;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 229, 255, 0.2);
+    }
+
+    .mode-sel-btn {
+      background: rgba(8, 24, 48, 0.7);
+      border: 1px solid rgba(0, 229, 255, 0.25);
+      color: #94a3b8;
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 7px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.25s ease;
+      white-space: nowrap;
+    }
+
+    .mode-sel-btn:hover {
+      background: rgba(0, 229, 255, 0.15);
+      color: #ffffff;
+      border-color: var(--hud-cyan);
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+    }
+
+    .mode-sel-btn.active {
+      background: linear-gradient(135deg, rgba(0, 229, 255, 0.3), rgba(41, 121, 255, 0.35));
+      border-color: var(--hud-cyan);
+      color: #ffffff;
+      box-shadow: 0 0 16px var(--glow-cyan), inset 0 0 8px rgba(0, 229, 255, 0.3);
+    }
+
+    .mode-sel-btn.active i {
+      color: var(--hud-cyan);
+      filter: drop-shadow(0 0 6px var(--hud-cyan));
+    }
+
+    /* 1Hz Live Telemetry Stream Strip */
+    .telemetry-stream-bar {
+      position: fixed;
+      top: 116px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(2, 8, 22, 0.88);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      border-radius: 6px;
+      padding: 5px 18px;
+      z-index: 999;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    }
+
+    .telem-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .telem-label {
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .telem-val {
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      transition: color 0.3s ease;
+    }
+
+    .telem-sep {
+      width: 1px;
+      height: 14px;
+      background: rgba(0, 229, 255, 0.2);
+    }
+
+    .badge-nominal {
+      background: rgba(0, 230, 118, 0.15);
+      border: 1px solid rgba(0, 230, 118, 0.4);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+    }
+
+    @media (max-width: 1200px) {
+      .mode-selectors-bar {
+        top: 60px;
+        transform: translateX(-50%) scale(0.9);
+      }
+      .telemetry-stream-bar {
+        top: 105px;
+        transform: translateX(-50%) scale(0.85);
+        gap: 8px;
+        padding: 4px 10px;
+      }
+    }
+
     /* =====================================================
        AURORA BOREALIS ANIMATED BACKGROUND LAYER
        ===================================================== */
@@ -127,110 +250,224 @@
         radial-gradient(1px 1px at 66% 3%,  rgba(200,200,255,0.9) 0%, transparent 100%);
     }
 
-    /* Aurora wave 1 — violet to cyan */
+    /* Aurora wave 1 — polar ice blue to white-cyan (stronger!) */
     .aurora-1 {
       position: absolute;
-      top: -20%;
-      left: -10%;
-      width: 120%;
-      height: 65%;
-      background: radial-gradient(ellipse 100% 60% at 50% 0%,
-        rgba(124, 77, 255, 0.22) 0%,
-        rgba(0, 229, 255, 0.14) 45%,
-        transparent 75%);
-      filter: blur(40px);
+      top: -25%;
+      left: -15%;
+      width: 130%;
+      height: 70%;
+      background: radial-gradient(ellipse 110% 65% at 50% 0%,
+        rgba(72, 200, 255, 0.35) 0%,
+        rgba(0, 229, 255, 0.20) 40%,
+        rgba(100, 255, 200, 0.08) 65%,
+        transparent 80%);
+      filter: blur(35px);
       animation: aurora-drift-1 18s ease-in-out infinite alternate;
       transform-origin: center top;
     }
 
-    /* Aurora wave 2 — teal to green */
+    /* Aurora wave 2 — sea-green / teal (wider, lower) */
     .aurora-2 {
       position: absolute;
-      top: -15%;
-      left: -20%;
-      width: 130%;
-      height: 50%;
-      background: radial-gradient(ellipse 80% 55% at 35% 0%,
-        rgba(0, 229, 255, 0.16) 0%,
-        rgba(0, 230, 118, 0.10) 50%,
-        transparent 80%);
-      filter: blur(55px);
+      top: -18%;
+      left: -25%;
+      width: 140%;
+      height: 55%;
+      background: radial-gradient(ellipse 90% 60% at 35% 0%,
+        rgba(0, 255, 180, 0.18) 0%,
+        rgba(0, 229, 255, 0.12) 45%,
+        transparent 75%);
+      filter: blur(50px);
       animation: aurora-drift-2 24s ease-in-out infinite alternate-reverse;
       transform-origin: 35% top;
     }
 
-    /* Aurora wave 3 — deep indigo accent */
+    /* Aurora wave 3 — violet-blue accent */
     .aurora-3 {
       position: absolute;
-      top: -10%;
-      right: -15%;
-      width: 80%;
-      height: 55%;
-      background: radial-gradient(ellipse 70% 50% at 65% 0%,
-        rgba(41, 121, 255, 0.18) 0%,
-        rgba(124, 77, 255, 0.12) 55%,
+      top: -12%;
+      right: -20%;
+      width: 90%;
+      height: 60%;
+      background: radial-gradient(ellipse 75% 55% at 65% 0%,
+        rgba(41, 160, 255, 0.22) 0%,
+        rgba(100, 180, 255, 0.12) 50%,
         transparent 80%);
-      filter: blur(50px);
+      filter: blur(45px);
       animation: aurora-drift-3 20s ease-in-out infinite alternate;
       transform-origin: 65% top;
     }
 
-    /* Horizon glow line (polar horizon) */
-    .aurora-horizon {
+    /* Bright polar ice shimmer band at top */
+    .aurora-ice-band {
       position: absolute;
-      bottom: 28%;
+      top: 0;
       left: 0;
       right: 0;
-      height: 1px;
-      background: linear-gradient(90deg,
-        transparent 0%,
-        rgba(0, 229, 255, 0.12) 20%,
-        rgba(0, 229, 255, 0.35) 50%,
-        rgba(0, 229, 255, 0.12) 80%,
+      height: 180px;
+      background: linear-gradient(180deg,
+        rgba(150, 240, 255, 0.06) 0%,
+        rgba(0, 229, 255, 0.03) 60%,
         transparent 100%);
-      filter: blur(2px);
-      box-shadow: 0 0 30px rgba(0, 229, 255, 0.2);
+      pointer-events: none;
     }
 
-    /* Subtle vignette */
-    .aurora-vignette {
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse 90% 80% at 50% 50%,
-        transparent 50%,
-        rgba(2, 5, 16, 0.55) 100%);
+    /* =====================================================
+       BLIZZARD ACTIVE MODE — full body class
+       ===================================================== */
+    body.blizzard-active #aurora-bg {
+      /* Heavy storm cloud / whiteout overlay */
     }
 
-    /* Animated scan-line overlay */
-    .aurora-scanlines {
+    /* Wind streak layer — horizontal lines of snow-blur */
+    #blizzard-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+    body.blizzard-active #blizzard-layer { opacity: 1; }
+
+    #blizzard-layer::before {
+      content: '';
       position: absolute;
       inset: 0;
+      background:
+        repeating-linear-gradient(
+          -75deg,
+          transparent 0px,
+          transparent 14px,
+          rgba(200, 230, 255, 0.025) 14px,
+          rgba(200, 230, 255, 0.025) 15px
+        ),
+        repeating-linear-gradient(
+          -80deg,
+          transparent 0px,
+          transparent 28px,
+          rgba(180, 220, 255, 0.018) 28px,
+          rgba(180, 220, 255, 0.018) 29px
+        );
+      animation: wind-streak 1.2s linear infinite;
+    }
+
+    #blizzard-layer::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 100% 100% at 50% 50%,
+        transparent 30%,
+        rgba(150, 200, 255, 0.08) 70%,
+        rgba(200, 230, 255, 0.18) 100%);
+      animation: blizzard-pulse 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes wind-streak {
+      0%   { transform: translateX(-3%) skewX(-5deg); }
+      100% { transform: translateX(3%) skewX(-5deg); }
+    }
+    @keyframes blizzard-pulse {
+      0%   { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+
+    /* Blizzard INTENSIFIES the aurora (faster, more chaotic) */
+    body.blizzard-active .aurora-1 {
+      animation-duration: 5s;
+      filter: blur(20px);
+      opacity: 0.5;
+    }
+    body.blizzard-active .aurora-2 {
+      animation-duration: 6s;
+      background: radial-gradient(ellipse 90% 60% at 35% 0%,
+        rgba(200, 240, 255, 0.25) 0%,
+        rgba(150, 220, 255, 0.15) 45%,
+        transparent 75%);
+    }
+    body.blizzard-active .aurora-3 {
+      animation-duration: 4s;
+    }
+
+    /* =====================================================
+       POLAR NIGHT MODE
+       ===================================================== */
+    #polar-night-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1.5s ease;
+      background:
+        /* Deep polar night gradient */
+        radial-gradient(ellipse 100% 60% at 50% 0%,
+          rgba(0, 10, 40, 0.7) 0%,
+          rgba(0, 5, 20, 0.9) 60%,
+          rgba(0, 0, 8, 0.95) 100%),
+        /* Cold moonlight shimmer */
+        linear-gradient(180deg,
+          rgba(60, 120, 200, 0.08) 0%,
+          transparent 40%);
+    }
+    body.polar-night #polar-night-layer { opacity: 1; }
+
+    /* In polar night: auroras become denser and more electric */
+    body.polar-night .aurora-1 {
+      background: radial-gradient(ellipse 110% 65% at 50% 0%,
+        rgba(50, 255, 180, 0.40) 0%,
+        rgba(0, 229, 255, 0.28) 40%,
+        rgba(100, 100, 255, 0.12) 70%,
+        transparent 85%);
+      animation-duration: 12s;
+    }
+    body.polar-night .aurora-2 {
+      background: radial-gradient(ellipse 90% 60% at 35% 0%,
+        rgba(180, 255, 220, 0.30) 0%,
+        rgba(0, 200, 150, 0.18) 45%,
+        transparent 75%);
+      animation-duration: 16s;
+    }
+    body.polar-night #aurora-bg::before {
+      /* More stars visible at night */
+      opacity: 2;
+      filter: brightness(1.8);
+    }
+    body.polar-night .aurora-scanlines {
+      opacity: 1;
       background: repeating-linear-gradient(
         0deg,
         transparent,
         transparent 3px,
-        rgba(0, 229, 255, 0.012) 3px,
-        rgba(0, 229, 255, 0.012) 4px
+        rgba(0, 200, 180, 0.02) 3px,
+        rgba(0, 200, 180, 0.02) 4px
       );
-      pointer-events: none;
-      opacity: 0.6;
+    }
+
+    /* Polar + Blizzard combined: total whiteout at edges */
+    body.polar-night.blizzard-active #blizzard-layer::after {
+      background: radial-gradient(ellipse 100% 100% at 50% 50%,
+        transparent 20%,
+        rgba(150, 200, 255, 0.15) 60%,
+        rgba(220, 240, 255, 0.35) 100%);
     }
 
     @keyframes aurora-drift-1 {
-      0%   { transform: translateX(0%) scaleY(1) rotate(-1deg); opacity: 0.8; }
-      33%  { transform: translateX(4%) scaleY(1.1) rotate(0.5deg); opacity: 1; }
-      66%  { transform: translateX(-3%) scaleY(0.95) rotate(1deg); opacity: 0.85; }
-      100% { transform: translateX(5%) scaleY(1.15) rotate(-0.5deg); opacity: 0.9; }
+      0%   { transform: translateX(0%) scaleY(1) rotate(-1deg); opacity: 0.85; }
+      33%  { transform: translateX(5%) scaleY(1.12) rotate(0.5deg); opacity: 1; }
+      66%  { transform: translateX(-4%) scaleY(0.92) rotate(1.2deg); opacity: 0.88; }
+      100% { transform: translateX(6%) scaleY(1.18) rotate(-0.5deg); opacity: 0.95; }
     }
     @keyframes aurora-drift-2 {
-      0%   { transform: translateX(0%) scaleX(1) scaleY(1); opacity: 0.7; }
-      50%  { transform: translateX(-6%) scaleX(1.08) scaleY(1.2); opacity: 1; }
-      100% { transform: translateX(4%) scaleX(0.95) scaleY(0.9); opacity: 0.75; }
+      0%   { transform: translateX(0%) scaleX(1) scaleY(1); opacity: 0.75; }
+      50%  { transform: translateX(-7%) scaleX(1.10) scaleY(1.22); opacity: 1; }
+      100% { transform: translateX(5%) scaleX(0.93) scaleY(0.88); opacity: 0.78; }
     }
     @keyframes aurora-drift-3 {
-      0%   { transform: translateX(0%) rotate(0deg); opacity: 0.6; }
-      50%  { transform: translateX(5%) rotate(-1.5deg); opacity: 0.9; }
-      100% { transform: translateX(-3%) rotate(1deg); opacity: 0.7; }
+      0%   { transform: translateX(0%) rotate(0deg); opacity: 0.65; }
+      50%  { transform: translateX(6%) rotate(-1.8deg); opacity: 0.95; }
+      100% { transform: translateX(-4%) rotate(1.2deg); opacity: 0.72; }
     }
 
     /* =====================================================
@@ -1065,803 +1302,6 @@
       .status-dot { animation: none; }
     }
   </style>
-
-    body.theme-neon {
-      --hud-cyan: #ff007f;
-      --hud-blue: #7928ca;
-      --hud-gold: #00f0ff;
-      --hud-border: rgba(255, 0, 127, 0.35);
-      --hud-glow: rgba(255, 0, 127, 0.6);
-    }
-
-    body.theme-emerald {
-      --hud-cyan: #00ff88;
-      --hud-blue: #059669;
-      --hud-gold: #f59e0b;
-      --hud-border: rgba(0, 255, 136, 0.35);
-      --hud-glow: rgba(0, 255, 136, 0.6);
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      user-select: none;
-    }
-
-    body {
-      background-color: var(--bg-dark);
-      color: #fff;
-      font-family: var(--font-body);
-      height: 100vh;
-      overflow: hidden;
-      transition: all 0.4s ease;
-    }
-
-    /* Fullscreen 3D Viewport */
-    #sim-canvas-container {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 1;
-    }
-
-    #three-canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    /* Marvel / Sci-Fi HUD Overlay System */
-    .hud-layer {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 10;
-      pointer-events: none;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 16px;
-      overflow: hidden;
-    }
-
-    .interactive-element {
-      pointer-events: auto;
-    }
-
-    /* Minimal Top Navigation Header */
-    header.hud-header {
-      background: rgba(6, 15, 30, 0.88);
-      border: 1px solid var(--hud-border);
-      border-radius: 14px;
-      backdrop-filter: blur(20px);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 24px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-      width: 100%;
-    }
-
-    .brand-title {
-      font-family: var(--font-display);
-      font-size: 20px;
-      font-weight: 900;
-      letter-spacing: 2px;
-      background: linear-gradient(90deg, #fff, var(--hud-cyan));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .brand-title::before {
-      content: '';
-      width: 8px;
-      height: 20px;
-      background: var(--hud-cyan);
-      box-shadow: 0 0 12px var(--hud-cyan);
-      border-radius: 2px;
-    }
-
-    /* 3 Clean Main Tabs */
-    .top-nav-tabs {
-      display: flex;
-      gap: 12px;
-    }
-
-    .nav-tab-btn {
-      background: rgba(0, 240, 255, 0.05);
-      border: 1px solid rgba(0, 240, 255, 0.2);
-      color: #cbd5e1;
-      padding: 8px 22px;
-      border-radius: 8px;
-      font-family: var(--font-display);
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .nav-tab-btn:hover {
-      background: rgba(0, 240, 255, 0.15);
-      color: #fff;
-      border-color: var(--hud-cyan);
-      box-shadow: 0 0 15px var(--hud-glow);
-    }
-
-    .nav-tab-btn.active {
-      background: linear-gradient(90deg, rgba(0,240,255,0.35), rgba(0,119,255,0.35));
-      border-color: var(--hud-cyan);
-      color: #fff;
-      box-shadow: 0 0 20px var(--hud-cyan);
-    }
-
-    /* PUBG-style Eye Legend Floating Trigger */
-    .legend-eye-btn {
-      position: absolute;
-      top: 90px;
-      right: 24px;
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: rgba(6, 15, 30, 0.88);
-      border: 1px solid var(--hud-cyan);
-      box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
-      backdrop-filter: blur(12px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      color: var(--hud-cyan);
-      font-size: 18px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      z-index: 100;
-    }
-
-    .legend-eye-btn:hover {
-      background: var(--hud-cyan);
-      color: #040812;
-      box-shadow: 0 0 25px var(--hud-cyan);
-      transform: scale(1.08);
-    }
-
-    .legend-eye-btn.active {
-      background: var(--hud-cyan);
-      color: #040812;
-      box-shadow: 0 0 30px var(--hud-cyan);
-    }
-
-    /* Tooltip on hover */
-    .legend-tooltip {
-      position: absolute;
-      right: 58px;
-      background: rgba(6, 15, 30, 0.95);
-      border: 1px solid var(--hud-cyan);
-      color: #fff;
-      font-family: var(--font-display);
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      padding: 6px 14px;
-      border-radius: 6px;
-      white-space: nowrap;
-      pointer-events: none;
-      opacity: 0;
-      transform: translateX(8px);
-      transition: all 0.25s ease;
-      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
-    }
-
-    .legend-eye-btn:hover .legend-tooltip {
-      opacity: 1;
-      transform: translateX(0);
-    }
-
-    /* ===== COMPACT RIGHT-SIDE LEGEND DROPDOWN (PUBG-style) ===== */
-    .legend-dropdown {
-      position: absolute;
-      top: 148px;
-      right: 24px;
-      width: 280px;
-      background: rgba(4, 10, 22, 0.94);
-      border: 1px solid var(--hud-border);
-      border-radius: 14px;
-      backdrop-filter: blur(24px);
-      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 30px rgba(0, 240, 255, 0.1);
-      padding: 14px;
-      z-index: 99;
-      pointer-events: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      opacity: 0;
-      transform: translateY(-12px) scale(0.96);
-      visibility: hidden;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .legend-dropdown.visible {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-      visibility: visible;
-    }
-
-    .legend-dropdown .legend-section-label {
-      font-family: var(--font-display);
-      font-size: 10px;
-      font-weight: 700;
-      color: var(--hud-cyan);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      padding: 4px 0 2px 4px;
-      border-bottom: 1px solid rgba(0, 240, 255, 0.12);
-      margin-top: 4px;
-    }
-
-    .legend-dropdown .legend-section-label:first-child {
-      margin-top: 0;
-    }
-
-    .legend-option-btn {
-      background: rgba(0, 240, 255, 0.04);
-      border: 1px solid rgba(0, 240, 255, 0.12);
-      color: #cbd5e1;
-      padding: 10px 14px;
-      border-radius: 8px;
-      font-family: var(--font-body);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .legend-option-btn:hover {
-      background: rgba(0, 240, 255, 0.14);
-      color: #fff;
-      border-color: var(--hud-cyan);
-      box-shadow: 0 0 14px rgba(0, 240, 255, 0.2);
-      transform: translateX(-3px);
-    }
-
-    .legend-option-btn.active {
-      background: linear-gradient(90deg, rgba(0,240,255,0.3), rgba(0,119,255,0.3));
-      border-color: var(--hud-cyan);
-      color: #fff;
-      box-shadow: 0 0 18px rgba(0, 240, 255, 0.25);
-    }
-
-    .legend-option-btn i {
-      font-size: 14px;
-      color: var(--hud-cyan);
-      width: 20px;
-      text-align: center;
-    }
-
-    .legend-option-btn .legend-opt-label {
-      flex: 1;
-      text-align: left;
-    }
-
-    .legend-option-btn .legend-opt-icon {
-      font-size: 13px;
-      opacity: 0.6;
-    }
-
-    /* Winch sub-buttons (compact row) */
-    .winch-sub-row {
-      display: flex;
-      gap: 6px;
-    }
-
-    .winch-sub-btn {
-      flex: 1;
-      background: rgba(0, 240, 255, 0.04);
-      border: 1px solid rgba(0, 240, 255, 0.1);
-      color: #94a3b8;
-      padding: 7px 4px;
-      border-radius: 6px;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 700;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.2s;
-    }
-
-    .winch-sub-btn:hover {
-      background: rgba(0, 240, 255, 0.15);
-      color: #fff;
-      border-color: var(--hud-cyan);
-    }
-
-    /* ===== ALWAYS-VISIBLE BOTTOM TELEMETRY ===== */
-    .sim-bottom-bar {
-      position: absolute;
-      bottom: 16px;
-      left: 16px;
-      right: 16px;
-      pointer-events: auto;
-      background: var(--hud-glass);
-      border: 1px solid var(--hud-border);
-      border-radius: 12px;
-      backdrop-filter: blur(20px);
-      display: grid;
-      grid-template-columns: 1.2fr 1fr 1.5fr;
-      gap: 16px;
-      padding: 14px 20px;
-      z-index: 15;
-      opacity: 0;
-      transform: translateY(20px);
-      transition: all 0.4s ease;
-    }
-
-    .sim-bottom-bar.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    /* ===== FLOATING CAMERA BAR (center bottom) ===== */
-    .floating-cam-bar {
-      position: absolute;
-      bottom: 260px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(6, 15, 30, 0.85);
-      border: 1px solid var(--hud-border);
-      border-radius: 30px;
-      padding: 8px 16px;
-      backdrop-filter: blur(12px);
-      display: flex;
-      gap: 12px;
-      box-shadow: 0 0 30px rgba(0,0,0,0.8);
-      z-index: 20;
-      pointer-events: auto;
-      opacity: 0;
-      transition: opacity 0.4s ease;
-    }
-
-    .floating-cam-bar.visible {
-      opacity: 1;
-    }
-
-    /* ===== FLOATING RIGHT INSPECTOR (appears on 3D click) ===== */
-    .floating-inspector {
-      position: absolute;
-      top: 148px;
-      right: 320px;
-      width: 340px;
-      background: var(--hud-glass);
-      border: 1px solid var(--hud-border);
-      border-radius: 12px;
-      backdrop-filter: blur(20px);
-      padding: 16px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-      z-index: 18;
-      pointer-events: auto;
-      display: none;
-      flex-direction: column;
-      gap: 12px;
-      animation: inspectorSlideIn 0.3s ease forwards;
-    }
-
-    .floating-inspector.visible {
-      display: flex;
-    }
-
-    @keyframes inspectorSlideIn {
-      from { opacity: 0; transform: translateX(20px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-
-    /* Info & Credits Fullscreen Modal Views */
-    .view-modal {
-      position: absolute;
-      top: 86px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: calc(100vw - 48px);
-      max-width: 1200px;
-      height: calc(100vh - 110px);
-      background: rgba(4, 10, 22, 0.94);
-      border: 1px solid var(--hud-border);
-      border-radius: 16px;
-      backdrop-filter: blur(28px);
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 240, 255, 0.15);
-      z-index: 90;
-      padding: 32px;
-      overflow-y: auto;
-      display: none;
-      flex-direction: column;
-      gap: 24px;
-    }
-
-    .view-modal.active {
-      display: flex;
-      animation: modalFadeIn 0.3s ease forwards;
-    }
-
-    @keyframes modalFadeIn {
-      from { opacity: 0; transform: translate(-50%, 15px); }
-      to { opacity: 1; transform: translate(-50%, 0); }
-    }
-
-    .sih-badge-tag {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      background: rgba(249, 115, 22, 0.2);
-      color: #ff9d00;
-      border: 1px solid #ff9d00;
-      padding: 4px 10px;
-      border-radius: 4px;
-      letter-spacing: 1px;
-    }
-
-    /* Top Quick Stats */
-    .top-telemetry-strip {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-    }
-
-    .stat-box {
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid var(--hud-border);
-      padding: 6px 14px;
-      border-radius: 6px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .stat-label {
-      font-size: 10px;
-      color: #8fa0c0;
-      font-family: var(--font-mono);
-      text-transform: uppercase;
-    }
-
-    .stat-val {
-      font-family: var(--font-mono);
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--hud-cyan);
-    }
-
-    .panel-section-title {
-      font-family: var(--font-display);
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--hud-cyan);
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      border-bottom: 1px solid var(--hud-border);
-      padding-bottom: 8px;
-    }
-
-    .btn-sci-fi {
-      background: rgba(0, 240, 255, 0.05);
-      border: 1px solid var(--hud-border);
-      color: #fff;
-      padding: 12px 16px;
-      border-radius: 8px;
-      font-family: var(--font-body);
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .btn-sci-fi:hover {
-      background: rgba(0, 240, 255, 0.2);
-      border-color: var(--hud-cyan);
-      box-shadow: 0 0 20px var(--hud-glow);
-      transform: translateX(4px);
-    }
-
-    .btn-sci-fi.active {
-      background: linear-gradient(90deg, rgba(0,240,255,0.4), rgba(0,119,255,0.4));
-      border-color: var(--hud-cyan);
-      box-shadow: 0 0 25px var(--hud-cyan);
-    }
-
-    .btn-sci-fi i {
-      font-size: 16px;
-      color: var(--hud-cyan);
-    }
-
-    .cam-chip {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: #c0d0e0;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.25s;
-    }
-
-    .cam-chip:hover, .cam-chip.active {
-      background: var(--hud-cyan);
-      color: #000;
-      box-shadow: 0 0 15px var(--hud-cyan);
-    }
-
-    /* Component Detailed Card */
-    .component-inspect-card {
-      background: rgba(0, 240, 255, 0.05);
-      border: 1px solid var(--hud-cyan);
-      border-radius: 8px;
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      animation: glowPulse 2s infinite alternate;
-    }
-
-    @keyframes glowPulse {
-      from { box-shadow: 0 0 10px rgba(0, 240, 255, 0.2); }
-      to { box-shadow: 0 0 25px rgba(0, 240, 255, 0.5); }
-    }
-
-    .comp-name {
-      font-family: var(--font-display);
-      font-size: 16px;
-      font-weight: 800;
-      color: var(--hud-cyan);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .comp-spec-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      font-size: 12px;
-      font-family: var(--font-mono);
-    }
-
-    .spec-item {
-      background: rgba(0, 0, 0, 0.5);
-      padding: 6px 8px;
-      border-radius: 4px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .spec-item-val {
-      color: var(--hud-green);
-      font-weight: 700;
-    }
-
-    /* Bottom Telemetry HUD Bar - now uses .sim-bottom-bar class */
-
-    /* Chart Container */
-    .chart-box {
-      width: 100%;
-      height: 140px;
-      position: relative;
-    }
-
-    /* Console Terminal */
-    .terminal-console {
-      background: rgba(2, 6, 14, 0.95);
-      border: 1px solid var(--hud-border);
-      border-radius: 6px;
-      padding: 10px;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--hud-green);
-      height: 140px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    /* 3D Click Tooltip Anchor */
-    /* GTA / CYBERPUNK REAL-TIME 3D HOVER HUD TOOLTIP */
-    .gta-hud-tooltip {
-      position: fixed;
-      display: none;
-      pointer-events: none;
-      z-index: 10000;
-      background: rgba(4, 13, 26, 0.94);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--hud-cyan);
-      box-shadow: 0 0 20px rgba(0, 240, 255, 0.35), inset 0 0 10px rgba(0, 240, 255, 0.15);
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: #fff;
-      font-family: var(--font-body);
-      min-width: 210px;
-      max-width: 290px;
-      transform: translate(15px, -50%);
-      transition: opacity 0.15s ease;
-    }
-
-    .gta-hud-tag {
-      display: inline-block;
-      font-family: var(--font-mono);
-      font-size: 9px;
-      font-weight: 700;
-      color: var(--hud-gold);
-      background: rgba(245, 158, 11, 0.15);
-      border: 1px solid var(--hud-gold);
-      padding: 2px 6px;
-      border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 4px;
-    }
-
-    .gta-hud-title {
-      font-family: var(--font-display);
-      font-size: 15px;
-      font-weight: 800;
-      color: var(--hud-cyan);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      letter-spacing: 0.5px;
-    }
-
-    .gta-hud-cost {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--hud-green);
-      font-weight: 700;
-      margin-top: 4px;
-    }
-
-    .gta-hud-subtext {
-      font-size: 11px;
-      color: #94a3b8;
-      margin-top: 2px;
-      line-height: 1.3;
-    }
-
-    /* REGION SWITCHER & DISASTER HUD CARD */
-    .region-switch-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-      margin-top: 6px;
-      margin-bottom: 10px;
-    }
-
-    .region-opt-btn {
-      background: rgba(15, 23, 42, 0.8);
-      border: 1px solid var(--hud-border);
-      color: #94a3b8;
-      padding: 7px;
-      border-radius: 6px;
-      font-family: var(--font-display);
-      font-size: 10px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      transition: all 0.2s ease;
-    }
-
-    .region-opt-btn:hover {
-      border-color: var(--hud-cyan);
-      color: #fff;
-    }
-
-    .region-opt-btn.active {
-      background: rgba(0, 240, 255, 0.18);
-      border-color: var(--hud-cyan);
-      color: var(--hud-cyan);
-      box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
-    }
-
-    .disaster-card {
-      position: absolute;
-      top: 75px;
-      left: 20px;
-      background: rgba(4, 13, 26, 0.88);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--hud-border);
-      border-left: 4px solid var(--hud-green);
-      border-radius: 8px;
-      padding: 12px 16px;
-      max-width: 360px;
-      z-index: 90;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-      font-family: var(--font-body);
-      transition: all 0.3s ease;
-    }
-
-    .disaster-hdr {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 6px;
-    }
-
-    .region-badge {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 700;
-      color: var(--hud-cyan);
-      background: rgba(0, 240, 255, 0.1);
-      padding: 2px 8px;
-      border-radius: 4px;
-      border: 1px solid var(--hud-border);
-    }
-
-    .disaster-status-tag {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 700;
-      color: var(--hud-green);
-      background: rgba(0, 255, 136, 0.12);
-      padding: 2px 8px;
-      border-radius: 4px;
-      border: 1px solid var(--hud-green);
-    }
-
-    .disaster-title {
-      font-family: var(--font-display);
-      font-size: 13px;
-      font-weight: 800;
-      color: #fff;
-      line-height: 1.3;
-    }
-
-    .disaster-desc {
-      font-size: 12px;
-      color: #94a3b8;
-      margin-top: 4px;
-      line-height: 1.4;
-    }
-
-    .inspect-img-box {
-      margin-top: 8px;
-      margin-bottom: 8px;
-      border-radius: 6px;
-      overflow: hidden;
-      border: 1px solid var(--hud-cyan);
-      box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
-    }
-
-    .inspect-img-box img {
-      width: 100%;
-      height: 130px;
-      object-fit: cover;
-      display: block;
-    }
-  </style>
 </head>
 <body>
 
@@ -1870,10 +1310,17 @@
     <div class="aurora-1"></div>
     <div class="aurora-2"></div>
     <div class="aurora-3"></div>
+    <div class="aurora-ice-band"></div>
     <div class="aurora-horizon"></div>
     <div class="aurora-vignette"></div>
     <div class="aurora-scanlines"></div>
   </div>
+
+  <!-- Blizzard wind overlay layer -->
+  <div id="blizzard-layer" aria-hidden="true"></div>
+
+  <!-- Polar night darkness layer -->
+  <div id="polar-night-layer" aria-hidden="true"></div>
 
   <!-- Fullscreen 3D Canvas -->
   <div id="sim-canvas-container">
@@ -1894,8 +1341,8 @@
     <!-- Top Header: 3 Exclusive Option Clickable Labels -->
     <header class="hud-header interactive-element">
       <div class="brand-title">
-        DHRUVA SETU
-        <span class="sih-badge-tag">SIH 26065</span>
+        PROJECT DHURVA SETU
+        <span class="sih-badge-tag">SIH PS 26065 / MoES</span>
       </div>
 
       <!-- 3 Primary Navigation Labels -->
@@ -1917,6 +1364,56 @@
         <span>POLAR REAL-TIME LINK</span>
       </div>
     </header>
+
+    <!-- DEDICATED INDUSTRIAL MODE SELECTORS BAR -->
+    <div class="mode-selectors-bar interactive-element" id="mode-selectors-bar">
+      <button class="mode-sel-btn" id="mode-btn-xray" onclick="toggleXRayView()">
+        <i class="fa-solid fa-eye"></i> X-RAY VIEW
+      </button>
+      <button class="mode-sel-btn" id="mode-btn-exploded" onclick="toggleExplodedAssembly()">
+        <i class="fa-solid fa-arrows-split-up-and-left"></i> EXPLODED ASSEMBLY
+      </button>
+      <button class="mode-sel-btn active" id="mode-btn-waves" onclick="toggleWaveSimulation()">
+        <i class="fa-solid fa-water"></i> OCEAN WAVE SIMULATION
+      </button>
+      <button class="mode-sel-btn" id="mode-btn-power" onclick="togglePowerFlow()">
+        <i class="fa-solid fa-bolt"></i> POWER FLOW DIAGRAMS
+      </button>
+    </div>
+
+    <!-- 1 Hz TELEMETRY STREAM HUD -->
+    <div class="telemetry-stream-bar interactive-element" id="telemetry-stream-bar">
+      <div class="telem-item">
+        <span class="telem-label">SYS VOLTAGE</span>
+        <span class="telem-val" id="telem-volts" style="color: var(--hud-gold);">12.8V</span>
+      </div>
+      <div class="telem-sep"></div>
+      <div class="telem-item">
+        <span class="telem-label">INTERNAL TEMP</span>
+        <span class="telem-val" id="telem-int-temp" style="color: var(--hud-cyan);">-1.5°C</span>
+      </div>
+      <div class="telem-sep"></div>
+      <div class="telem-item">
+        <span class="telem-label">SEA SURFACE TEMP</span>
+        <span class="telem-val" id="telem-sst" style="color: var(--hud-ice);">-1.82°C</span>
+      </div>
+      <div class="telem-sep"></div>
+      <div class="telem-item">
+        <span class="telem-label">SALINITY</span>
+        <span class="telem-val" id="telem-salinity" style="color: var(--hud-cyan);">34.5 PSU</span>
+      </div>
+      <div class="telem-sep"></div>
+      <div class="telem-item">
+        <span class="telem-label">TINYML ANOMALY</span>
+        <span class="telem-val badge-nominal" id="telem-anomaly" style="color: var(--hud-green);"><i class="fa-solid fa-circle-check"></i> NOMINAL</span>
+      </div>
+      <div class="telem-sep"></div>
+      <div class="telem-item">
+        <span class="telem-label">WAVE PERIOD</span>
+        <span class="telem-val" id="telem-wave-period" style="color: var(--hud-purple);">4.2s</span>
+      </div>
+    </div>
+
 
     <!-- PUBG-Style Floating Eye Legend Button -->
     <div class="legend-eye-btn interactive-element" id="btn-legend-eye" onclick="toggleSimLegendHUD()">
@@ -2099,6 +1596,78 @@
         </div>
 
         <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid var(--hud-border); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px;">
+          <h3 style="font-family: var(--font-display); color: var(--hud-cyan); font-size: 18px;"><i class="fa-solid fa-layer-group"></i> 5-Tier Internal CAD Mechanical & Electrical Architecture Blueprint</h3>
+          <p style="color: #cbd5e1; font-size: 13.5px; line-height: 1.6;">
+            The internal assembly of Dhruva Setu is engineered into <strong>5 distinct modular staging tiers</strong> supported by 4 vertical anodized aluminum standoff rails and laser-cut acrylic vibration-damping trays.
+          </p>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 6px;">
+            <!-- Tier 1 -->
+            <div style="background: rgba(4, 14, 32, 0.85); border: 1px solid var(--hud-border); border-left: 3px solid var(--hud-cyan); padding: 14px; border-radius: 8px;">
+              <div style="font-family: var(--font-mono); font-size: 11px; color: var(--hud-gold); font-weight: 700;">TIER 1 — ELEVATION: +1.3m to +4.5m</div>
+              <h4 style="font-family: var(--font-display); color: #fff; font-size: 14px; margin-top: 4px;"><i class="fa-solid fa-satellite-dish"></i> Surface Mast & Solar Harvesting</h4>
+              <ul style="color: #94a3b8; font-size: 12px; margin-left: 18px; margin-top: 6px; line-height: 1.5;">
+                <li>Curved flexible PET monocrystalline solar array (22.5% efficiency).</li>
+                <li>433MHz LoRa whip antenna (15km Weddell seal bio-tag link).</li>
+                <li>Iridium Short Burst Data (SBD) satellite uplink dome.</li>
+                <li>SHT45 / TMP117 surface air temperature & humidity met array.</li>
+              </ul>
+            </div>
+
+            <!-- Tier 2 -->
+            <div style="background: rgba(4, 14, 32, 0.85); border: 1px solid var(--hud-border); border-left: 3px solid var(--hud-green); padding: 14px; border-radius: 8px;">
+              <div style="font-family: var(--font-mono); font-size: 11px; color: var(--hud-gold); font-weight: 700;">TIER 2 — ELEVATION: +0.8m to +1.2m</div>
+              <h4 style="font-family: var(--font-display); color: #fff; font-size: 14px; margin-top: 4px;"><i class="fa-solid fa-microchip"></i> Avionics & Gateway Core</h4>
+              <ul style="color: #94a3b8; font-size: 12px; margin-left: 18px; margin-top: 6px; line-height: 1.5;">
+                <li>ESP32-S3 dual-core 240MHz MCU running FreeRTOS dual tasks.</li>
+                <li>BNO085 9-DOF IMU for wave height & ocean pitch/roll motion.</li>
+                <li>NEO-6M 50-channel GPS engine with UTC pulse sync.</li>
+                <li>Conformal-coated 32MB SPI flash & vibration-proof MicroSD logger.</li>
+                <li>Closed-Hull Wi-Fi AP diagnostic portal (no external port leaks).</li>
+              </ul>
+            </div>
+
+            <!-- Tier 3 -->
+            <div style="background: rgba(4, 14, 32, 0.85); border: 1px solid var(--hud-border); border-left: 3px solid var(--hud-gold); padding: 14px; border-radius: 8px;">
+              <div style="font-family: var(--font-mono); font-size: 11px; color: var(--hud-gold); font-weight: 700;">TIER 3 — ELEVATION: -0.2m to +0.6m</div>
+              <h4 style="font-family: var(--font-display); color: #fff; font-size: 14px; margin-top: 4px;"><i class="fa-solid fa-battery-three-quarters"></i> Power & Sub-Zero Thermal Protection</h4>
+              <ul style="color: #94a3b8; font-size: 12px; margin-left: 18px; margin-top: 6px; line-height: 1.5;">
+                <li>TP5100 MPPT buck converter (96% efficiency at low solar angles).</li>
+                <li>12V Kapton PTC closed-loop thermal pulse heater pad.</li>
+                <li>12V 25Ah (300Wh) sub-zero battery pack for 6-month polar night.</li>
+                <li>Thermally bonded copper heat distribution conduit loop.</li>
+              </ul>
+            </div>
+
+            <!-- Tier 4 -->
+            <div style="background: rgba(4, 14, 32, 0.85); border: 1px solid var(--hud-border); border-left: 3px solid var(--hud-purple); padding: 14px; border-radius: 8px;">
+              <div style="font-family: var(--font-mono); font-size: 11px; color: var(--hud-gold); font-weight: 700;">TIER 4 — ELEVATION: -1.0m to -2.0m</div>
+              <h4 style="font-family: var(--font-display); color: #fff; font-size: 14px; margin-top: 4px;"><i class="fa-solid fa-arrows-up-down"></i> Winch Drive & Hydrodynamic Ballast</h4>
+              <ul style="color: #94a3b8; font-size: 12px; margin-left: 18px; margin-top: 6px; line-height: 1.5;">
+                <li>12V 40RPM high-torque worm-gear motor (self-locking when unpowered).</li>
+                <li>200m Kevlar-reinforced polyurethane multi-conductor tether spool.</li>
+                <li>6-wire gold-contact slip ring for continuous rotational datafeed.</li>
+                <li>16.1kg mild-steel ballast keel ring ensuring passive self-righting.</li>
+              </ul>
+            </div>
+
+            <!-- Tier 5 -->
+            <div style="background: rgba(4, 14, 32, 0.85); border: 1px solid var(--hud-border); border-left: 3px solid var(--hud-cyan); padding: 14px; border-radius: 8px; grid-column: 1 / -1;">
+              <div style="font-family: var(--font-mono); font-size: 11px; color: var(--hud-gold); font-weight: 700;">TIER 5 — DEPTH: 0m to -200m SEABED</div>
+              <h4 style="font-family: var(--font-display); color: #fff; font-size: 14px; margin-top: 4px;"><i class="fa-solid fa-dharmachakra"></i> Sub-Surface Deep CTD Profiler Pod</h4>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 8px; font-size: 12px; color: #94a3b8;">
+                <div><strong>TI MSP430 Bare Silicon Brain:</strong> Ultra-low power 230uA/MHz RISC MCU.</div>
+                <div><strong>GY-MS5837 Depth Cell:</strong> Gel-filled 24-bit piezoresistive sensor (±1.5cm precision).</div>
+                <div><strong>DS18B20 Temp Probe:</strong> 316L stainless steel probe for thermoclines.</div>
+                <div><strong>Inductive Salinity Toroid:</strong> Electrode-less toroidal coil (no bio-crust drift).</div>
+                <div><strong>MAX485 Dual RS485:</strong> Differential noise-immune link over 200m tether.</div>
+                <div><strong>470nm Optical Fluorometer:</strong> Chlorophyll-a / algae bloom detection.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid var(--hud-border); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px;">
           <h3 style="font-family: var(--font-display); color: var(--hud-gold); font-size: 18px;"><i class="fa-solid fa-coins"></i> Commercial-Grade Hardware Bill of Materials (BOM)</h3>
           <p style="color: #94a3b8; font-size: 13px;">
             Commercial polar CTD profiling floats cost <strong>₹12,00,000+ ($15,000 USD)</strong>. Project Dhruva Setu delivers full polar-grade CTD profiling & dual-hop animal telemetry for <strong>~₹19,000 (~$225 USD)</strong> — achieving an <strong>98% cost reduction</strong>.
@@ -2266,6 +1835,7 @@
 
       // Create Scene Elements
       createCinematicOcean();
+      createPolarIcebergs();
       createDetailedBuoy();
       createCTDPod();
       createTether();
@@ -2322,6 +1892,104 @@
 
     let esp32MeshRef, sdLoggerMeshRef, loraMeshRef, gpsMeshRef, imuMeshRef, tempEnvMeshRef, mpptMeshRef, rs485MeshRef, kaptonMeshRef, batMeshRef, winchMeshRef, ballastMeshRef, solarMeshRef, domeMeshRef;
     let podHousingMeshRef, msp430MeshRef, ms5837MeshRef, rtdTempMeshRef, toroidSalMeshRef, podRs485MeshRef, fluoroMeshRef;
+    let chassisRailsMesh, tier1TrayMesh, tier2TrayMesh, tier3TrayMesh, heatPipeMesh, icebergGroup;
+
+    /* -------------------------------------------------------------------------
+       POLAR ICEBERGS, SEA ICE FLOES & ANTARCTIC GLACIER WALL (PROCEDURAL 3D)
+       ------------------------------------------------------------------------- */
+    function createPolarIcebergs() {
+      icebergGroup = new THREE.Group();
+
+      const bergMat = new THREE.MeshStandardMaterial({
+        color: 0xe0f2fe,
+        roughness: 0.18,
+        metalness: 0.1,
+        flatShading: true
+      });
+
+      const submergedMat = new THREE.MeshStandardMaterial({
+        color: 0x0284c7,
+        roughness: 0.2,
+        metalness: 0.35,
+        transparent: true,
+        opacity: 0.72,
+        flatShading: true
+      });
+
+      // 6 Majestic Jagged Icebergs positioned around horizon
+      const bergConfigs = [
+        { x: -65, z: -80, scale: 14, height: 18, rot: 0.4 },
+        { x: 75, z: -70, scale: 18, height: 22, rot: 1.2 },
+        { x: -95, z: 45, scale: 12, height: 14, rot: 2.1 },
+        { x: 90, z: 65, scale: 16, height: 20, rot: 0.8 },
+        { x: -40, z: 100, scale: 10, height: 12, rot: 1.7 },
+        { x: 120, z: -15, scale: 22, height: 26, rot: 2.9 }
+      ];
+
+      bergConfigs.forEach((cfg) => {
+        const berg = new THREE.Group();
+
+        // Above-water pinnacle peak
+        const topGeo = new THREE.ConeGeometry(cfg.scale * 0.7, cfg.height, 7);
+        const topMesh = new THREE.Mesh(topGeo, bergMat);
+        topMesh.position.y = cfg.height * 0.4;
+        topMesh.rotation.y = cfg.rot;
+        topMesh.castShadow = true;
+        berg.add(topMesh);
+
+        // Submerged underwater mass (90% buoyancy rule of icebergs)
+        const subGeo = new THREE.ConeGeometry(cfg.scale * 1.1, cfg.height * 1.6, 8);
+        subGeo.rotateX(Math.PI);
+        const subMesh = new THREE.Mesh(subGeo, submergedMat);
+        subMesh.position.y = -cfg.height * 0.8;
+        subMesh.rotation.y = cfg.rot + 0.3;
+        berg.add(subMesh);
+
+        berg.position.set(cfg.x, 0, cfg.z);
+        icebergGroup.add(berg);
+      });
+
+      // 12 Pancake sea-ice floes around the buoy
+      const floeMat = new THREE.MeshStandardMaterial({
+        color: 0xf0fdfa,
+        roughness: 0.45,
+        metalness: 0.05,
+        transparent: true,
+        opacity: 0.92
+      });
+
+      const floePositions = [
+        { x: -14, z: -18, r: 3.5 },
+        { x: 18, z: -12, r: 4.2 },
+        { x: -22, z: 14, r: 5.0 },
+        { x: 15, z: 20, r: 3.8 },
+        { x: -8, z: 25, r: 4.5 },
+        { x: 26, z: -5, r: 5.5 },
+        { x: -28, z: -25, r: 4.0 },
+        { x: 30, z: 22, r: 4.8 }
+      ];
+
+      floePositions.forEach((fp) => {
+        const floeGeo = new THREE.CylinderGeometry(fp.r, fp.r * 1.05, 0.25, 10);
+        const floeMesh = new THREE.Mesh(floeGeo, floeMat);
+        floeMesh.position.set(fp.x, 0.08, fp.z);
+        icebergGroup.add(floeMesh);
+      });
+
+      // Distant Antarctic Ice Shelf Glacier Wall
+      const wallGeo = new THREE.BoxGeometry(450, 45, 15);
+      const wallMat = new THREE.MeshStandardMaterial({
+        color: 0xdbeafe,
+        roughness: 0.3,
+        metalness: 0.15,
+        flatShading: true
+      });
+      const shelfWall = new THREE.Mesh(wallGeo, wallMat);
+      shelfWall.position.set(0, 15, -180);
+      icebergGroup.add(shelfWall);
+
+      scene.add(icebergGroup);
+    }
 
     /* -------------------------------------------------------------------------
        HIGH-FIDELITY 3D HARDWARE MODEL BUILDERS (ESP32-S3, MS5837, TOROID SALINITY)
@@ -2507,7 +2175,7 @@
     }
 
     /* -------------------------------------------------------------------------
-       DETAILED SPHERICAL BUOY WITH INDIVIDUAL HARDWARE SENSORS & EXPLODED CAD KINEMATICS
+       DETAILED SPHERICAL BUOY WITH INTERNAL CAD ARCHITECTURE CHASSIS & SENSORS
        ------------------------------------------------------------------------- */
     function createDetailedBuoy() {
       const buoyGroup = new THREE.Group();
@@ -2533,8 +2201,41 @@
       };
       clickableComponents.push(buoyShellMesh);
 
-      // 2. INTERNAL ELECTRONICS STACK (EXPLODES OUT IN CAD VIEW)
+      // 2. INTERNAL ELECTRONICS STACK & MECHANICAL CHASSIS (EXPLODES OUT IN CAD VIEW)
       buoyInternalGroup = new THREE.Group();
+
+      // 4x Aluminum Vertical Standoff Rails
+      const chassisMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.95, roughness: 0.15 });
+      const acrylicMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.35, roughness: 0.1 });
+      const heatPipeMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.2 });
+
+      chassisRailsMesh = new THREE.Group();
+      const railAngles = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2];
+      railAngles.forEach((ang) => {
+        const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 3.2, 8), chassisMat);
+        rail.position.set(Math.cos(ang) * 1.05, -0.2, Math.sin(ang) * 1.05);
+        chassisRailsMesh.add(rail);
+      });
+      buoyInternalGroup.add(chassisRailsMesh);
+
+      // Laser-Cut Acrylic Staging Tier Trays
+      tier1TrayMesh = new THREE.Mesh(new THREE.CylinderGeometry(1.22, 1.22, 0.04, 24), acrylicMat);
+      tier1TrayMesh.position.set(0, 0.92, 0);
+      buoyInternalGroup.add(tier1TrayMesh);
+
+      tier2TrayMesh = new THREE.Mesh(new THREE.CylinderGeometry(1.22, 1.22, 0.04, 24), acrylicMat);
+      tier2TrayMesh.position.set(0, 0.28, 0);
+      buoyInternalGroup.add(tier2TrayMesh);
+
+      tier3TrayMesh = new THREE.Mesh(new THREE.CylinderGeometry(1.22, 1.22, 0.04, 24), acrylicMat);
+      tier3TrayMesh.position.set(0, -0.95, 0);
+      buoyInternalGroup.add(tier3TrayMesh);
+
+      // Copper Thermal Heat Conduits (PTC Heater -> Sub-Zero Battery)
+      heatPipeMesh = new THREE.Mesh(new THREE.TorusGeometry(0.8, 0.035, 12, 24), heatPipeMat);
+      heatPipeMesh.rotation.x = Math.PI / 2;
+      heatPipeMesh.position.set(0, -0.4, 0);
+      buoyInternalGroup.add(heatPipeMesh);
 
       // REAL 3D MODEL: ESP32-S3 WROOM Surface Master MCU
       esp32MeshRef = buildESP323DModel();
@@ -3010,6 +2711,12 @@
         switchCameraTarget('xray');
 
         // Animate Buoy Internal Explosion (Vertical & Radial expansion)
+        if (chassisRailsMesh) new TWEEN.Tween(chassisRailsMesh.scale).to({ x: 1.8, y: 1.4, z: 1.8 }, dur).easing(ease).start();
+        if (tier1TrayMesh) new TWEEN.Tween(tier1TrayMesh.position).to({ x: 0, y: 1.8, z: 0 }, dur).easing(ease).start();
+        if (tier2TrayMesh) new TWEEN.Tween(tier2TrayMesh.position).to({ x: 0, y: 0.6, z: 0 }, dur).easing(ease).start();
+        if (tier3TrayMesh) new TWEEN.Tween(tier3TrayMesh.position).to({ x: 0, y: -1.6, z: 0 }, dur).easing(ease).start();
+        if (heatPipeMesh) new TWEEN.Tween(heatPipeMesh.position).to({ x: 0, y: -0.5, z: 0 }, dur).easing(ease).start();
+
         if (esp32MeshRef) new TWEEN.Tween(esp32MeshRef.position).to({ x: 0, y: 2.2, z: 0 }, dur).easing(ease).start();
         if (sdLoggerMeshRef) new TWEEN.Tween(sdLoggerMeshRef.position).to({ x: -1.2, y: 2.3, z: 0.8 }, dur).easing(ease).start();
         if (loraMeshRef) new TWEEN.Tween(loraMeshRef.position).to({ x: 1.2, y: 2.3, z: 0.8 }, dur).easing(ease).start();
@@ -3041,6 +2748,12 @@
         switchCameraTarget('buoy');
 
         // Retract Buoy Assembly
+        if (chassisRailsMesh) new TWEEN.Tween(chassisRailsMesh.scale).to({ x: 1.0, y: 1.0, z: 1.0 }, dur).easing(ease).start();
+        if (tier1TrayMesh) new TWEEN.Tween(tier1TrayMesh.position).to({ x: 0, y: 0.92, z: 0 }, dur).easing(ease).start();
+        if (tier2TrayMesh) new TWEEN.Tween(tier2TrayMesh.position).to({ x: 0, y: 0.28, z: 0 }, dur).easing(ease).start();
+        if (tier3TrayMesh) new TWEEN.Tween(tier3TrayMesh.position).to({ x: 0, y: -0.95, z: 0 }, dur).easing(ease).start();
+        if (heatPipeMesh) new TWEEN.Tween(heatPipeMesh.position).to({ x: 0, y: -0.4, z: 0 }, dur).easing(ease).start();
+
         if (esp32MeshRef) new TWEEN.Tween(esp32MeshRef.position).to({ x: 0, y: 1.0, z: 0 }, dur).easing(ease).start();
         if (sdLoggerMeshRef) new TWEEN.Tween(sdLoggerMeshRef.position).to({ x: -0.4, y: 1.08, z: 0.2 }, dur).easing(ease).start();
         if (loraMeshRef) new TWEEN.Tween(loraMeshRef.position).to({ x: 0.4, y: 1.08, z: 0.2 }, dur).easing(ease).start();
@@ -3135,6 +2848,11 @@
       if (buoyRoot) {
         buoyRoot.position.y = buoyY;
         buoyRoot.rotation.z = Math.sin(waveTime * 0.8) * (isBlizzard ? 0.25 : 0.08);
+      }
+
+      // Iceberg floating bobbing
+      if (icebergGroup) {
+        icebergGroup.position.y = Math.sin(waveTime * 0.3) * 0.25;
       }
 
       // 3. Winch Pod Depth Interpolation
@@ -3404,12 +3122,15 @@
         if (snowfallParticles) {
           snowfallParticles.visible = true;
         }
+        if (icebergGroup) {
+          icebergGroup.visible = true;
+        }
 
         if (badgeEl) badgeEl.innerHTML = `<i class="fa-solid fa-snowflake"></i> POLAR MARGIN (-1.8°C)`;
         if (titleEl) titleEl.innerText = `Prevented: Lithium Battery Plating & Freeze-Out`;
         if (descEl) descEl.innerText = `Automatic 12V Kapton PTC Heater Pad triggers thermal pulses @ -1.8°C seawater to prevent permanent battery degradation & dendrite short circuits during 6-month polar night.`;
 
-        addLog('REGION', 'Deployment Region set to POLAR MARGIN (-1.8°C Antarctic Icy Shelf).');
+        addLog('REGION', 'Deployment Region set to POLAR MARGIN (-1.8°C Antarctic Icy Shelf & Icebergs).');
 
       } else if (region === 'southern') {
         if (btnSouthern) btnSouthern.classList.add('active');
@@ -3424,6 +3145,9 @@
         }
         if (snowfallParticles) {
           snowfallParticles.visible = false;
+        }
+        if (icebergGroup) {
+          icebergGroup.visible = false;
         }
 
         if (badgeEl) badgeEl.innerHTML = `<i class="fa-solid fa-water"></i> SOUTHERN OCEAN (Sea State 7)`;

@@ -1,4 +1,9 @@
+node_modules/
+dist/
 .agent/
 custom-skills-folder/
 .vscode/
 .idea/
+*.bak
+scratch/
+.DS_Store
