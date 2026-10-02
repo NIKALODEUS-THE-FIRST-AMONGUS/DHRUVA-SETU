@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,7 +12,11 @@
     color: #f8fafc;
     overflow: hidden;
     user-select: none;
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: 'Fira Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'Fira Code', monospace;
   }
 }
 
@@ -41,4 +47,17 @@
 
 .animate-spin-slow {
   animation: spinSlow 12s linear infinite;
+}
+
+/* Polar & HUD Glow Utilities */
+.text-glow-cyan {
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+}
+
+.text-glow-gold {
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+.box-glow-cyan {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
 }
