@@ -129,13 +129,15 @@ export function generateSealSkinBumpMap() {
   const imgData = ctx.getImageData(0, 0, size, size);
   const data = imgData.data;
 
-  // Fine fur & ripple scale
+  // Streamlined wet mammalian fur flow & micro-creases
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const idx = (y * size + x) * 4;
-      const wave = Math.sin(y * 0.8) * Math.cos(x * 0.8) * 12;
-      const grain = (Math.random() - 0.5) * 20;
-      const v = Math.min(255, Math.max(0, 128 + wave + grain));
+      // Directional hair flow along Y axis with fine lateral ripple
+      const hairFlow = Math.sin(x * 1.8 + Math.sin(y * 0.15) * 4.0) * 10.0;
+      const microPores = Math.sin(x * 4.0) * Math.cos(y * 4.0) * 6.0;
+      const noise = (Math.random() - 0.5) * 16.0;
+      const v = Math.min(255, Math.max(0, 128 + hairFlow + microPores + noise));
       data[idx] = v;
       data[idx + 1] = v;
       data[idx + 2] = v;
@@ -148,7 +150,79 @@ export function generateSealSkinBumpMap() {
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(5, 5);
+  texture.repeat.set(4, 4);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+// 4B. Photorealistic Antarctic Weddell Seal Mottled Pelt Albedo Map
+export function generateWeddellSealPelt() {
+  const size = 1024;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  // Base dorsal-to-ventral smooth gradient (Dark slate back -> Pale silvery belly)
+  const baseGrad = ctx.createLinearGradient(0, 0, 0, size);
+  baseGrad.addColorStop(0.00, '#111827'); // Deep dorsal charcoal
+  baseGrad.addColorStop(0.25, '#1e293b'); // Rich slate grey
+  baseGrad.addColorStop(0.50, '#334155'); // Mid-flank cool grey
+  baseGrad.addColorStop(0.75, '#64748b'); // Lower flank silvery grey
+  baseGrad.addColorStop(1.00, '#94a3b8'); // Pale ventral blubber belly
+  ctx.fillStyle = baseGrad;
+  ctx.fillRect(0, 0, size, size);
+
+  // Layer 1: Large soft mottled patches (Weddell seal signature dappling)
+  for (let i = 0; i < 90; i++) {
+    const px = Math.random() * size;
+    // Concentrate dapples along midriff and flanks
+    const py = (0.25 + Math.random() * 0.65) * size;
+    const radX = 14 + Math.random() * 32;
+    const radY = 8 + Math.random() * 18;
+    const rot = (Math.random() - 0.5) * 0.8;
+
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(rot);
+
+    const isLightDapple = Math.random() > 0.45;
+    ctx.fillStyle = isLightDapple ? 'rgba(226, 232, 240, 0.28)' : 'rgba(15, 23, 42, 0.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, radX, radY, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Layer 2: Fine dark leopard-like rosettes and speckles
+  for (let j = 0; j < 450; j++) {
+    const sx = Math.random() * size;
+    const sy = (0.15 + Math.random() * 0.80) * size;
+    const r = 2.0 + Math.random() * 5.5;
+
+    ctx.fillStyle = Math.random() > 0.5 ? 'rgba(15, 23, 42, 0.45)' : 'rgba(241, 245, 249, 0.30)';
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Layer 3: Organic wet hair grain overlay
+  const imgData = ctx.getImageData(0, 0, size, size);
+  const data = imgData.data;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const idx = (y * size + x) * 4;
+      const grain = (Math.random() - 0.5) * 12.0;
+      data[idx] = Math.min(255, Math.max(0, data[idx] + grain));
+      data[idx + 1] = Math.min(255, Math.max(0, data[idx + 1] + grain));
+      data[idx + 2] = Math.min(255, Math.max(0, data[idx + 2] + grain));
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.needsUpdate = true;
   return texture;
 }

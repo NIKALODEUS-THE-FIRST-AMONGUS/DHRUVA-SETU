@@ -98,6 +98,11 @@ export default function VFXScene({
     abyssLight.position.set(0, -50, 0);
     scene.add(abyssLight);
 
+    // 5B. Dynamic Polar Sky & Oceanic Beer-Lambert Depth Extinction Fog
+    const sceneFog = new THREE.FogExp2(0x071526, 0.0075);
+    scene.fog = sceneFog;
+    scene.background = new THREE.Color(0x071526);
+
     // 6. Instantiate VFX Modules
     const initialPhysics = (activeRegion && activeRegion.seaPhysics) ? activeRegion.seaPhysics : {};
     const ocean = createOceanSurface(initialPhysics);
@@ -310,6 +315,35 @@ export default function VFXScene({
       const time = sceneElementsRef.current.clock.getElapsedTime();
       const delta = Math.min(0.1, time - lastTime);
       lastTime = time;
+
+      // ── Physical Atmospheric Horizon vs. Subsea Ocean Depth Extinction ──
+      const camY = camera.position.y;
+      if (camY >= 0.0) {
+        // Above water: Polar sky horizon haze matching active season
+        const skyHex = season === 'winter' ? 0x030712 : (season === 'autumn' ? 0x071526 : 0x091e38);
+        const targetColor = new THREE.Color(skyHex);
+        scene.fog.color.lerp(targetColor, 0.08);
+        scene.fog.density = 0.0075;
+        scene.background.lerp(targetColor, 0.08);
+        renderer.setClearColor(scene.fog.color, 1.0);
+      } else {
+        // Underwater: Physical Beer-Lambert Ocean Depth Extinction Gradient
+        const subDepth = Math.min(60.0, Math.abs(camY));
+        const depthNorm = Math.min(1.0, subDepth / 45.0);
+
+        // Subsea Antarctic Water Colors:
+        // Shallow (0-15m): Luminous glacier turquoise-sapphire (0x0284c7 to 0x025687)
+        // Deep Halocline/Abyss (15-60m): Deep Antarctic marine navy (0x011a38 to 0x010e1f)
+        const shallowSubsea = new THREE.Color(0x025687);
+        const deepAbyss = new THREE.Color(0x011326);
+        const targetSubseaColor = shallowSubsea.clone().lerp(deepAbyss, depthNorm);
+
+        scene.fog.color.lerp(targetSubseaColor, 0.12);
+        // Rich subsea turbidity so objects naturally emerge from the glowing blue haze
+        scene.fog.density = 0.016 + depthNorm * 0.012;
+        scene.background.lerp(targetSubseaColor, 0.12);
+        renderer.setClearColor(scene.fog.color, 1.0);
+      }
 
       // Buoyancy Wave Displacement & Surface Slope Normal at buoy's instantaneous position!
       const buoyX = buoy.buoyRoot.position.x;

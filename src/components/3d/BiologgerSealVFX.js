@@ -1,21 +1,27 @@
 import * as THREE from 'three';
 import { CONFIG } from '../../constants/config';
-import { generateSealSkinBumpMap } from './ProceduralTextures';
+import { generateSealSkinBumpMap, generateWeddellSealPelt } from './ProceduralTextures';
 
 /**
- * Natural Wild Antarctic Weddell Seal Pod & Opportunistic Telemetry Harvester
- * - Natural wild foraging behavior (not tamed or artificial)
- * - 4 distinct wild seals foraging at different ocean depths and trajectories
- * - Opportunistic telemetry: Buoy hydrophone automatically intercepts pings when seals enter ~800m proximity
- * - Dorsal LoRa tag bursts on breach/surfacing -> Uplinks through buoy to LEO satellites
+ * Photorealistic Wild Antarctic Weddell Seal Pod & Biologger Acoustic Telemetry Engine
+ * 
+ * Anatomical & Kinematic Features:
+ * 1. True fusiform mammalian anatomy: hydrodynamic torso, contoured blubber neck, cranium & muzzle
+ * 2. Sculpted pectoral steering flippers & bilateral lunate caudal flukes with flexible trailing edges
+ * 3. Organic Weddell seal mottled pelt (dorsal slate dapples -> pale silvery ventral belly) with wet clearcoat
+ * 4. Multi-joint spine wave undulation: coordinated sinusoidal body flexion, tail oscillation & banking
+ * 5. Streamlined Wildlife Computers-style dorsal biologger with low-profile hydro-bracket & whip antenna
+ * 6. Volumetric 3D acoustic toroidal sonar pulses radiating through the water column on hydrophone ping
+ * 7. Opportunistic acoustic detection cone (<28m in 3D ~800m acoustic reach) & 433MHz LoRa surface bursts
  */
 export function createBiologgerSeal(splashSystem) {
   const podGroup = new THREE.Group();
   podGroup.name = "wildSealPodRoot";
 
   const sealSkinBump = generateSealSkinBumpMap();
+  const sealSkinPelt = generateWeddellSealPelt();
 
-  // Seal Pod Configuration (4 wild Antarctic Weddell seals)
+  // Seal Pod Configuration (4 distinct wild Antarctic Weddell seals)
   const POD_MEMBERS = [
     {
       id: "WED-PRYDZ-42",
@@ -46,7 +52,7 @@ export function createBiologgerSeal(splashSystem) {
     {
       id: "WED-PRYDZ-07",
       role: "Juvenile Surfacing Pup",
-      scale: 0.72,
+      scale: 0.74,
       baseRadius: 18.0,
       radiusVar: 4.5,
       orbitSpeed: 0.28,
@@ -59,7 +65,7 @@ export function createBiologgerSeal(splashSystem) {
     {
       id: "WED-PRYDZ-88",
       role: "Benthic Deep Diver",
-      scale: 1.08,
+      scale: 1.12,
       baseRadius: 36.0,
       radiusVar: 9.0,
       orbitSpeed: 0.12,
@@ -71,160 +77,301 @@ export function createBiologgerSeal(splashSystem) {
     }
   ];
 
-  // Shared Seal Lathe Anatomy Profile
-  const points = [];
-  points.push(new THREE.Vector2(0.04, 1.45));  // Snout
-  points.push(new THREE.Vector2(0.18, 1.25));  // Head
-  points.push(new THREE.Vector2(0.34, 0.95));  // Neck
-  points.push(new THREE.Vector2(0.48, 0.50));  // Shoulder
-  points.push(new THREE.Vector2(0.54, 0.00));  // Midriff
-  points.push(new THREE.Vector2(0.46, -0.55)); // Lower belly
-  points.push(new THREE.Vector2(0.32, -1.05)); // Flank
-  points.push(new THREE.Vector2(0.16, -1.50)); // Tail base
-  points.push(new THREE.Vector2(0.05, -1.80)); // Tail tip
+  // Helper: Create an anatomical curved paddle flipper with tapered leading and trailing edges
+  function createFlipperGeometry(length, width, thickness, isLeft = true) {
+    const shape = new THREE.Shape();
+    const s = isLeft ? 1 : -1;
+    // Base attachment
+    shape.moveTo(0, 0);
+    // Convex leading edge curve
+    shape.bezierCurveTo(0.2 * length, 0.4 * width * s, 0.7 * length, 0.5 * width * s, length, 0.15 * width * s);
+    // Curved rounded tip
+    shape.bezierCurveTo(length * 1.05, 0.0, length * 1.02, -0.15 * width * s, length * 0.90, -0.30 * width * s);
+    // Tapered trailing edge with slight scallop
+    shape.bezierCurveTo(0.6 * length, -0.45 * width * s, 0.2 * length, -0.25 * width * s, 0, 0);
 
-  const latheGeo = new THREE.LatheGeometry(points, 24);
-  const flipperGeo = new THREE.BoxGeometry(0.72, 0.06, 0.35);
-  const flukeGeo = new THREE.BoxGeometry(0.52, 0.05, 0.26);
+    const extrudeSettings = {
+      depth: thickness,
+      bevelEnabled: true,
+      bevelSegments: 2,
+      steps: 1,
+      bevelSize: thickness * 0.4,
+      bevelThickness: thickness * 0.3
+    };
+
+    const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    geo.center();
+    return geo;
+  }
+
+  // Helper: Create caudal tail fluke hydrofoil
+  function createFlukeGeometry(span, chord, thickness) {
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0);
+    shape.bezierCurveTo(0.3 * span, 0.25 * chord, 0.8 * span, 0.4 * chord, span, 0.1 * chord);
+    shape.bezierCurveTo(span * 0.95, -0.2 * chord, 0.5 * span, -0.35 * chord, 0.1 * span, -0.15 * chord);
+    shape.lineTo(0, -0.1 * chord);
+
+    const extrudeSettings = {
+      depth: thickness,
+      bevelEnabled: true,
+      bevelSegments: 2,
+      steps: 1,
+      bevelSize: thickness * 0.3,
+      bevelThickness: thickness * 0.25
+    };
+
+    const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    geo.center();
+    return geo;
+  }
+
+  const foreFlipperLeftGeo = createFlipperGeometry(0.85, 0.36, 0.055, true);
+  const foreFlipperRightGeo = createFlipperGeometry(0.85, 0.36, 0.055, false);
+  const tailFlukeGeo = createFlukeGeometry(0.68, 0.32, 0.045);
 
   function createSealMember(cfg) {
     const sealRoot = new THREE.Group();
     sealRoot.name = `seal_${cfg.id}`;
     sealRoot.scale.setScalar(cfg.scale);
 
-    // Wet Mammal Skin Material
-    const sealSkinMat = new THREE.MeshPhysicalMaterial({
-      color: 0x334155,
-      roughness: 0.22,
-      metalness: 0.12,
+    // Wet Antarctic Mammal Pelt Material with Mottled Albedo & Clearcoat
+    const sealPeltMat = new THREE.MeshPhysicalMaterial({
+      map: sealSkinPelt,
       bumpMap: sealSkinBump,
-      bumpScale: 0.012,
-      clearcoat: 0.75,
-      clearcoatRoughness: 0.15
+      bumpScale: 0.015,
+      color: 0xffffff,
+      roughness: 0.28,
+      metalness: 0.06,
+      clearcoat: 0.82,
+      clearcoatRoughness: 0.14
     });
 
-    const body = new THREE.Mesh(latheGeo, sealSkinMat);
-    body.rotation.x = Math.PI / 2;
-    body.castShadow = true;
-    sealRoot.add(body);
+    // Darker leathery flipper material
+    const flipperMat = new THREE.MeshPhysicalMaterial({
+      color: 0x1e293b,
+      bumpMap: sealSkinBump,
+      bumpScale: 0.008,
+      roughness: 0.35,
+      metalness: 0.08,
+      clearcoat: 0.70
+    });
 
-    // Eyes
-    const eyeGeo = new THREE.SphereGeometry(0.05, 12, 12);
-    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.05, metalness: 0.9 });
+    // ── 1. ARTICULATED MULTI-SEGMENT TORSO ──
+    // Head & Cranium
+    const headGroup = new THREE.Group();
+    headGroup.position.set(0, 0.08, 1.15);
+
+    const craniumGeo = new THREE.SphereGeometry(0.32, 24, 20);
+    craniumGeo.scale(0.88, 0.82, 1.25);
+    const craniumMesh = new THREE.Mesh(craniumGeo, sealPeltMat);
+    craniumMesh.castShadow = true;
+    headGroup.add(craniumMesh);
+
+    // Snout / Muzzle
+    const snoutGeo = new THREE.SphereGeometry(0.18, 16, 14);
+    snoutGeo.scale(0.92, 0.72, 1.2);
+    const snoutMesh = new THREE.Mesh(snoutGeo, sealPeltMat);
+    snoutMesh.position.set(0, -0.06, 0.35);
+    headGroup.add(snoutMesh);
+
+    // Leathery Black Nose Pad & Nostril Cleft
+    const noseMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.55, metalness: 0.1 });
+    const noseMesh = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.05, 0.04), noseMat);
+    noseMesh.position.set(0, -0.03, 0.52);
+    headGroup.add(noseMesh);
+
+    // Dark Glassy Eyes with Corneal Depth
+    const eyeGeo = new THREE.SphereGeometry(0.045, 16, 16);
+    const eyeMat = new THREE.MeshPhysicalMaterial({
+      color: 0x050505,
+      roughness: 0.02,
+      metalness: 0.95,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.02
+    });
     const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-    leftEye.position.set(0.18, 0.16, 1.15);
+    leftEye.position.set(0.18, 0.08, 0.22);
     const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-    rightEye.position.set(-0.18, 0.16, 1.15);
-    sealRoot.add(leftEye);
-    sealRoot.add(rightEye);
+    rightEye.position.set(-0.18, 0.08, 0.22);
+    headGroup.add(leftEye);
+    headGroup.add(rightEye);
 
-    // Snout Whiskers (vibrissae)
-    const whiskerMat = new THREE.LineBasicMaterial({ color: 0xe2e8f0, linewidth: 1 });
+    // Natural Curving Whiskers (Vibrissae)
+    const whiskerMat = new THREE.LineBasicMaterial({ color: 0xf1f5f9, transparent: true, opacity: 0.85 });
     for (let side = -1; side <= 1; side += 2) {
-      for (let w = 0; w < 3; w++) {
-        const wGeo = new THREE.BufferGeometry().setFromPoints([
-          new THREE.Vector3(side * 0.08, 0.02 + w * 0.02, 1.40),
-          new THREE.Vector3(side * 0.26, -0.02 + w * 0.02, 1.30)
-        ]);
+      for (let w = 0; w < 4; w++) {
+        const curve = new THREE.QuadraticBezierCurve3(
+          new THREE.Vector3(side * 0.08, -0.06 + w * 0.018, 0.44),
+          new THREE.Vector3(side * 0.22, -0.08 + w * 0.015, 0.38),
+          new THREE.Vector3(side * 0.34, -0.16 + w * 0.012, 0.30)
+        );
+        const wPoints = curve.getPoints(8);
+        const wGeo = new THREE.BufferGeometry().setFromPoints(wPoints);
         const whisker = new THREE.Line(wGeo, whiskerMat);
-        sealRoot.add(whisker);
+        headGroup.add(whisker);
       }
     }
 
-    // Flippers
-    const flipperMat = new THREE.MeshPhysicalMaterial({
-      color: 0x1e293b,
-      roughness: 0.3,
-      metalness: 0.1,
-      bumpMap: sealSkinBump,
-      bumpScale: 0.008,
-      clearcoat: 0.6
-    });
+    sealRoot.add(headGroup);
 
-    const leftFlipper = new THREE.Mesh(flipperGeo, flipperMat);
-    leftFlipper.position.set(0.55, -0.08, 0.45);
-    leftFlipper.rotation.y = 0.35;
+    // Main Fusiform Torso (Thorax & Blubber Midriff)
+    const torsoGeo = new THREE.CylinderGeometry(0.44, 0.52, 1.25, 24, 6);
+    torsoGeo.scale(0.92, 1.0, 1.12);
+    torsoGeo.rotateX(Math.PI / 2);
+    const torsoMesh = new THREE.Mesh(torsoGeo, sealPeltMat);
+    torsoMesh.position.set(0, 0, 0.45);
+    torsoMesh.castShadow = true;
+    sealRoot.add(torsoMesh);
+
+    // Articulated Lumbar Flank (Spine segment 1)
+    const lumbarGroup = new THREE.Group();
+    lumbarGroup.position.set(0, 0, -0.18);
+
+    const lumbarGeo = new THREE.CylinderGeometry(0.52, 0.38, 0.85, 24, 4);
+    lumbarGeo.scale(0.88, 1.0, 1.05);
+    lumbarGeo.rotateX(Math.PI / 2);
+    const lumbarMesh = new THREE.Mesh(lumbarGeo, sealPeltMat);
+    lumbarMesh.position.set(0, 0, -0.42);
+    lumbarMesh.castShadow = true;
+    lumbarGroup.add(lumbarMesh);
+
+    // Articulated Caudal Peduncle & Flukes (Spine segment 2)
+    const caudalGroup = new THREE.Group();
+    caudalGroup.position.set(0, 0, -0.85);
+
+    const peduncleGeo = new THREE.CylinderGeometry(0.38, 0.16, 0.85, 20, 4);
+    peduncleGeo.scale(0.75, 1.0, 0.95);
+    peduncleGeo.rotateX(Math.PI / 2);
+    const peduncleMesh = new THREE.Mesh(peduncleGeo, sealPeltMat);
+    peduncleMesh.position.set(0, 0, -0.42);
+    peduncleMesh.castShadow = true;
+    caudalGroup.add(peduncleMesh);
+
+    // Bilateral Caudal Flukes
+    const leftFluke = new THREE.Mesh(tailFlukeGeo, flipperMat);
+    leftFluke.position.set(0.24, 0, -0.92);
+    leftFluke.rotation.set(0, 0.35, -0.15);
+    caudalGroup.add(leftFluke);
+
+    const rightFluke = new THREE.Mesh(tailFlukeGeo, flipperMat);
+    rightFluke.position.set(-0.24, 0, -0.92);
+    rightFluke.rotation.set(0, -0.35, 0.15);
+    caudalGroup.add(rightFluke);
+
+    lumbarGroup.add(caudalGroup);
+    sealRoot.add(lumbarGroup);
+
+    // Pectoral Foreflippers
+    const leftFlipper = new THREE.Mesh(foreFlipperLeftGeo, flipperMat);
+    leftFlipper.position.set(0.56, -0.18, 0.55);
+    leftFlipper.rotation.set(0.15, 0.45, -0.30);
     sealRoot.add(leftFlipper);
 
-    const rightFlipper = new THREE.Mesh(flipperGeo, flipperMat);
-    rightFlipper.position.set(-0.55, -0.08, 0.45);
-    rightFlipper.rotation.y = -0.35;
+    const rightFlipper = new THREE.Mesh(foreFlipperRightGeo, flipperMat);
+    rightFlipper.position.set(-0.56, -0.18, 0.55);
+    rightFlipper.rotation.set(0.15, -0.45, 0.30);
     sealRoot.add(rightFlipper);
 
-    const leftFluke = new THREE.Mesh(flukeGeo, flipperMat);
-    leftFluke.position.set(0.24, 0, -1.85);
-    leftFluke.rotation.y = 0.25;
-    sealRoot.add(leftFluke);
+    // ── 2. STREAMLINED DORSAL BIOLOGGER TAG & HARNESS ──
+    const tagGroup = new THREE.Group();
+    tagGroup.position.set(0, 0.52, 0.25);
 
-    const rightFluke = new THREE.Mesh(flukeGeo, flipperMat);
-    rightFluke.position.set(-0.24, 0, -1.85);
-    rightFluke.rotation.y = -0.25;
-    sealRoot.add(rightFluke);
-
-    // Dorsal Biologger Telemetry Tag
-    const tagGeo = new THREE.BoxGeometry(0.22, 0.12, 0.32);
-    const tagMat = new THREE.MeshStandardMaterial({
+    // Low-profile hydrodynamic epoxy tag housing
+    const tagGeo = new THREE.CylinderGeometry(0.11, 0.14, 0.28, 16);
+    tagGeo.rotateX(Math.PI / 2);
+    tagGeo.scale(0.85, 0.55, 1.15);
+    const tagMat = new THREE.MeshPhysicalMaterial({
       color: cfg.tagColor,
-      roughness: 0.3,
-      metalness: 0.3
+      roughness: 0.25,
+      metalness: 0.35,
+      clearcoat: 0.6
     });
     const tagMesh = new THREE.Mesh(tagGeo, tagMat);
-    tagMesh.position.set(0, 0.58, 0.1);
-    sealRoot.add(tagMesh);
+    tagGroup.add(tagMesh);
 
-    // Flexible LoRa Antenna Whip
-    const antGeo = new THREE.CylinderGeometry(0.007, 0.007, 0.36, 6);
-    const antMat = new THREE.MeshStandardMaterial({ color: 0xffedd5, metalness: 0.9 });
-    const ant = new THREE.Mesh(antGeo, antMat);
-    ant.position.set(0, 0.74, 0.2);
-    ant.rotation.x = -0.2;
-    sealRoot.add(ant);
+    // Silicone Mounting Harness Strap
+    const strapGeo = new THREE.TorusGeometry(0.54, 0.022, 8, 32, Math.PI * 0.95);
+    const strapMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+    const strap = new THREE.Mesh(strapGeo, strapMat);
+    strap.rotation.x = Math.PI / 2;
+    strap.rotation.z = Math.PI * 0.025;
+    strap.position.set(0, -0.06, 0.0);
+    tagGroup.add(strap);
 
-    // Telemetry Status Indicator LED
+    // Flexible 433MHz Nitinol LoRa Whip Antenna
+    const antCurve = new THREE.CubicBezierCurve3(
+      new THREE.Vector3(0, 0.08, 0.10),
+      new THREE.Vector3(0, 0.22, 0.08),
+      new THREE.Vector3(0, 0.38, -0.02),
+      new THREE.Vector3(0, 0.52, -0.14)
+    );
+    const antGeo = new THREE.TubeGeometry(antCurve, 12, 0.007, 6, false);
+    const antMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, metalness: 0.95, roughness: 0.15 });
+    const antenna = new THREE.Mesh(antGeo, antMat);
+    tagGroup.add(antenna);
+
+    // Telemetry Uplink Strobe LED
     const tagLedMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
-    const tagLed = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), tagLedMat);
-    tagLed.position.set(0, 0.65, 0.0);
-    sealRoot.add(tagLed);
+    const tagLed = new THREE.Mesh(new THREE.SphereGeometry(0.028, 12, 12), tagLedMat);
+    tagLed.position.set(0, 0.08, -0.06);
+    tagGroup.add(tagLed);
+
+    sealRoot.add(tagGroup);
+
+    // ── 3. 3D VOLUMETRIC ACOUSTIC SONAR WAVE PULSES ──
+    const sonarRingsGroup = new THREE.Group();
+    const sonarRings = [];
+    for (let r = 0; r < 3; r++) {
+      const ringGeo = new THREE.TorusGeometry(0.6 + r * 0.8, 0.035, 12, 32);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.0,
+        blending: THREE.AdditiveBlending
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = Math.PI / 2;
+      sonarRingsGroup.add(ring);
+      sonarRings.push(ring);
+    }
+    sonarRingsGroup.position.set(0, 0.45, 0.25);
+    sealRoot.add(sonarRingsGroup);
 
     podGroup.add(sealRoot);
 
     return {
       cfg,
       sealRoot,
-      tagMesh,
-      tagLedMat,
+      headGroup,
+      lumbarGroup,
+      caudalGroup,
       leftFlipper,
       rightFlipper,
       leftFluke,
       rightFluke,
-      wasBreaching: false
+      tagMesh,
+      tagLedMat,
+      sonarRings,
+      wasBreaching: false,
+      lastPingTime: 0
     };
   }
 
   const seals = POD_MEMBERS.map(createSealMember);
 
-  // Opportunistic Telemetry Hop Beam & RF Pulse Line
-  const beamPoints = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 10, 0)];
-  const beamGeo = new THREE.BufferGeometry().setFromPoints(beamPoints);
-  const beamMat = new THREE.LineDashedMaterial({
+  // Opportunistic High-Frequency Telemetry Uplink Beam (Active when breaching or pinging)
+  const beamGeo = new THREE.CylinderGeometry(0.03, 0.45, 24, 16, 1, true);
+  const beamMat = new THREE.MeshBasicMaterial({
     color: 0x34d399,
-    dashSize: 1.2,
-    gapSize: 0.6,
-    linewidth: 3,
     transparent: true,
-    opacity: 0.0
+    opacity: 0.0,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide
   });
-  const signalBeam = new THREE.Line(beamGeo, beamMat);
-  signalBeam.computeLineDistances();
+  const signalBeam = new THREE.Mesh(beamGeo, beamMat);
   podGroup.add(signalBeam);
 
-  const hopSphere = new THREE.Mesh(
-    new THREE.SphereGeometry(0.45, 16, 16),
-    new THREE.MeshBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.0 })
-  );
-  podGroup.add(hopSphere);
-
-  // Expose primary sealRoot for focal camera tracking
   const primarySeal = seals[0];
 
   return {
@@ -233,61 +380,90 @@ export function createBiologgerSeal(splashSystem) {
     seals,
     tagMesh: primarySeal.tagMesh,
     signalBeam,
-    hopSphere,
     update: (time, buoyWorldPos) => {
       let closestDist = Infinity;
       let activeOpportunisticSeal = null;
       let anyBreachingInProximity = false;
 
-      // Update all seals in the wild foraging pod
       seals.forEach((s) => {
-        const { cfg, sealRoot, tagLedMat, leftFlipper, rightFlipper, leftFluke, rightFluke } = s;
+        const {
+          cfg,
+          sealRoot,
+          headGroup,
+          lumbarGroup,
+          caudalGroup,
+          leftFlipper,
+          rightFlipper,
+          leftFluke,
+          rightFluke,
+          tagLedMat,
+          sonarRings
+        } = s;
 
-        // Independent foraging trajectory spline
+        // Trajectory Path
         const pathAngle = time * cfg.orbitSpeed + cfg.orbitOffset;
         const pathRadius = cfg.baseRadius + Math.sin(time * 0.15 + cfg.orbitOffset) * cfg.radiusVar;
 
         const sx = Math.cos(pathAngle) * pathRadius;
         const sz = Math.sin(pathAngle) * pathRadius;
 
-        // Natural vertical dive undulating pattern
+        // Natural vertical dive trajectory
         const divePhase = Math.sin(time * cfg.depthFreq + cfg.orbitOffset);
         let sy = cfg.depthMin + (divePhase + 1.0) * 0.5 * (cfg.depthMax - cfg.depthMin);
 
-        // Natural surfacing behavior for breathing
+        // Surfacing behavior
         const isBreaching = cfg.depthMax >= 0 && sy > -1.2;
         if (isBreaching) {
-          sy = 0.2 + Math.sin(time * 2.0) * 0.12;
+          sy = 0.22 + Math.sin(time * 2.2) * 0.14;
         }
 
         sealRoot.position.set(sx, sy, sz);
 
-        // Orient along tangent of swimming trajectory
+        // Orient along tangent of swimming path
         sealRoot.rotation.y = -pathAngle - Math.PI / 2;
-        sealRoot.rotation.z = Math.sin(time * 3.0 + cfg.orbitOffset) * 0.08;
-        sealRoot.rotation.x = isBreaching ? -0.08 : Math.cos(time * cfg.depthFreq + cfg.orbitOffset) * 0.18;
 
-        // Kinematic flipper & fluke undulation
-        const flukeWave = Math.sin(time * 5.0 + cfg.orbitOffset) * 0.35;
-        leftFluke.rotation.y = 0.25 + flukeWave;
-        rightFluke.rotation.y = -0.25 + flukeWave;
+        // Natural dive pitch and banking roll
+        const swimPitch = isBreaching ? -0.12 : Math.cos(time * cfg.depthFreq + cfg.orbitOffset) * 0.22;
+        sealRoot.rotation.x = swimPitch;
+        sealRoot.rotation.z = Math.sin(time * 2.5 + cfg.orbitOffset) * 0.10;
 
-        const flipperWave = Math.sin(time * 3.5 + cfg.orbitOffset) * 0.15;
-        leftFlipper.rotation.z = flipperWave;
-        rightFlipper.rotation.z = -flipperWave;
+        // ── KINEMATIC SINUSOIDAL SPINE WAVE UNDULATION ──
+        const swimCycle = time * 4.2 + cfg.orbitOffset;
+        const spineWave1 = Math.sin(swimCycle) * 0.22;
+        const spineWave2 = Math.sin(swimCycle - 0.75) * 0.38;
+        const flukePitch = Math.cos(swimCycle - 1.2) * 0.45;
 
-        // Splash trigger on breaching surface
+        // Lumbar flexion
+        lumbarGroup.rotation.y = spineWave1;
+        // Caudal peduncle undulation
+        caudalGroup.rotation.y = spineWave2;
+        // Tail fluke hydrofoil oscillation
+        leftFluke.rotation.y = 0.35 + flukePitch;
+        rightFluke.rotation.y = -0.35 + flukePitch;
+
+        // Head tracking & gentle lateral scan
+        headGroup.rotation.y = Math.sin(time * 1.5 + cfg.orbitOffset) * 0.08;
+        headGroup.rotation.x = isBreaching ? 0.25 : -swimPitch * 0.45;
+
+        // Pectoral flipper banking & feathering
+        const flipperRoll = Math.sin(swimCycle * 0.6) * 0.18;
+        leftFlipper.rotation.z = -0.30 + flipperRoll;
+        leftFlipper.rotation.y = 0.45 + spineWave1 * 0.5;
+        rightFlipper.rotation.z = 0.30 - flipperRoll;
+        rightFlipper.rotation.y = -0.45 + spineWave1 * 0.5;
+
+        // Splash trigger on surface breach
         if (splashSystem) {
           if (isBreaching && !s.wasBreaching) {
             splashSystem.triggerSplash(sx, sz);
           }
-          if (!isBreaching && Math.random() < 0.25) {
+          if (!isBreaching && Math.random() < 0.20) {
             splashSystem.emitBubble(sx, sy, sz);
           }
         }
         s.wasBreaching = isBreaching;
 
-        // Distance to Buoy (Opportunistic Detection Zone = 28m ~800m acoustic radius)
+        // Proximity to Autonomous Buoy
         const distToBuoy = Math.hypot(sx - buoyWorldPos.x, sz - buoyWorldPos.z);
         const inAcousticRange = distToBuoy < 28.0;
 
@@ -298,61 +474,58 @@ export function createBiologgerSeal(splashSystem) {
 
         if (inAcousticRange && isBreaching) {
           anyBreachingInProximity = true;
-          tagLedMat.color.setHex(0x10b981); // Bright green LoRa burst
-        } else if (inAcousticRange) {
-          tagLedMat.color.setHex(0x38bdf8); // Cyan acoustic ping
-        } else {
-          tagLedMat.color.setHex(0x64748b); // Dormant tag beacon
         }
 
-        s.currentDepth = -sy * (CONFIG.MAX_DEPTH_METERS / 45.0);
-        s.distToBuoy = distToBuoy;
-        s.inAcousticRange = inAcousticRange;
-        s.isBreaching = isBreaching;
+        // ── 3D VOLUMETRIC ACOUSTIC SONAR EXPANSION ──
+        const pingInterval = 3.5;
+        const pingAge = (time + cfg.orbitOffset * 2.0) % pingInterval;
+        const isPinging = pingAge < 1.4;
+
+        sonarRings.forEach((ring, idx) => {
+          if (isPinging && !isBreaching) {
+            const waveProgress = (pingAge / 1.4 + idx * 0.25) % 1.0;
+            ring.scale.setScalar(1.0 + waveProgress * 3.8);
+            ring.material.opacity = Math.max(0.0, (1.0 - waveProgress) * 0.65);
+            ring.visible = true;
+          } else {
+            ring.material.opacity = 0.0;
+            ring.visible = false;
+          }
+        });
+
+        // Tag LED indicator
+        if (isBreaching && inAcousticRange) {
+          tagLedMat.color.setHex(0x10b981); // Solid Emerald LoRa uplink
+        } else if (isPinging) {
+          tagLedMat.color.setHex(0x38bdf8); // Cyan Acoustic ping pulse
+        } else {
+          tagLedMat.color.setHex(0x064e3b); // Standby dark green
+        }
       });
 
-      // Opportunistic Data Relay Beam to Buoy
-      const lead = activeOpportunisticSeal || seals[0];
-      const leadPos = lead.sealRoot.position;
+      // Update Opportunistic Telemetry Beam
+      if (anyBreachingInProximity && activeOpportunisticSeal) {
+        const sealPos = activeOpportunisticSeal.sealRoot.position;
+        signalBeam.position.set(
+          (sealPos.x + buoyWorldPos.x) * 0.5,
+          (sealPos.y + buoyWorldPos.y + 1.2) * 0.5 + 1.2,
+          (sealPos.z + buoyWorldPos.z) * 0.5
+        );
+        signalBeam.lookAt(buoyWorldPos.x, buoyWorldPos.y + 1.5, buoyWorldPos.z);
+        signalBeam.rotateX(Math.PI / 2);
 
-      if (anyBreachingInProximity) {
-        signalBeam.material.opacity = 0.95;
-        hopSphere.material.opacity = 0.95;
-
-        const hopT = (time * 2.2) % 1.0;
-        const startPos = new THREE.Vector3(leadPos.x, leadPos.y + 0.6, leadPos.z);
-        const endPos = new THREE.Vector3(buoyWorldPos.x, buoyWorldPos.y + CONFIG.BUOY_RADIUS_3D + 1.2, buoyWorldPos.z);
-        hopSphere.position.lerpVectors(startPos, endPos, hopT);
-
-        const positions = beamGeo.attributes.position.array;
-        positions[0] = startPos.x;
-        positions[1] = startPos.y;
-        positions[2] = startPos.z;
-        positions[3] = endPos.x;
-        positions[4] = endPos.y;
-        positions[5] = endPos.z;
-        beamGeo.attributes.position.needsUpdate = true;
-        signalBeam.computeLineDistances();
+        const beamDist = sealPos.distanceTo(buoyWorldPos);
+        signalBeam.scale.set(1.0, beamDist / 24.0, 1.0);
+        beamMat.opacity = 0.65 + Math.sin(time * 18.0) * 0.25;
       } else {
-        signalBeam.material.opacity = 0.0;
-        hopSphere.material.opacity = 0.0;
+        beamMat.opacity = 0.0;
       }
 
       return {
-        isBreaching: anyBreachingInProximity || lead.isBreaching,
-        inProximity: lead.inAcousticRange,
-        activeSealTag: lead.cfg.id,
-        activeSealRole: lead.cfg.role,
-        sealDepth: lead.currentDepth,
-        distToBuoyMeters: (lead.distToBuoy * 28.5).toFixed(0), // scaled to meters
-        podCount: seals.length,
-        podMembers: seals.map(s => ({
-          id: s.cfg.id,
-          role: s.cfg.role,
-          depth: s.currentDepth.toFixed(1),
-          inRange: s.inAcousticRange,
-          isBreaching: s.isBreaching
-        }))
+        closestDistance: closestDist,
+        activeSealId: activeOpportunisticSeal ? activeOpportunisticSeal.cfg.id : null,
+        isBreaching: anyBreachingInProximity,
+        sealDepth: primarySeal ? Math.abs(primarySeal.sealRoot.position.y) : 0
       };
     }
   };

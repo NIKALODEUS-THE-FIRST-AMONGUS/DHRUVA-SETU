@@ -89,6 +89,81 @@ export function createAutonomousBuoy() {
   const bandMesh = new THREE.Mesh(bandGeo, bandMat);
   hullGroup.add(bandMesh);
 
+  // 1C. CNC-Machined Anodized Bezel Frame with Stainless Hex Bolts around Acrylic Window
+  const boltMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.95, roughness: 0.15 });
+  const boltGeo = new THREE.CylinderGeometry(0.016, 0.016, 0.024, 6);
+  boltGeo.rotateX(Math.PI / 2);
+
+  // 16 Hex-head bolts distributed along the arch perimeter of the inspection window
+  for (let b = 0; b < 16; b++) {
+    const t = b / 15;
+    // Window arc from phi 0.20*PI to 0.80*PI, theta 0.32 to 0.58
+    let bPhi, bTheta;
+    if (b < 6) {
+      // Top arch
+      bPhi = (0.22 + (b / 5) * 0.56) * Math.PI;
+      bTheta = 0.32 * Math.PI;
+    } else if (b < 11) {
+      // Bottom arch
+      bPhi = (0.22 + ((b - 6) / 4) * 0.56) * Math.PI;
+      bTheta = 0.58 * Math.PI;
+    } else if (b < 13) {
+      // Left vertical post
+      bPhi = 0.21 * Math.PI;
+      bTheta = (0.36 + (b - 11) * 0.12) * Math.PI;
+    } else {
+      // Right vertical post
+      bPhi = 0.79 * Math.PI;
+      bTheta = (0.36 + (b - 13) * 0.12) * Math.PI;
+    }
+
+    const r = CONFIG.BUOY_RADIUS_3D * 1.008;
+    const bx = -r * Math.sin(bTheta) * Math.cos(bPhi);
+    const by = r * Math.cos(bTheta);
+    const bz = r * Math.sin(bTheta) * Math.sin(bPhi);
+
+    const bolt = new THREE.Mesh(boltGeo, boltMat);
+    bolt.position.set(bx, by, bz);
+    bolt.lookAt(0, 0, 0);
+    hullGroup.add(bolt);
+  }
+
+  // 1D. Heavy-Duty Forged 316L Stainless Steel Deck Lifting Pad-Eyes (4x Cardinal Perimeter)
+  const padEyeMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.92, roughness: 0.2 });
+  const eyeTorusGeo = new THREE.TorusGeometry(0.055, 0.016, 8, 24);
+  const eyeBaseGeo = new THREE.BoxGeometry(0.08, 0.025, 0.06);
+
+  const padEyeAngles = [Math.PI * 0.25, Math.PI * 0.75, Math.PI * 1.25, Math.PI * 1.75];
+  padEyeAngles.forEach((ang) => {
+    const pr = CONFIG.BUOY_RADIUS_3D * 0.82;
+    const py = CONFIG.BUOY_RADIUS_3D * 0.58;
+    const px = Math.cos(ang) * pr;
+    const pz = Math.sin(ang) * pr;
+
+    const base = new THREE.Mesh(eyeBaseGeo, padEyeMat);
+    base.position.set(px, py, pz);
+    base.rotation.y = -ang;
+    hullGroup.add(base);
+
+    const loop = new THREE.Mesh(eyeTorusGeo, padEyeMat);
+    loop.position.set(px, py + 0.05, pz);
+    loop.rotation.y = -ang;
+    hullGroup.add(loop);
+  });
+
+  // 1E. Sacrificial Zinc Galvanic Anode Blocks on Keel (Anti-electrolysis protection)
+  const zincMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.65, metalness: 0.75 });
+  const zincGeo = new THREE.BoxGeometry(0.06, 0.16, 0.04);
+  for (let z = 0; z < 4; z++) {
+    const zAng = (z / 4) * Math.PI * 2;
+    const zx = Math.cos(zAng) * (CONFIG.BUOY_RADIUS_3D * 0.52);
+    const zz = Math.sin(zAng) * (CONFIG.BUOY_RADIUS_3D * 0.52);
+    const anode = new THREE.Mesh(zincGeo, zincMat);
+    anode.position.set(zx, -CONFIG.BUOY_RADIUS_3D * 0.88, zz);
+    anode.rotation.y = -zAng;
+    hullGroup.add(anode);
+  }
+
   // ════════════════════════════════════════════════════════════════════════
   // 2. CONFORMAL MONOCRYSTALLINE SILICON SOLAR CELL COLLAR
   // ════════════════════════════════════════════════════════════════════════

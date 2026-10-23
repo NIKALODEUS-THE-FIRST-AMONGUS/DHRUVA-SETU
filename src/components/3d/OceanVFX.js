@@ -179,22 +179,28 @@ export function createOceanSurface(initialPhysics = {}) {
         float criticalCos = 0.66; // cos(48.6°)
         float tir = smoothstep(criticalCos - 0.08, criticalCos + 0.05, subCosTheta);
 
-        // Sub-surface caustic shimmering waves
-        vec2 subUv = vWorldPosition.xz * 0.08 + vec2(u_time * 0.02, -u_time * 0.015);
-        vec3 subRipple = texture2D(u_normalMap, subUv).rgb * 2.0 - 1.0;
-        float caustic = pow(clamp(subRipple.z * 0.5 + 0.5, 0.0, 1.0), 3.0) * 0.6;
+        // High-frequency animated sub-surface caustics dancing on surface underside
+        vec2 subUv1 = vWorldPosition.xz * 0.085 + vec2(u_time * 0.025, -u_time * 0.018);
+        vec2 subUv2 = vWorldPosition.xz * 0.160 + vec2(-u_time * 0.032, u_time * 0.024);
+        vec3 r1 = texture2D(u_normalMap, subUv1).rgb * 2.0 - 1.0;
+        vec3 r2 = texture2D(u_normalMap, subUv2).rgb * 2.0 - 1.0;
+        float caustic = pow(clamp((r1.z + r2.z * 0.5) * 0.5 + 0.5, 0.0, 1.0), 3.5) * 0.85;
 
-        vec3 underWaterSky = mix(u_skyColor * 1.4, vec3(0.12, 0.72, 0.95), caustic);
-        vec3 underWaterDeep = u_waterDeep * 1.5;
+        // Ethereal Antarctic Snell's window: glowing icy turquoise looking upward
+        vec3 underWaterSky = mix(vec3(0.06, 0.45, 0.75), vec3(0.22, 0.85, 0.98), caustic);
+        // Rich deep polar sapphire water
+        vec3 underWaterDeep = vec3(0.015, 0.14, 0.32);
 
         vec3 subColor = mix(underWaterDeep, underWaterSky, tir);
-        subColor += vec3(0.08, 0.45, 0.65) * caustic;
+        // Add crisp caustic sun glitter
+        subColor += vec3(0.15, 0.65, 0.85) * caustic;
 
-        // Underwater depth fog
-        float subFog = 1.0 - exp(-vDistance * 0.025);
-        subColor = mix(subColor, u_waterDeep * 0.8, clamp(subFog, 0.0, 1.0));
+        // Volumetric subsea distance extinction into deep ocean blue
+        float subFog = 1.0 - exp(-vDistance * 0.022);
+        vec3 abyssalHaze = vec3(0.012, 0.09, 0.20);
+        subColor = mix(subColor, abyssalHaze, clamp(subFog, 0.0, 1.0));
 
-        gl_FragColor = vec4(subColor, 0.92);
+        gl_FragColor = vec4(subColor, 0.95);
         return;
       }
 
