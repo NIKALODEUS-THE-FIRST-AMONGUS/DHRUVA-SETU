@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Compass, Anchor, Waves, Radio, Eye, Camera, Cpu, Sparkles, 
   ChevronRight, ChevronLeft, X, Check, HelpCircle, Layers, Sliders, Zap,
-  Play, Square, ShieldCheck, Sun, Snowflake, Moon, ArrowRight
+  Play, Square, ShieldCheck, Sun, Snowflake, Moon, ArrowRight, Award, IndianRupee
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -22,17 +22,22 @@ export default function OnboardingTutorial({
   sealBreachData,
   powerWatts = 1.35,
   battery = 100,
-  onOpenDeckTab
+  onOpenDeckTab,
+  sidebarOpen = false,
+  onToggleSidebar,
+  showTeamModal = false,
+  onOpenTeamDetails,
+  onStartSlideshow
 }) {
   const [activeMission, setActiveMission] = useState(0);
   const [isCompact, setIsCompact] = useState(false);
-  const [missionCompleted, setMissionCompleted] = useState([false, false, false, false, false]);
+  const [missionCompleted, setMissionCompleted] = useState([false, false, false, false, false, false, false]);
 
   // Track user actions inside the simulation to auto-check off missions
   useEffect(() => {
     if (!isOpen) return;
 
-    // Mission 0: Winch deployed >= 40m
+    // Mission 0: Winch deployed >= 35m
     if (activeMission === 0 && currentDepth >= 35) {
       setMissionCompleted(prev => {
         const next = [...prev];
@@ -76,7 +81,25 @@ export default function OnboardingTutorial({
         return next;
       });
     }
-  }, [currentDepth, cameraPreset, activeSeason, activeMission, isOpen]);
+
+    // Mission 5: Opened Observatory Preferences
+    if (activeMission === 5 && sidebarOpen) {
+      setMissionCompleted(prev => {
+        const next = [...prev];
+        next[5] = true;
+        return next;
+      });
+    }
+
+    // Mission 6: Opened Team SIH Details
+    if (activeMission === 6 && showTeamModal) {
+      setMissionCompleted(prev => {
+        const next = [...prev];
+        next[6] = true;
+        return next;
+      });
+    }
+  }, [currentDepth, cameraPreset, activeSeason, activeMission, isOpen, sidebarOpen, showTeamModal]);
 
   const missions = [
     {
@@ -163,18 +186,61 @@ export default function OnboardingTutorial({
         ? `✓ Austral ${activeSeason.toUpperCase()} climate active — Power consumption: ${powerWatts.toFixed(1)}W`
         : 'Change polar season to test sub-zero freeze survival and heating load',
       isDone: activeSeason === 'winter' || activeSeason === 'autumn'
+    },
+    {
+      id: 'preferences-drawer',
+      tag: 'MISSION 06 // OBSERVATORY PREFERENCES',
+      title: 'Environmental Physics & Shaders (⚙️)',
+      icon: Sliders,
+      accent: 'amber',
+      objective: 'Open the Observatory Preferences drawer to fine-tune wave amplitudes, ocean foam intensity, sea ice density, and restore MoES factory defaults.',
+      actionLabel: sidebarOpen ? 'Preferences Drawer Active' : 'Open Preferences (⚙️)',
+      onAction: () => {
+        if (onToggleSidebar) onToggleSidebar();
+      },
+      statusText: sidebarOpen
+        ? '✓ Observatory Preferences drawer open — Adjust wave physics, foam, or restore standardized defaults'
+        : 'Click button or click ⚙️ in the top bar to calibrate environmental shaders & parameters',
+      isDone: sidebarOpen || missionCompleted[5]
+    },
+    {
+      id: 'team-mandate',
+      tag: 'MISSION 07 // SIH GRAND FINALE & MANDATE',
+      title: 'Team Dhruva Setu & NCPOR Mandate (🏆)',
+      icon: Award,
+      accent: 'green',
+      objective: 'Review the Smart India Hackathon PS SIH-26065 mandate, ₹20,000 student BOM compliance, and polar deployment architecture.',
+      actionLabel: showTeamModal ? 'Team Dossier Active' : 'View SIH Team Details (🏆)',
+      onAction: () => {
+        if (onOpenTeamDetails) onOpenTeamDetails();
+      },
+      statusText: showTeamModal
+        ? '✓ SIH-26065 Mandate & Team Dossier verified — ₹19,450 prototype BOM strictly within ₹20K cap'
+        : 'Click button or click 🏆 in the top bar to inspect team credentials and MoES objectives',
+      isDone: showTeamModal || missionCompleted[6]
     }
   ];
 
-  const current = missions[activeMission];
-  const StepIcon = current.icon;
+  const isFinale = activeMission >= missions.length;
+  const current = !isFinale ? missions[activeMission] : null;
+  const StepIcon = current ? current.icon : Award;
   const allMissionsFinished = missionCompleted.every(Boolean);
 
   const handleNext = () => {
-    if (activeMission < missions.length - 1) {
-      setActiveMission(prev => prev + 1);
+    if (activeMission < missions.length) {
+      const nextMission = activeMission + 1;
+      setActiveMission(nextMission);
+      if (nextMission === missions.length) {
+        // Trigger celebration when arriving at the finale
+        confetti({
+          particleCount: 70,
+          spread: 75,
+          origin: { y: 0.65 },
+          colors: ['#38bdf8', '#10b981', '#f59e0b', '#a855f7']
+        });
+      }
     } else {
-      handleFinish();
+      handleLaunchSlideshow();
     }
   };
 
@@ -184,16 +250,36 @@ export default function OnboardingTutorial({
     }
   };
 
-  const handleFinish = () => {
+  const handleLaunchSlideshow = () => {
     try {
       localStorage.setItem(STORAGE_KEY, 'true');
     } catch (e) {}
 
     confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.65 },
+      particleCount: 90,
+      spread: 80,
+      origin: { y: 0.6 },
       colors: ['#38bdf8', '#10b981', '#f59e0b', '#a855f7']
+    });
+
+    onClose();
+    if (onStartSlideshow) {
+      setTimeout(() => {
+        onStartSlideshow();
+      }, 150);
+    }
+  };
+
+  const handleFinishSimulationOnly = () => {
+    try {
+      localStorage.setItem(STORAGE_KEY, 'true');
+    } catch (e) {}
+
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { y: 0.7 },
+      colors: ['#38bdf8', '#10b981']
     });
 
     onClose();
@@ -203,13 +289,13 @@ export default function OnboardingTutorial({
 
   return (
     <div className="sim-tutorial-overlay">
-      <div className={`sim-tutorial-hud glass-panel ${isCompact ? 'compact' : ''}`}>
+      <div className={`sim-tutorial-hud glass-panel ${isCompact ? 'compact' : ''} ${isFinale ? 'is-finale' : ''}`}>
         {/* HUD Top Bar */}
         <div className="sim-hud-top-row">
           <div className="sim-hud-badge-group">
-            <span className={`sim-mission-pill accent-${current.accent}`}>
+            <span className={`sim-mission-pill accent-${isFinale ? 'amber' : current.accent}`}>
               <Sparkles size={11} className="spin-icon" />
-              <span>{current.tag}</span>
+              <span>{isFinale ? 'GRAND FINALE // EXECUTIVE PRESENTATION' : current.tag}</span>
             </span>
 
             {/* Micro Step Dots */}
@@ -220,9 +306,17 @@ export default function OnboardingTutorial({
                   type="button"
                   className={`sim-step-dot ${idx === activeMission ? 'active' : ''} ${missionCompleted[idx] ? 'completed' : ''}`}
                   onClick={() => setActiveMission(idx)}
-                  title={m.title}
+                  title={`${m.title} ${missionCompleted[idx] ? '(Completed)' : ''}`}
                 />
               ))}
+              <button
+                type="button"
+                className={`sim-step-dot finale-dot ${isFinale ? 'active' : ''} ${allMissionsFinished ? 'completed' : ''}`}
+                onClick={() => setActiveMission(missions.length)}
+                title="Grand Finale Slide Show"
+              >
+                ★
+              </button>
             </div>
           </div>
 
@@ -248,62 +342,133 @@ export default function OnboardingTutorial({
 
         {/* HUD Interactive Content (Hidden in compact view) */}
         {!isCompact && (
-          <div className="sim-hud-body">
-            <div className="sim-hud-main-content">
-              <div className={`sim-icon-frame bg-accent-${current.accent}`}>
-                <StepIcon size={20} className={`accent-${current.accent}`} />
-              </div>
-              <div className="sim-text-block">
-                <div className="sim-mission-title">{current.title}</div>
-                <div className="sim-mission-objective">{current.objective}</div>
-              </div>
-            </div>
+          <>
+            {isFinale ? (
+              /* Finale Screen: Guides user directly into the Grand Finale Slide Show */
+              <div className="sim-hud-body sim-finale-body">
+                <div className="sim-finale-hero">
+                  <div className="sim-icon-frame bg-accent-amber finale-badge-glow">
+                    <Award size={22} className="accent-amber" />
+                  </div>
+                  <div className="sim-text-block">
+                    <div className="sim-mission-title text-amber-glow">
+                      SIMULATION TRAINING COMPLETE
+                    </div>
+                    <div className="sim-mission-objective">
+                      You've mastered live pycnocline haloclines, 6-DOF wave drift, Weddell seal telemetry, cutaway avionics, observatory preferences, and team credentials!
+                    </div>
+                  </div>
+                </div>
 
-            {/* Live Simulation Feedback Banner */}
-            <div className={`sim-live-feedback ${current.isDone ? 'is-complete' : 'in-progress'}`}>
-              <div className="feedback-status-indicator">
-                {current.isDone ? <ShieldCheck size={14} className="accent-green" /> : <Zap size={14} className="accent-cyan pulse-anim" />}
-              </div>
-              <div className="feedback-status-text mono-readout">
-                {current.statusText}
-              </div>
-            </div>
+                {/* Slideshow Presentation Teaser Card */}
+                <div className="sim-slideshow-callout glass-panel">
+                  <div className="callout-header">
+                    <Sparkles size={14} className="accent-cyan" />
+                    <span className="callout-title">RECOMMENDED NEXT: THE GRAND FINALE SLIDE SHOW</span>
+                  </div>
+                  <p className="callout-desc">
+                    Experience our automated 120-second executive slide presentation showcasing the full end-to-end telemetry architecture, multi-angle camera transitions, acoustic signal routing, and polar mission capabilities!
+                  </p>
+                  <div className="callout-features-strip">
+                    <span className="callout-pill">📊 6 Presentation Slides</span>
+                    <span className="callout-pill">🎥 Multi-Angle Cameras</span>
+                    <span className="callout-pill">🦭 Bio-Acoustic Relays</span>
+                    <span className="callout-pill">🇮🇳 MoES &amp; NCPOR Mandate</span>
+                  </div>
+                </div>
 
-            {/* Bottom Directive Actions Bar */}
-            <div className="sim-hud-controls-row">
-              {/* Simulator Action Trigger Button */}
-              <button
-                type="button"
-                className={`sim-trigger-action-btn ${current.isDone ? 'done' : ''}`}
-                onClick={current.onAction}
-              >
-                <Zap size={13} />
-                <span>{current.actionLabel}</span>
-              </button>
-
-              <div className="sim-nav-btn-group">
-                {activeMission > 0 && (
+                {/* Bottom Launch Button Bar */}
+                <div className="sim-finale-actions-row">
                   <button
                     type="button"
-                    className="sim-nav-prev-btn"
-                    onClick={handlePrev}
+                    className="sim-launch-slideshow-btn"
+                    onClick={handleLaunchSlideshow}
                   >
-                    <ChevronLeft size={14} />
-                    <span>Prev</span>
+                    <Play size={13} fill="currentColor" />
+                    <span>LAUNCH GRAND FINALE SLIDESHOW</span>
+                    <ArrowRight size={13} />
                   </button>
-                )}
 
-                <button
-                  type="button"
-                  className="sim-nav-next-btn"
-                  onClick={handleNext}
-                >
-                  <span>{activeMission === missions.length - 1 ? "Complete Training" : "Next Mission"}</span>
-                  {activeMission === missions.length - 1 ? <Check size={14} /> : <ChevronRight size={14} />}
-                </button>
+                  <div className="sim-nav-btn-group">
+                    <button
+                      type="button"
+                      className="sim-nav-prev-btn"
+                      onClick={() => setActiveMission(missions.length - 1)}
+                    >
+                      <ChevronLeft size={14} />
+                      <span>Back to Missions</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="sim-skip-to-sim-btn"
+                      onClick={handleFinishSimulationOnly}
+                      title="Skip slideshow and explore 3D simulation freely"
+                    >
+                      <span>Explore 3D Freely</span>
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            ) : (
+              /* Regular Mission Step View */
+              <div className="sim-hud-body">
+                <div className="sim-hud-main-content">
+                  <div className={`sim-icon-frame bg-accent-${current.accent}`}>
+                    <StepIcon size={20} className={`accent-${current.accent}`} />
+                  </div>
+                  <div className="sim-text-block">
+                    <div className="sim-mission-title">{current.title}</div>
+                    <div className="sim-mission-objective">{current.objective}</div>
+                  </div>
+                </div>
+
+                {/* Live Simulation Feedback Banner */}
+                <div className={`sim-live-feedback ${current.isDone ? 'is-complete' : 'in-progress'}`}>
+                  <div className="feedback-status-indicator">
+                    {current.isDone ? <ShieldCheck size={14} className="accent-green" /> : <Zap size={14} className="accent-cyan pulse-anim" />}
+                  </div>
+                  <div className="feedback-status-text mono-readout">
+                    {current.statusText}
+                  </div>
+                </div>
+
+                {/* Bottom Directive Actions Bar */}
+                <div className="sim-hud-controls-row">
+                  {/* Simulator Action Trigger Button */}
+                  <button
+                    type="button"
+                    className={`sim-trigger-action-btn ${current.isDone ? 'done' : ''}`}
+                    onClick={current.onAction}
+                  >
+                    <Zap size={13} />
+                    <span>{current.actionLabel}</span>
+                  </button>
+
+                  <div className="sim-nav-btn-group">
+                    {activeMission > 0 && (
+                      <button
+                        type="button"
+                        className="sim-nav-prev-btn"
+                        onClick={handlePrev}
+                      >
+                        <ChevronLeft size={14} />
+                        <span>Prev</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      className="sim-nav-next-btn"
+                      onClick={handleNext}
+                    >
+                      <span>{activeMission === missions.length - 1 ? "Finish & Go to Slide Show" : "Next Mission"}</span>
+                      {activeMission === missions.length - 1 ? <ArrowRight size={14} /> : <ChevronRight size={14} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

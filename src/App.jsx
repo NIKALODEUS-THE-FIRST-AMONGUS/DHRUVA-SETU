@@ -800,7 +800,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Interactive 5-Step Guided Simulation Tutorial Mode (Live 3D Action & Feedback) */}
+      {/* Interactive Guided Simulation Tutorial Mode (Live 3D Action & Feedback + Finale Slideshow Hand-off) */}
       <OnboardingTutorial
         isOpen={showTutorialModal}
         onClose={() => setShowTutorialModal(false)}
@@ -816,6 +816,11 @@ export default function App() {
         powerWatts={powerWatts}
         battery={battery}
         onOpenDeckTab={() => setIsDeckMinimized(false)}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={handleToggleSidebar}
+        showTeamModal={showTeamModal}
+        onOpenTeamDetails={handleOpenTeamModal}
+        onStartSlideshow={handleStartTour}
       />
     </div>
   );
