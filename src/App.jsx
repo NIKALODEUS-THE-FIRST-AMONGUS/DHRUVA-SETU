@@ -5,9 +5,10 @@ import UnifiedControlDeck from './components/ui/UnifiedControlDeck';
 import ComponentDetailModal from './components/ui/ComponentDetailModal';
 import TourPresentationOverlay from './components/ui/TourPresentationOverlay';
 import TeamDetailsModal from './components/ui/TeamDetailsModal';
+import OnboardingTutorial from './components/ui/OnboardingTutorial';
 import { CONFIG } from './constants/config';
 import { POLAR_REGIONS, DEFAULT_REGION_ID } from './constants/polarRegions';
-import { Sliders, X, Box, Cpu, Radio, Waves, Sun, Anchor, Play, Award, Sparkles, RotateCcw } from 'lucide-react';
+import { Sliders, X, Box, Cpu, Radio, Waves, Sun, Anchor, Play, Award, Sparkles, RotateCcw, HelpCircle } from 'lucide-react';
 
 export default function App() {
   // Polar Region State (Isolated between Prydz Bay MIZ and Bharati Base)
@@ -207,6 +208,23 @@ export default function App() {
     setSidebarOpen(false);
   };
 
+  // Onboarding Tutorial & Non-Annoying Welcome Invite State
+  const [showTutorialModal, setShowTutorialModal] = useState(false);
+  const [showTutorialInvite, setShowTutorialInvite] = useState(false);
+
+  // Check if first-time visitor with a polite 2.5s delay (doesn't interrupt initial render)
+  useEffect(() => {
+    try {
+      const hasOnboarded = localStorage.getItem('dhruva_setu_onboarded_v2');
+      if (!hasOnboarded) {
+        const timer = setTimeout(() => setShowTutorialInvite(true), 2500);
+        return () => clearTimeout(timer);
+      }
+    } catch (e) {
+      // ignore storage access errors
+    }
+  }, []);
+
   // Easter Egg 2: Secret Gold Medal Evaluator Modal (typed 's-i-h')
   const [showGoldMedalModal, setShowGoldMedalModal] = useState(false);
   const keySequenceRef = useRef([]);
@@ -215,7 +233,7 @@ export default function App() {
   const [benthicToast, setBenthicToast] = useState(null);
   const toastTimeoutRef = useRef(null);
 
-  // Secret Key Sequence Listener ('s' -> 'i' -> 'h')
+  // Secret Key Sequence Listener ('s' -> 'i' -> 'h') & Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Don't capture if user is typing in an input
@@ -223,11 +241,19 @@ export default function App() {
 
       const key = e.key.toLowerCase();
       if (key === 'escape') {
+        if (showTutorialModal) setShowTutorialModal(false);
         if (isTourRunning) setIsTourRunning(false);
         if (showGoldMedalModal) setShowGoldMedalModal(false);
         if (showTeamModal) setShowTeamModal(false);
         if (sidebarOpen) setSidebarOpen(false);
         if (selectedSubsystem) setSelectedSubsystem(null);
+        return;
+      }
+
+      // Help / Tutorial shortcut ('?' or 'h')
+      if (key === '?' || key === 'h') {
+        setShowTutorialModal(prev => !prev);
+        setShowTutorialInvite(false);
         return;
       }
 
@@ -507,6 +533,41 @@ export default function App() {
           </div>
         )}
 
+        {/* Floating Welcome Tutorial Invite (First-time visitors, non-blocking & dismissible) */}
+        {showTutorialInvite && !showTutorialModal && !isTourRunning && (
+          <div className="tutorial-invite-pill glass-panel">
+            <div className="invite-text-block">
+              <Sparkles size={14} className="accent-cyan" />
+              <span>New to Dhruva Setu Simulator?</span>
+            </div>
+            <div className="invite-btn-group">
+              <button
+                type="button"
+                className="invite-start-btn"
+                onClick={() => {
+                  setShowTutorialModal(true);
+                  setShowTutorialInvite(false);
+                }}
+              >
+                30s Tour
+              </button>
+              <button
+                type="button"
+                className="invite-close-btn"
+                onClick={() => {
+                  setShowTutorialInvite(false);
+                  try {
+                    localStorage.setItem('dhruva_setu_onboarded_v2', 'true');
+                  } catch (e) {}
+                }}
+                title="Dismiss Tour Invitation"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Clean, Icon-First Unified Bottom Control Deck (Hidden in Tour Mode) */}
         {!isTourRunning && (
           <UnifiedControlDeck
@@ -637,6 +698,27 @@ export default function App() {
                 )}
               </div>
 
+              {/* Quick Onboarding & Tutorial Guide */}
+              <div className="sidebar-section">
+                <h4 className="sidebar-section-title">GUIDED ONBOARDING TUTORIAL</h4>
+                <div className="sidebar-default-box">
+                  <p className="sidebar-default-desc">
+                    Re-launch the interactive 5-step simulator walkthrough to inspect polar climate controls, winch profiler, biologger telemetry, and cutaway hardware.
+                  </p>
+                  <button
+                    type="button"
+                    className="sidebar-action-btn"
+                    onClick={() => {
+                      setSidebarOpen(false);
+                      setShowTutorialModal(true);
+                    }}
+                  >
+                    <HelpCircle size={14} className="accent-cyan" />
+                    <span>LAUNCH INTERACTIVE TUTORIAL</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Problem 9: Factory Calibration & Default Mode Section (Hardware Inspector Removed) */}
               <div className="sidebar-section">
                 <h4 className="sidebar-section-title">STANDARDIZED POLAR DEFAULTS</h4>
@@ -717,6 +799,18 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Interactive 5-Step Guided Onboarding Tutorial (Interactive & Non-Annoying) */}
+      <OnboardingTutorial
+        isOpen={showTutorialModal}
+        onClose={() => setShowTutorialModal(false)}
+        onChangeCamera={handleCameraChange}
+        onChangeDepth={setCurrentDepth}
+        onChangeSeason={setActiveSeason}
+        onSelectRegion={handleSelectRegion}
+        onOpenDeckTab={() => setIsDeckMinimized(false)}
+        onStartTour={handleStartTour}
+      />
     </div>
   );
 }
