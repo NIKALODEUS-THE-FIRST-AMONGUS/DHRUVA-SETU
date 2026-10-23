@@ -5007,151 +5007,174 @@ div.cursive-body {
   color: #ffffff;
 }
 
-/* Modal Overlay & Card */
-.onboarding-overlay {
+/* ── Live Simulation Tutorial HUD Overlay ── */
+.sim-tutorial-overlay {
   position: fixed;
   inset: 0;
-  z-index: 95;
+  z-index: 85;
   pointer-events: none;
 }
 
-.onboarding-backdrop {
+.sim-tutorial-hud {
   position: absolute;
-  inset: 0;
-  background: rgba(3, 7, 18, 0.45);
-  backdrop-filter: blur(4px);
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 560px;
+  max-width: calc(100vw - 20px);
   pointer-events: auto;
+  border-radius: 14px;
+  background: rgba(6, 16, 32, 0.95) !important;
+  backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.85), 0 0 25px rgba(56, 189, 248, 0.25) !important;
+  padding: 12px 16px;
+  animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  z-index: 90;
 }
 
-.onboarding-card {
-  position: absolute;
-  bottom: 84px;
-  right: 24px;
-  width: 440px;
-  max-width: calc(100vw - 32px);
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
-  pointer-events: auto;
-  border-radius: 18px;
-  background: rgba(6, 16, 32, 0.96) !important;
-  backdrop-filter: blur(28px) !important;
-  border: 1px solid rgba(56, 189, 248, 0.4) !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(56, 189, 248, 0.25) !important;
-  padding: 16px 18px;
-  animation: slideUpFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.sim-tutorial-hud.compact {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
 }
 
-.onboarding-card.minimized {
-  width: auto;
-  max-width: 320px;
-  padding: 10px 14px;
-}
-
-.onboarding-header {
+.sim-hud-top-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
-.onboarding-step-pill {
+.sim-hud-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sim-mission-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
+  gap: 5px;
+  padding: 2px 8px;
   border-radius: var(--radius-pill);
   background: rgba(56, 189, 248, 0.12);
   border: 1px solid rgba(56, 189, 248, 0.35);
   font-family: var(--font-data);
   font-size: 9.5px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: #38bdf8;
   text-transform: uppercase;
 }
 
-.onboarding-step-pill.accent-amber {
+.sim-mission-pill.accent-amber {
   background: rgba(245, 158, 11, 0.12);
   border-color: rgba(245, 158, 11, 0.35);
   color: #f59e0b;
 }
 
-.onboarding-step-pill.accent-green {
+.sim-mission-pill.accent-green {
   background: rgba(16, 185, 129, 0.12);
   border-color: rgba(16, 185, 129, 0.35);
   color: #10b981;
 }
 
-.onboarding-step-pill.accent-purple {
+.sim-mission-pill.accent-purple {
   background: rgba(168, 85, 247, 0.12);
   border-color: rgba(168, 85, 247, 0.35);
   color: #a855f7;
 }
 
-.onboarding-window-controls {
+.sim-step-dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sim-step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.sim-step-dot.active {
+  background: #38bdf8;
+  border-color: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
+  transform: scale(1.2);
+}
+
+.sim-step-dot.completed {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.sim-hud-actions {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.onboarding-icon-btn {
-  width: 24px;
-  height: 24px;
+.sim-hud-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  font-family: var(--font-data);
+  font-size: 8.5px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sim-hud-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+}
+
+.sim-hud-close-btn {
+  width: 22px;
+  height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: #94a3b8;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.onboarding-icon-btn:hover {
-  background: rgba(56, 189, 248, 0.25);
-  border-color: #38bdf8;
-  color: #ffffff;
-}
-
-.onboarding-icon-btn.close-btn:hover {
+.sim-hud-close-btn:hover {
   background: rgba(239, 68, 68, 0.25);
   border-color: #ef4444;
   color: #ffffff;
 }
 
-.onboarding-progress-bar {
-  width: 100%;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
-  margin: 10px 0 14px 0;
-  overflow: hidden;
-}
-
-.onboarding-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #38bdf8, #f59e0b, #10b981);
-  border-radius: 2px;
-  transition: width 0.35s ease;
-}
-
-.onboarding-body {
+.sim-hud-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
-.onboarding-title-group {
+.sim-hud-main-content {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
 }
 
-.onboarding-icon-box {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+.sim-icon-frame {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5160,155 +5183,82 @@ div.cursive-body {
   border: 1px solid rgba(56, 189, 248, 0.35);
 }
 
-.onboarding-icon-box.bg-accent-amber {
+.sim-icon-frame.bg-accent-amber {
   background: rgba(245, 158, 11, 0.12);
   border-color: rgba(245, 158, 11, 0.35);
 }
 
-.onboarding-icon-box.bg-accent-green {
+.sim-icon-frame.bg-accent-green {
   background: rgba(16, 185, 129, 0.12);
   border-color: rgba(16, 185, 129, 0.35);
 }
 
-.onboarding-icon-box.bg-accent-purple {
+.sim-icon-frame.bg-accent-purple {
   background: rgba(168, 85, 247, 0.12);
   border-color: rgba(168, 85, 247, 0.35);
 }
 
-.onboarding-title {
-  margin: 0;
+.sim-text-block {
+  flex: 1;
+}
+
+.sim-mission-title {
   font-family: 'Oswald', sans-serif;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: #f8fafc;
   text-transform: uppercase;
 }
 
-.onboarding-desc {
-  margin: 4px 0 0 0;
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: #cbd5e1;
-}
-
-.onboarding-features-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.onboarding-feature-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.feature-bullet-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #38bdf8;
-  margin-top: 6px;
-  flex-shrink: 0;
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.8);
-}
-
-.feature-text {
+.sim-mission-objective {
   font-size: 11px;
-  line-height: 1.45;
-  color: #94a3b8;
+  color: #cbd5e1;
+  line-height: 1.4;
+  margin-top: 2px;
 }
 
-.feature-label {
-  color: #e2e8f0;
-  font-weight: 600;
-}
-
-.onboarding-tip-banner {
+.sim-live-feedback {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 10px;
-  border-radius: 8px;
-  background: rgba(56, 189, 248, 0.08);
-  border: 1px dashed rgba(56, 189, 248, 0.3);
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  transition: all 0.25s ease;
 }
 
-.tip-sparkle {
-  font-size: 13px;
+.sim-live-feedback.is-complete {
+  border-color: rgba(16, 185, 129, 0.55);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.feedback-status-indicator {
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
 }
 
-.tip-text {
-  font-size: 10.5px;
-  color: #bae6fd;
-  line-height: 1.4;
+.feedback-status-text {
+  font-size: 10px;
+  color: #e0f2fe;
 }
 
-.onboarding-footer {
+.sim-hud-controls-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-top: 4px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 8px;
 }
 
-.onboarding-dont-show {
+.sim-trigger-action-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
-  color: #64748b;
-  cursor: pointer;
-  user-select: none;
-}
-
-.onboarding-dont-show input[type="checkbox"] {
-  cursor: pointer;
-  accent-color: #38bdf8;
-}
-
-.onboarding-nav-btns {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.onboarding-prev-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #cbd5e1;
-  font-family: var(--font-data);
-  font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.onboarding-prev-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-}
-
-.onboarding-next-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 14px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.3), rgba(16, 185, 129, 0.25));
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(245, 158, 11, 0.2));
   border: 1px solid rgba(56, 189, 248, 0.55);
   color: #ffffff;
   font-family: var(--font-data);
@@ -5317,14 +5267,70 @@ div.cursive-body {
   letter-spacing: 0.03em;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
 }
 
-.onboarding-next-btn:hover {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.45), rgba(16, 185, 129, 0.35));
+.sim-trigger-action-btn:hover {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.45), rgba(245, 158, 11, 0.35));
   border-color: #38bdf8;
   transform: translateY(-1px);
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+}
+
+.sim-trigger-action-btn.done {
+  border-color: rgba(16, 185, 129, 0.6);
+  background: rgba(16, 185, 129, 0.2);
+  color: #a7f3d0;
+}
+
+.sim-nav-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sim-nav-prev-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+  font-family: var(--font-data);
+  font-size: 9.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sim-nav-prev-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.sim-nav-next-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.3), rgba(16, 185, 129, 0.25));
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  color: #ffffff;
+  font-family: var(--font-data);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sim-nav-next-btn:hover {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.5), rgba(16, 185, 129, 0.4));
+  border-color: #38bdf8;
+  transform: translateY(-1px);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
 }
 
 .sidebar-action-btn {
@@ -5354,60 +5360,35 @@ div.cursive-body {
   box-shadow: 0 0 14px rgba(56, 189, 248, 0.3);
 }
 
-/* Mobile Adjustments for Tutorial */
+/* Mobile Simulation HUD Adjustments */
 @media (max-width: 680px) {
-  .tutorial-invite-pill {
-    bottom: 58px;
-    right: 8px;
-    left: 8px;
-    padding: 6px 10px;
-    gap: 8px;
-    justify-content: space-between;
+  .sim-tutorial-hud {
+    top: 48px;
+    width: calc(100vw - 12px);
+    padding: 8px 10px;
   }
 
-  .invite-text-block {
-    font-size: 10.5px;
+  .sim-mission-title {
+    font-size: 13px;
   }
 
-  .invite-start-btn {
-    padding: 3px 8px;
-    font-size: 10px;
-  }
-
-  .onboarding-card {
-    bottom: 54px;
-    right: 6px;
-    left: 6px;
-    width: auto;
-    max-width: none;
-    padding: 10px 12px;
-    max-height: 62vh;
-  }
-
-  .onboarding-title {
-    font-size: 14px;
-  }
-
-  .onboarding-desc {
-    font-size: 10.5px;
-  }
-
-  .feature-text {
-    font-size: 10px;
-  }
-
-  .tip-text {
+  .sim-mission-objective {
     font-size: 9.5px;
   }
 
-  .onboarding-dont-show {
+  .feedback-status-text {
     font-size: 9px;
   }
 
-  .onboarding-next-btn,
-  .onboarding-prev-btn {
-    padding: 4px 10px;
-    font-size: 9.5px;
+  .sim-trigger-action-btn {
+    padding: 4px 8px;
+    font-size: 9px;
+  }
+
+  .sim-nav-next-btn {
+    padding: 4px 8px;
+    font-size: 9px;
   }
 }
+
 

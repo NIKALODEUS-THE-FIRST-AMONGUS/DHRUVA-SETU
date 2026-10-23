@@ -800,16 +800,22 @@ export default function App() {
         </div>
       )}
 
-      {/* Interactive 5-Step Guided Onboarding Tutorial (Interactive & Non-Annoying) */}
+      {/* Interactive 5-Step Guided Simulation Tutorial Mode (Live 3D Action & Feedback) */}
       <OnboardingTutorial
         isOpen={showTutorialModal}
         onClose={() => setShowTutorialModal(false)}
-        onChangeCamera={handleCameraChange}
+        currentDepth={currentDepth}
         onChangeDepth={setCurrentDepth}
+        cameraPreset={cameraPreset}
+        onChangeCamera={handleCameraChange}
+        activeSeason={activeSeason}
         onChangeSeason={setActiveSeason}
-        onSelectRegion={handleSelectRegion}
+        isAutoProfiling={isAutoProfiling}
+        onToggleAutoProfile={() => setIsAutoProfiling(prev => !prev)}
+        sealBreachData={sealBreachData}
+        powerWatts={powerWatts}
+        battery={battery}
         onOpenDeckTab={() => setIsDeckMinimized(false)}
-        onStartTour={handleStartTour}
       />
     </div>
   );

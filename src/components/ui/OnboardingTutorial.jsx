@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Compass, Anchor, Waves, Radio, Eye, Camera, Cpu, Sparkles, 
-  ChevronRight, ChevronLeft, X, Check, HelpCircle, Layers, Sliders, Zap
+  ChevronRight, ChevronLeft, X, Check, HelpCircle, Layers, Sliders, Zap,
+  Play, Square, ShieldCheck, Sun, Snowflake, Moon, ArrowRight
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -10,275 +11,301 @@ const STORAGE_KEY = 'dhruva_setu_onboarded_v2';
 export default function OnboardingTutorial({
   isOpen,
   onClose,
-  onChangeCamera,
+  currentDepth = 0,
   onChangeDepth,
+  cameraPreset = 'wide',
+  onChangeCamera,
+  activeSeason = 'summer',
   onChangeSeason,
-  onSelectRegion,
-  onOpenDeckTab,
-  onStartTour
+  isAutoProfiling = false,
+  onToggleAutoProfile,
+  sealBreachData,
+  powerWatts = 1.35,
+  battery = 100,
+  onOpenDeckTab
 }) {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [activeMission, setActiveMission] = useState(0);
+  const [isCompact, setIsCompact] = useState(false);
+  const [missionCompleted, setMissionCompleted] = useState([false, false, false, false, false]);
 
-  // Auto-trigger actions per step to demonstrate live capabilities
+  // Track user actions inside the simulation to auto-check off missions
   useEffect(() => {
     if (!isOpen) return;
 
-    if (currentStep === 0) {
-      // Step 1: Environment & Climate Overview
-      if (onChangeCamera) onChangeCamera('wide');
-    } else if (currentStep === 1) {
-      // Step 2: Spar Buoy 6-DOF Hydrodynamics
-      if (onChangeCamera) onChangeCamera('buoy');
-    } else if (currentStep === 2) {
-      // Step 3: Winch & Subsea CTD Profiler
-      if (onChangeCamera) onChangeCamera('ctd');
-      if (onChangeDepth) onChangeDepth(45.0); // Show Halocline depth
-      if (onOpenDeckTab) onOpenDeckTab('winch');
-    } else if (currentStep === 3) {
-      // Step 4: Wild Weddell Seal Pod & Acoustics
-      if (onChangeCamera) onChangeCamera('seal');
-      if (onOpenDeckTab) onOpenDeckTab('seal');
-    } else if (currentStep === 4) {
-      // Step 5: 3-Tier Cutaway Hardware Bay
-      if (onChangeCamera) onChangeCamera('electronics');
-      if (onOpenDeckTab) onOpenDeckTab('camera');
+    // Mission 0: Winch deployed >= 40m
+    if (activeMission === 0 && currentDepth >= 35) {
+      setMissionCompleted(prev => {
+        const next = [...prev];
+        next[0] = true;
+        return next;
+      });
     }
-  }, [currentStep, isOpen]);
 
-  const steps = [
+    // Mission 1: Camera focused on buoy
+    if (activeMission === 1 && cameraPreset === 'buoy') {
+      setMissionCompleted(prev => {
+        const next = [...prev];
+        next[1] = true;
+        return next;
+      });
+    }
+
+    // Mission 2: Tracking seal pod
+    if (activeMission === 2 && cameraPreset === 'seal') {
+      setMissionCompleted(prev => {
+        const next = [...prev];
+        next[2] = true;
+        return next;
+      });
+    }
+
+    // Mission 3: Inspecting electronics
+    if (activeMission === 3 && cameraPreset?.startsWith('electronics')) {
+      setMissionCompleted(prev => {
+        const next = [...prev];
+        next[3] = true;
+        return next;
+      });
+    }
+
+    // Mission 4: Triggered winter or autumn season
+    if (activeMission === 4 && (activeSeason === 'winter' || activeSeason === 'autumn')) {
+      setMissionCompleted(prev => {
+        const next = [...prev];
+        next[4] = true;
+        return next;
+      });
+    }
+  }, [currentDepth, cameraPreset, activeSeason, activeMission, isOpen]);
+
+  const missions = [
     {
-      id: 'polar-env',
-      badge: 'STEP 1 OF 5 // POLAR CLIMATE',
-      title: 'Polar Deployment & Seasons',
-      icon: Compass,
-      accent: 'cyan',
-      desc: 'Dhruva Setu simulates India’s autonomous polar ocean observation platform across the high-energy Marginal Ice Zone (MIZ) of Prydz Bay and the coastal Antarctic waters of Bharati Station.',
-      highlights: [
-        { label: 'Deployment Sectors', detail: 'Toggle between Prydz Bay MIZ (68°22\'S) and Bharati Station in the Top Bar.' },
-        { label: '4-Season Climate', detail: 'Austral Summer (Midnight Sun), Autumn Blizzard, Polar Night, and Spring Breakup.' },
-        { label: '↺ Auto-Cycle', detail: 'Toggle automatic seasonal progression with real-time solar watt variations.' }
-      ],
-      quickTip: 'Tip: Click the Area or Season pill in the Top Bar anytime to change polar conditions.'
-    },
-    {
-      id: 'spar-buoy',
-      badge: 'STEP 2 OF 5 // HYDRODYNAMICS',
-      title: '6-DOF Spar Buoy & Ocean Physics',
-      icon: Anchor,
-      accent: 'amber',
-      desc: 'The surface spar buoy uses metacentric ballast and a slender hydrodynamic draft to survive violent Southern Ocean swells and sea ice collisions without power.',
-      highlights: [
-        { label: 'Interactive 3D Camera', detail: 'Drag to Orbit, Scroll to Zoom, Right-Click / Two-Finger drag to Pan.' },
-        { label: 'Wave & Ice Synthesis', detail: 'Real-time Gerstner wave mechanics with damping from pancake ice floes.' },
-        { label: 'Mooring Catenary', detail: 'Aramid Kevlar line anchored with a 280kg benthic clump mud anchor at -48m.' }
-      ],
-      quickTip: 'Tip: Open Observatory Preferences (⚙️ icon) to adjust wave amplitude and ice density.'
-    },
-    {
-      id: 'ctd-profiler',
-      badge: 'STEP 3 OF 5 // HYDROGRAPHY',
-      title: 'Subsea Winch & Halocline CTD',
+      id: 'ctd-depth',
+      tag: 'MISSION 01 // SUBSEA HYDROGRAPHY',
+      title: 'Sounding the Antarctic Pycnocline',
       icon: Waves,
       accent: 'cyan',
-      desc: 'An automated winch lowers the hydrodynamic titanium CTD sonde from 0m to 200m depth to log live ocean stratification, sound velocity channels, and polar meltwater.',
-      highlights: [
-        { label: 'Depth Winch', detail: 'Use the bottom dock slider or tap Quick Presets (Surface, Halocline, Abyss).' },
-        { label: 'Live CTD Graph', detail: 'Calculates real-time UNESCO EOS-80 density, salinity, and sound speed.' },
-        { label: 'Pycnocline Shear Layer', detail: 'Observe rapid water mass transition between AASW and deep MCDW.' }
-      ],
-      quickTip: 'Tip: Tap "Auto Profile" in the Winch tab to let the sonde continuously sound the water column.'
+      objective: 'Deploy the automated winch to 50m depth to profile the sub-zero Halocline shear boundary layer.',
+      actionLabel: 'Deploy Winch to 50m',
+      onAction: () => {
+        if (onChangeDepth) onChangeDepth(50.0);
+        if (onChangeCamera) onChangeCamera('ctd');
+        if (onOpenDeckTab) onOpenDeckTab('winch');
+      },
+      statusText: currentDepth >= 35 
+        ? `✓ Pycnocline penetrated (${currentDepth.toFixed(1)}m) — Halocline profile active (-1.85°C)`
+        : `Sonde currently at ${currentDepth.toFixed(1)}m — Descend below 35m to complete`,
+      isDone: currentDepth >= 35
     },
     {
-      id: 'marine-seal',
-      badge: 'STEP 4 OF 5 // MARINE TELEMETRY',
-      title: 'Weddell Seal Opportunistic Relay',
+      id: 'buoy-physics',
+      tag: 'MISSION 02 // WAVE HYDRODYNAMICS',
+      title: '6-DOF Spar Buoy & Sea Ice Damping',
+      icon: Anchor,
+      accent: 'amber',
+      objective: 'Switch camera to the surface spar buoy and observe 6-DOF Stokes drift stability amidst colliding pancake ice floes.',
+      actionLabel: 'Focus Spar Buoy (Cam 2)',
+      onAction: () => {
+        if (onChangeCamera) onChangeCamera('buoy');
+      },
+      statusText: cameraPreset === 'buoy'
+        ? '✓ 6-DOF hydrodynamic tracking active — Metacentric ballast self-righting verified'
+        : 'Click the button or drag the 3D viewport to orbit around the spar buoy',
+      isDone: cameraPreset === 'buoy'
+    },
+    {
+      id: 'seal-telemetry',
+      tag: 'MISSION 03 // MARINE BIO-LOGGERS',
+      title: 'Weddell Seal Acoustic Telemetry Relay',
       icon: Radio,
       accent: 'green',
-      desc: 'Wild Weddell seals (Leptonychotes weddellii) fitted with non-invasive bio-loggers act as mobile oceanographic sensors, harvesting data across a <800m acoustic cone.',
-      highlights: [
-        { label: '12.5 kHz Underwater Sonar', detail: 'Spar buoy hydrophone listens for acoustic ping packets from the diving pod.' },
-        { label: 'Surface LoRa Burst (433MHz)', detail: 'When seals surface to breathe, high-speed RF uplink transfers ocean soundings.' },
-        { label: 'PPI Sonar Radar', detail: 'View the live 360° PPI sonar scope and RF waterfall spectrum in the Seal Pod tab.' }
-      ],
-      quickTip: 'Tip: Click "Track Wild Pod" to follow the Weddell seal pod directly in 3D.'
+      objective: 'Track the 4 foraging Weddell seals harvesting subsea ocean data and transmitting packets over the 12.5kHz acoustic link.',
+      actionLabel: 'Track Weddell Seal Pod',
+      onAction: () => {
+        if (onChangeCamera) onChangeCamera('seal');
+        if (onOpenDeckTab) onOpenDeckTab('seal');
+      },
+      statusText: cameraPreset === 'seal'
+        ? `✓ Acoustic sonar link locked (<800m cone) — ${sealBreachData?.isBreaching ? '433MHz LoRa burst active' : '12.5kHz acoustic standby'}`
+        : 'Track the seal pod to monitor opportunistic biological sensor relays',
+      isDone: cameraPreset === 'seal'
     },
     {
-      id: 'hardware-inspection',
-      badge: 'STEP 5 OF 5 // HARDWARE & PRESENTATION',
-      title: '3-Tier Cutaway & Evaluator Tools',
+      id: 'electronics-cutaway',
+      tag: 'MISSION 04 // AVIONICS CUTAWAY',
+      title: '3-Tier Watertight Avionics Bay',
       icon: Cpu,
       accent: 'purple',
-      desc: 'Dhruva Setu was engineered under a ₹18,700 (~$225) student BOM budget for the Smart India Hackathon Grand Finale.',
-      highlights: [
-        { label: 'Part A: Antenna & Solar', detail: 'Inspect 433MHz whip, RTK GPS ceramic patch, and flexible ETFE solar conduit.' },
-        { label: 'Part B: PCB & Heaters', detail: 'Watertight bay with ESP32-S3, SX1278 LoRa, and Kapton thermal anti-freeze pads.' },
-        { label: 'Part C: Winch Motor', detail: 'Worm-drive motor, waterproof slip rings, and HDPE keel guide tubes.' },
-        { label: '120s Slide Show (▶)', detail: 'One-click automated executive PowerPoint-style presentation mode for evaluators.' }
-      ],
-      quickTip: 'Secret: Type "s-i-h" on your keyboard anytime to reveal the Evaluator Gold Medal compliance audit!'
+      objective: 'Inspect the interior electronics: ESP32-S3 microcontroller, SX1278 LoRa transceiver, and Kapton thermal heaters.',
+      actionLabel: 'Inspect Part B (Avionics)',
+      onAction: () => {
+        if (onChangeCamera) onChangeCamera('electronics');
+        if (onOpenDeckTab) onOpenDeckTab('camera');
+      },
+      statusText: cameraPreset?.startsWith('electronics')
+        ? '✓ Watertight IP68 hull cutaway active — Dual Kapton thermal heating pads verified'
+        : 'Switch to Part B to examine the cold-weather electronics hardware',
+      isDone: cameraPreset?.startsWith('electronics')
+    },
+    {
+      id: 'climate-seasons',
+      tag: 'MISSION 05 // POLAR CLIMATE',
+      title: 'Dynamic Blizzard & Aurora Australis',
+      icon: Snowflake,
+      accent: 'cyan',
+      objective: 'Switch the climate to Autumn Blizzard or Winter Polar Night to simulate sub-zero heating power balance and night sky auroras.',
+      actionLabel: 'Trigger Polar Night & Aurora',
+      onAction: () => {
+        if (onChangeSeason) onChangeSeason('winter');
+        if (onChangeCamera) onChangeCamera('wide');
+      },
+      statusText: (activeSeason === 'winter' || activeSeason === 'autumn')
+        ? `✓ Austral ${activeSeason.toUpperCase()} climate active — Power consumption: ${powerWatts.toFixed(1)}W`
+        : 'Change polar season to test sub-zero freeze survival and heating load',
+      isDone: activeSeason === 'winter' || activeSeason === 'autumn'
     }
   ];
 
-  const activeStepData = steps[currentStep];
-  const StepIcon = activeStepData.icon;
+  const current = missions[activeMission];
+  const StepIcon = current.icon;
+  const allMissionsFinished = missionCompleted.every(Boolean);
 
   const handleNext = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(prev => prev + 1);
+    if (activeMission < missions.length - 1) {
+      setActiveMission(prev => prev + 1);
     } else {
-      handleComplete();
+      handleFinish();
     }
   };
 
   const handlePrev = () => {
-    if (currentStep > 0) {
-      setCurrentStep(prev => prev - 1);
+    if (activeMission > 0) {
+      setActiveMission(prev => prev - 1);
     }
   };
 
-  const handleComplete = () => {
+  const handleFinish = () => {
     try {
       localStorage.setItem(STORAGE_KEY, 'true');
-    } catch (e) {
-      // ignore storage errors
-    }
-    
-    // Evaluator Celebration Confetti
+    } catch (e) {}
+
     confetti({
-      particleCount: 70,
-      spread: 60,
-      origin: { y: 0.75 },
+      particleCount: 80,
+      spread: 70,
+      origin: { y: 0.65 },
       colors: ['#38bdf8', '#10b981', '#f59e0b', '#a855f7']
     });
 
     onClose();
   };
 
-  const handleDismiss = () => {
-    if (dontShowAgain) {
-      try {
-        localStorage.setItem(STORAGE_KEY, 'true');
-      } catch (e) {
-        // ignore
-      }
-    }
-    onClose();
-  };
-
   if (!isOpen) return null;
 
   return (
-    <div className="onboarding-overlay">
-      {/* Semi-transparent non-blocking backdrop */}
-      <div className="onboarding-backdrop" onClick={handleDismiss} />
-
-      <aside className={`onboarding-card glass-panel ${isMinimized ? 'minimized' : ''}`}>
-        {/* Top Header Row */}
-        <div className="onboarding-header">
-          <div className="onboarding-badge-row">
-            <span className={`onboarding-step-pill accent-${activeStepData.accent}`}>
-              <Sparkles size={11} />
-              <span>{activeStepData.badge}</span>
+    <div className="sim-tutorial-overlay">
+      <div className={`sim-tutorial-hud glass-panel ${isCompact ? 'compact' : ''}`}>
+        {/* HUD Top Bar */}
+        <div className="sim-hud-top-row">
+          <div className="sim-hud-badge-group">
+            <span className={`sim-mission-pill accent-${current.accent}`}>
+              <Sparkles size={11} className="spin-icon" />
+              <span>{current.tag}</span>
             </span>
-          </div>
 
-          <div className="onboarding-window-controls">
-            <button
-              type="button"
-              className="onboarding-icon-btn"
-              onClick={() => setIsMinimized(prev => !prev)}
-              title={isMinimized ? "Expand Tutorial" : "Minimize Tutorial"}
-            >
-              <HelpCircle size={14} />
-            </button>
-            <button
-              type="button"
-              className="onboarding-icon-btn close-btn"
-              onClick={handleDismiss}
-              title="Close Tutorial"
-            >
-              <X size={15} />
-            </button>
-          </div>
-        </div>
-
-        {/* Step Progress Line */}
-        <div className="onboarding-progress-bar">
-          <div 
-            className="onboarding-progress-fill" 
-            style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }} 
-          />
-        </div>
-
-        {!isMinimized && (
-          <div className="onboarding-body">
-            {/* Title & Icon Header */}
-            <div className="onboarding-title-group">
-              <div className={`onboarding-icon-box bg-accent-${activeStepData.accent}`}>
-                <StepIcon size={20} className={`accent-${activeStepData.accent}`} />
-              </div>
-              <div>
-                <h3 className="onboarding-title">{activeStepData.title}</h3>
-                <p className="onboarding-desc">{activeStepData.desc}</p>
-              </div>
-            </div>
-
-            {/* Core Feature Bullet Points */}
-            <div className="onboarding-features-list">
-              {activeStepData.highlights.map((h, i) => (
-                <div key={i} className="onboarding-feature-item">
-                  <div className="feature-bullet-dot" />
-                  <div className="feature-text">
-                    <strong className="feature-label">{h.label}:</strong> {h.detail}
-                  </div>
-                </div>
+            {/* Micro Step Dots */}
+            <div className="sim-step-dots">
+              {missions.map((m, idx) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={`sim-step-dot ${idx === activeMission ? 'active' : ''} ${missionCompleted[idx] ? 'completed' : ''}`}
+                  onClick={() => setActiveMission(idx)}
+                  title={m.title}
+                />
               ))}
             </div>
+          </div>
 
-            {/* Quick Pro-Tip Callout */}
-            <div className="onboarding-tip-banner">
-              <span className="tip-sparkle">💡</span>
-              <span className="tip-text">{activeStepData.quickTip}</span>
+          <div className="sim-hud-actions">
+            <button
+              type="button"
+              className="sim-hud-btn"
+              onClick={() => setIsCompact(prev => !prev)}
+              title={isCompact ? "Expand Mission HUD" : "Minimize Mission HUD"}
+            >
+              {isCompact ? "EXPAND ▾" : "MINIMIZE ▴"}
+            </button>
+            <button
+              type="button"
+              className="sim-hud-close-btn"
+              onClick={onClose}
+              title="Exit Simulation Tutorial"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* HUD Interactive Content (Hidden in compact view) */}
+        {!isCompact && (
+          <div className="sim-hud-body">
+            <div className="sim-hud-main-content">
+              <div className={`sim-icon-frame bg-accent-${current.accent}`}>
+                <StepIcon size={20} className={`accent-${current.accent}`} />
+              </div>
+              <div className="sim-text-block">
+                <div className="sim-mission-title">{current.title}</div>
+                <div className="sim-mission-objective">{current.objective}</div>
+              </div>
             </div>
 
-            {/* Bottom Controls Bar */}
-            <div className="onboarding-footer">
-              <label className="onboarding-dont-show">
-                <input
-                  type="checkbox"
-                  checked={dontShowAgain}
-                  onChange={(e) => setDontShowAgain(e.target.checked)}
-                />
-                <span>Don't show on launch</span>
-              </label>
+            {/* Live Simulation Feedback Banner */}
+            <div className={`sim-live-feedback ${current.isDone ? 'is-complete' : 'in-progress'}`}>
+              <div className="feedback-status-indicator">
+                {current.isDone ? <ShieldCheck size={14} className="accent-green" /> : <Zap size={14} className="accent-cyan pulse-anim" />}
+              </div>
+              <div className="feedback-status-text mono-readout">
+                {current.statusText}
+              </div>
+            </div>
 
-              <div className="onboarding-nav-btns">
-                {currentStep > 0 && (
+            {/* Bottom Directive Actions Bar */}
+            <div className="sim-hud-controls-row">
+              {/* Simulator Action Trigger Button */}
+              <button
+                type="button"
+                className={`sim-trigger-action-btn ${current.isDone ? 'done' : ''}`}
+                onClick={current.onAction}
+              >
+                <Zap size={13} />
+                <span>{current.actionLabel}</span>
+              </button>
+
+              <div className="sim-nav-btn-group">
+                {activeMission > 0 && (
                   <button
                     type="button"
-                    className="onboarding-prev-btn"
+                    className="sim-nav-prev-btn"
                     onClick={handlePrev}
                   >
                     <ChevronLeft size={14} />
-                    <span>Back</span>
+                    <span>Prev</span>
                   </button>
                 )}
 
                 <button
                   type="button"
-                  className="onboarding-next-btn"
+                  className="sim-nav-next-btn"
                   onClick={handleNext}
                 >
-                  <span>{currentStep === steps.length - 1 ? "Start Exploring" : "Next Step"}</span>
-                  {currentStep === steps.length - 1 ? <Check size={14} /> : <ChevronRight size={14} />}
+                  <span>{activeMission === missions.length - 1 ? "Complete Training" : "Next Mission"}</span>
+                  {activeMission === missions.length - 1 ? <Check size={14} /> : <ChevronRight size={14} />}
                 </button>
               </div>
             </div>
           </div>
         )}
-      </aside>
+      </div>
     </div>
   );
 }
