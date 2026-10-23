@@ -289,6 +289,14 @@ export function createOceanSurface(initialPhysics = {}) {
       // Add crisp sun specular on top of water
       finalColor += sunSpecular * (1.0 - totalFoam * 0.75);
 
+      // 7B. Contact Ambient Occlusion & Spar Buoy Hull Grounding Shadow (r < 2.0m)
+      float buoyAO = smoothstep(0.65, 1.85, hullDist);
+      vec3 sunDirFlat = normalize(vec3(u_sunDirection.x, 0.0, u_sunDirection.z));
+      float sunShadowProj = length(vWorldPosition.xz - (u_buoyPos - sunDirFlat.xz * 0.75));
+      float buoySunShadow = smoothstep(0.55, 2.4, sunShadowProj);
+      float totalContactOcclusion = clamp(buoyAO * 0.62 + buoySunShadow * 0.38, 0.32, 1.0);
+      finalColor *= totalContactOcclusion;
+
       // 8. Exponential Polar Distance Fog (seamless horizon blending)
       float fogExp = 1.0 - exp(-vDistance * vDistance * u_fogDensity * u_fogDensity);
       finalColor = mix(finalColor, u_fogColor, clamp(fogExp, 0.0, 1.0));
@@ -400,33 +408,50 @@ export function createOceanSurface(initialPhysics = {}) {
     },
 
     // Synchronized analytical calculation of wave height for buoy and ice floe buoyancy
+    // (with 1-step Newton-Raphson trochoidal coordinate inversion for millimeter GPU alignment)
     getWaveHeight: (x, z) => {
       const hMult = material.uniforms.u_waveHeightMult.value;
       const wTime = accumulatedWaveTime;
       const chaos = material.uniforms.u_chaosFactor.value;
+      const steepness = material.uniforms.u_waveSteepness.value;
 
-      // Octave 1: Dominant Swell (wavelength 56m, speed 1.15, amp 0.85)
+      // Invert horizontal trochoidal Gerstner displacement to locate exact un-displaced rest coordinate (x0, z0)
       const k1 = 2.0 * Math.PI / 56.0;
       const c1 = Math.sqrt(9.81 / k1) * 1.15;
-      const f1 = k1 * (x * 0.92 + z * 0.38) - c1 * wTime;
+      const f1_approx = k1 * (x * 0.92 + z * 0.38) - c1 * wTime;
+      const q1 = steepness / (k1 * 0.85 * 7.0);
+      const dx1 = q1 * 0.85 * 0.92 * Math.cos(f1_approx);
+      const dz1 = q1 * 0.85 * 0.38 * Math.cos(f1_approx);
+
+      const k2 = 2.0 * Math.PI / 34.0;
+      const c2 = Math.sqrt(9.81 / k2) * 1.28;
+      const f2_approx = k2 * (-x * 0.48 + z * 0.88) - c2 * wTime;
+      const q2 = steepness / (k2 * 0.52 * 7.0);
+      const dx2 = q2 * 0.52 * (-0.48) * Math.cos(f2_approx);
+      const dz2 = q2 * 0.52 * 0.88 * Math.cos(f2_approx);
+
+      // Inverted rest coordinates
+      const x0 = x - (dx1 + dx2);
+      const z0 = z - (dz1 + dz2);
+
+      // Octave 1: Dominant Swell (wavelength 56m, speed 1.15, amp 0.85)
+      const f1 = k1 * (x0 * 0.92 + z0 * 0.38) - c1 * wTime;
       const w1 = Math.sin(f1) * 0.85 * hMult;
 
       // Octave 2: Secondary Swell (wavelength 34m, speed 1.28, amp 0.52)
-      const k2 = 2.0 * Math.PI / 34.0;
-      const c2 = Math.sqrt(9.81 / k2) * 1.28;
-      const f2 = k2 * (-x * 0.48 + z * 0.88) - c2 * wTime;
+      const f2 = k2 * (-x0 * 0.48 + z0 * 0.88) - c2 * wTime;
       const w2 = Math.sin(f2) * 0.52 * hMult;
 
       // Octave 3: Primary Cross Sea (wavelength 19m, speed 1.45, amp 0.32)
       const k3 = 2.0 * Math.PI / 19.0;
       const c3 = Math.sqrt(9.81 / k3) * 1.45;
-      const f3 = k3 * (x * 0.72 - z * 0.69) - c3 * wTime;
+      const f3 = k3 * (x0 * 0.72 - z0 * 0.69) - c3 * wTime;
       const w3 = Math.sin(f3) * 0.32 * hMult;
 
       // Octave 4: Surface Wind Chop (wavelength 10.5m, speed 1.80, amp 0.18)
       const k4 = 2.0 * Math.PI / 10.5;
       const c4 = Math.sqrt(9.81 / k4) * 1.80;
-      const f4 = k4 * (-x * 0.82 - z * 0.57) - c4 * wTime;
+      const f4 = k4 * (-x0 * 0.82 - z0 * 0.57) - c4 * wTime;
       const w4 = Math.sin(f4) * 0.18 * hMult;
 
       // Octaves 6 & 7: Chaotic Southern Ocean Waves (active when chaos > 0)
@@ -435,12 +460,12 @@ export function createOceanSurface(initialPhysics = {}) {
       if (chaos > 0.01) {
         const k6 = 2.0 * Math.PI / 44.0;
         const c6 = Math.sqrt(9.81 / k6) * 1.35;
-        const f6 = k6 * (x * 0.42 + z * 0.91) - c6 * wTime;
+        const f6 = k6 * (x0 * 0.42 + z0 * 0.91) - c6 * wTime;
         w6 = Math.sin(f6) * 0.65 * hMult * chaos;
 
         const k7 = 2.0 * Math.PI / 14.0;
         const c7 = Math.sqrt(9.81 / k7) * 1.70;
-        const f7 = k7 * (-x * 0.68 + z * 0.73) - c7 * wTime;
+        const f7 = k7 * (-x0 * 0.68 + z0 * 0.73) - c7 * wTime;
         w7 = Math.sin(f7) * 0.24 * hMult * chaos;
       }
 

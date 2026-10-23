@@ -966,5 +966,73 @@ export function generateHeatingPadTexture() {
   return texture;
 }
 
+// 12. Studio-Grade Procedural Antarctic Polar IBL Environment Map (PMREM Filtered)
+export function generatePolarEnvironmentMap(renderer) {
+  const width = 1024;
+  const height = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+
+  // Upper Hemisphere (Polar Sky & Golden Sun)
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, height * 0.5);
+  skyGrad.addColorStop(0.0, '#0c2a4d'); // Deep zenith polar navy
+  skyGrad.addColorStop(0.35, '#0284c7'); // Mid-sky electric blue
+  skyGrad.addColorStop(0.70, '#38bdf8'); // Low sky icy cyan
+  skyGrad.addColorStop(0.92, '#bae6fd'); // Polar horizon pale haze
+  skyGrad.addColorStop(1.0, '#fef08a'); // Horizon sun glow
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, width, height * 0.5);
+
+  // Intense low-angle polar sun disc & parhelion glints
+  const sunX = width * 0.35;
+  const sunY = height * 0.42;
+  const sunGrad = ctx.createRadialGradient(sunX, sunY, 2, sunX, sunY, 80);
+  sunGrad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+  sunGrad.addColorStop(0.15, 'rgba(254, 240, 138, 0.95)');
+  sunGrad.addColorStop(0.45, 'rgba(253, 186, 116, 0.45)');
+  sunGrad.addColorStop(1.0, 'rgba(254, 240, 138, 0.0)');
+  ctx.fillStyle = sunGrad;
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, 80, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Lower Hemisphere (Antarctic Southern Ocean & Sea Ice Shelf Reflections)
+  const groundGrad = ctx.createLinearGradient(0, height * 0.5, 0, height);
+  groundGrad.addColorStop(0.0, '#e0f2fe'); // Ice shelf compaction reflection
+  groundGrad.addColorStop(0.15, '#0369a1'); // Surface meltwater reflection
+  groundGrad.addColorStop(0.50, '#0c4a6e'); // Deep Southern Ocean body
+  groundGrad.addColorStop(1.0, '#021329'); // Abyssal nadir navy
+  ctx.fillStyle = groundGrad;
+  ctx.fillRect(0, height * 0.5, width, height * 0.5);
+
+  // Specular sun path reflection across water plane
+  const waterSunGrad = ctx.createLinearGradient(sunX - 40, height * 0.5, sunX + 40, height);
+  waterSunGrad.addColorStop(0.0, 'rgba(254, 240, 138, 0.85)');
+  waterSunGrad.addColorStop(0.3, 'rgba(253, 186, 116, 0.45)');
+  waterSunGrad.addColorStop(1.0, 'rgba(14, 165, 233, 0.0)');
+  ctx.fillStyle = waterSunGrad;
+  ctx.beginPath();
+  ctx.moveTo(sunX - 12, height * 0.5);
+  ctx.lineTo(sunX + 12, height * 0.5);
+  ctx.lineTo(sunX + 65, height);
+  ctx.lineTo(sunX - 65, height);
+  ctx.closePath();
+  ctx.fill();
+
+  const canvasTexture = new THREE.CanvasTexture(canvas);
+  canvasTexture.mapping = THREE.EquirectangularReflectionMapping;
+
+  const pmremGenerator = new THREE.PMREMGenerator(renderer);
+  pmremGenerator.compileEquirectangularShader();
+  const envMap = pmremGenerator.fromEquirectangular(canvasTexture).texture;
+  pmremGenerator.dispose();
+  canvasTexture.dispose();
+
+  return envMap;
+}
+
+
 
 

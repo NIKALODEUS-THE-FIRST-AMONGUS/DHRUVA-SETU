@@ -13,6 +13,7 @@ import { createSplashSystem } from './SplashVFX';
 import { createSeaIceFloes } from './SeaIceFloesVFX';
 import { createBharatiStation } from './BharatiStationVFX';
 import { setupPostProcessing } from './PostProcessingVFX';
+import { generatePolarEnvironmentMap } from './ProceduralTextures';
 import { CONFIG } from '../../constants/config';
 
 export default function VFXScene({
@@ -102,6 +103,10 @@ export default function VFXScene({
     const sceneFog = new THREE.FogExp2(0x071526, 0.0075);
     scene.fog = sceneFog;
     scene.background = new THREE.Color(0x071526);
+
+    // 5C. Studio-Grade Polar IBL Environment Map (PMREM Filtered Specular Radiance)
+    const polarEnvMap = generatePolarEnvironmentMap(renderer);
+    scene.environment = polarEnvMap;
 
     // 6. Instantiate VFX Modules
     const initialPhysics = (activeRegion && activeRegion.seaPhysics) ? activeRegion.seaPhysics : {};
