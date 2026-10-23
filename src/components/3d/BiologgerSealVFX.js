@@ -299,6 +299,8 @@ export function createBiologgerSeal(splashSystem) {
       clearcoat: 0.6
     });
     const tagMesh = new THREE.Mesh(tagGeo, tagMat);
+    tagMesh.name = "seal_tag_housing";
+    tagMesh.userData.partId = "seal_tag";
     tagGroup.add(tagMesh);
 
     // Silicone Mounting Harness Strap
@@ -308,6 +310,8 @@ export function createBiologgerSeal(splashSystem) {
     strap.rotation.x = Math.PI / 2;
     strap.rotation.z = Math.PI * 0.025;
     strap.position.set(0, -0.06, 0.0);
+    strap.name = "seal_tag_strap";
+    strap.userData.partId = "seal_tag";
     tagGroup.add(strap);
 
     // Flexible 433MHz Nitinol LoRa Whip Antenna
@@ -320,12 +324,16 @@ export function createBiologgerSeal(splashSystem) {
     const antGeo = new THREE.TubeGeometry(antCurve, 12, 0.007, 6, false);
     const antMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, metalness: 0.95, roughness: 0.15 });
     const antenna = new THREE.Mesh(antGeo, antMat);
+    antenna.name = "seal_lora_antenna";
+    antenna.userData.partId = "seal_lora";
     tagGroup.add(antenna);
 
     // Telemetry Uplink Strobe LED
     const tagLedMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
     const tagLed = new THREE.Mesh(new THREE.SphereGeometry(0.028, 12, 12), tagLedMat);
     tagLed.position.set(0, 0.08, -0.06);
+    tagLed.name = "seal_tag_led";
+    tagLed.userData.partId = "seal_lora";
     tagGroup.add(tagLed);
 
     sealRoot.add(tagGroup);
@@ -334,12 +342,13 @@ export function createBiologgerSeal(splashSystem) {
     const sonarRingsGroup = new THREE.Group();
     const sonarRings = [];
     for (let r = 0; r < 3; r++) {
-      const ringGeo = new THREE.TorusGeometry(0.6 + r * 0.8, 0.035, 12, 32);
+      const ringGeo = new THREE.TorusGeometry(0.5 + r * 0.7, 0.012, 8, 32);
       const ringMat = new THREE.MeshBasicMaterial({
-        color: 0x38bdf8,
+        color: 0x0ea5e9,
         transparent: true,
         opacity: 0.0,
-        blending: THREE.AdditiveBlending
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
       });
       const ring = new THREE.Mesh(ringGeo, ringMat);
       ring.rotation.x = Math.PI / 2;
@@ -534,7 +543,7 @@ export function createBiologgerSeal(splashSystem) {
           if (isPinging && !isBreaching) {
             const waveProgress = (pingAge / 1.4 + idx * 0.25) % 1.0;
             ring.scale.setScalar(1.0 + waveProgress * 3.8);
-            ring.material.opacity = Math.max(0.0, (1.0 - waveProgress) * 0.65);
+            ring.material.opacity = Math.max(0.0, (1.0 - waveProgress) * 0.32);
             ring.visible = true;
           } else {
             ring.material.opacity = 0.0;

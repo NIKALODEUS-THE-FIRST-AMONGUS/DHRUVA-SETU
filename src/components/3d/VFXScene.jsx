@@ -14,7 +14,11 @@ import { createSeaIceFloes } from './SeaIceFloesVFX';
 import { createBharatiStation } from './BharatiStationVFX';
 import { setupPostProcessing } from './PostProcessingVFX';
 import { generatePolarEnvironmentMap } from './ProceduralTextures';
+import { PARTS_REGISTRY, getPartById } from '../../constants/partsRegistry';
+import PartInspector from '../ui/PartInspector';
+import { currentModel } from '../../constants/currentModel';
 import { CONFIG } from '../../constants/config';
+import { Navigation, RefreshCw } from 'lucide-react';
 
 export default function VFXScene({
   currentDepth,
@@ -27,13 +31,63 @@ export default function VFXScene({
   onSealBreachUpdate,
   isFollowingCTD,
   onDisengageCTD,
-  season = 'summer'
+  season = 'summer',
+  heaterState = null,
+  onSetHeaterState,
+  onResetTrip,
+  onInjectFault
 }) {
   const containerRef = useRef(null);
   const sceneElementsRef = useRef(null);
   const sealBreachRef = useRef({ isBreaching: false });
   const isTransitioningRef = useRef(false);
-  const [hoveredSubsystem, setHoveredSubsystem] = useState(null);
+  const [selectedPartId, setSelectedPartId] = useState(null);
+  const [hoveredPart, setHoveredPart] = useState(null);
+  const [connectedPartPositions, setConnectedPartPositions] = useState([]);
+  const selectedPartIdRef = useRef(null);
+  const hoveredMeshesRef = useRef([]);
+  const savedCameraStateRef = useRef(null);
+  const selectPartRef = useRef(null);
+  const deselectPartRef = useRef(null);
+  const heaterStateRef = useRef(heaterState);
+  heaterStateRef.current = heaterState;
+
+  // Regional Prydz Bay MIZ current & drift telemetry state
+  const [currentTelemetry, setCurrentTelemetry] = useState(() => {
+    const initData = currentModel.get(0);
+    return {
+      headingDeg: initData.headingDeg,
+      speedMps: initData.speedMps,
+      speedCmpSec: initData.speedCmpSec,
+      seed: currentModel.getSeed(),
+      seasonName: initData.seasonName
+    };
+  });
+
+  const handleRerollSeed = () => {
+    const newSeed = Math.floor(Math.random() * 899999) + 100000;
+    if (window.__debug && typeof window.__debug.setSeed === 'function') {
+      window.__debug.setSeed(newSeed);
+    } else {
+      currentModel.setSeed(newSeed);
+      const t = sceneElementsRef.current ? sceneElementsRef.current.clock.getElapsedTime() : 0;
+      const data = currentModel.get(t);
+      setCurrentTelemetry({
+        headingDeg: data.headingDeg,
+        speedMps: data.speedMps,
+        speedCmpSec: data.speedCmpSec,
+        seed: newSeed,
+        seasonName: data.seasonName
+      });
+    }
+    if (typeof window !== 'undefined' && window.history) {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('seed', newSeed);
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {}
+    }
+  };
 
   // Initialize 3D Engine & Scene on Mount
   useEffect(() => {
@@ -49,7 +103,8 @@ export default function VFXScene({
     scene.fog = new THREE.FogExp2(0x071526, 0.008);
 
     // 2. Camera — starts from Front Overview (cinematic eye-level polar vista)
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 800);
+    // Near plane tuned to 0.05 for flawless macro inspection of SMD electronics without clipping
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.05, 800);
     camera.position.set(0, 6.5, 22.0);
 
     // 3. Renderer with High-Precision Shadows & PBR Pipeline
@@ -68,26 +123,27 @@ export default function VFXScene({
     // 4. OrbitControls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
     controls.maxDistance = 220;
-    controls.minDistance = 2.0;
-    controls.maxPolarAngle = Math.PI / 2 + 0.35; // Allow looking slightly upward from underwater
+    controls.minDistance = 0.3;
+    controls.maxPolarAngle = Math.PI - 0.05; // Full vertical range from zenith to abyssal seabed
     controls.target.set(0, 0.6, 0);
 
     // 5. Cinematic Lighting
-    // Directional Arctic Sun (low angle on horizon)
-    const sunLight = new THREE.DirectionalLight(0xfff7ed, 1.8);
-    sunLight.position.set(45, 28, 40);
+    // Directional Arctic Sun (low angle on horizon with tight, high-res shadow frustum)
+    const sunLight = new THREE.DirectionalLight(0xfff7ed, 1.9);
+    sunLight.position.set(38, 20, 32);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
-    sunLight.shadow.camera.near = 10;
-    sunLight.shadow.camera.far = 140;
-    sunLight.shadow.camera.left = -25;
-    sunLight.shadow.camera.right = 25;
-    sunLight.shadow.camera.top = 25;
-    sunLight.shadow.camera.bottom = -25;
-    sunLight.shadow.bias = -0.0005;
+    sunLight.shadow.camera.near = 5;
+    sunLight.shadow.camera.far = 110;
+    sunLight.shadow.camera.left = -14;
+    sunLight.shadow.camera.right = 14;
+    sunLight.shadow.camera.top = 14;
+    sunLight.shadow.camera.bottom = -14;
+    sunLight.shadow.bias = -0.0003;
+    sunLight.shadow.normalBias = 0.025;
+    sunLight.shadow.radius = 2.0;
     scene.add(sunLight);
 
     // Polar Sky Ambient Fill (cold cyan)
@@ -104,13 +160,20 @@ export default function VFXScene({
     scene.fog = sceneFog;
     scene.background = new THREE.Color(0x071526);
 
-    // 5C. Studio-Grade Polar IBL Environment Map (PMREM Filtered Specular Radiance)
-    const polarEnvMap = generatePolarEnvironmentMap(renderer);
+    // 5C. Studio-Grade Polar IBL Environment Map (PMREM Filtered Specular Radiance calibrated by season)
+    const { envMap: polarEnvMap, skyTexture: initialSkyTexture } = generatePolarEnvironmentMap(renderer, season);
     scene.environment = polarEnvMap;
 
-    // 6. Instantiate VFX Modules
+    // 6. Instantiate VFX Modules & Dedicated Raycasting Pick Group
+    const pickGroup = new THREE.Group();
+    pickGroup.name = "pickGroup";
+    scene.add(pickGroup);
+
     const initialPhysics = (activeRegion && activeRegion.seaPhysics) ? activeRegion.seaPhysics : {};
     const ocean = createOceanSurface(initialPhysics);
+    if (ocean.setSkyTexture) {
+      ocean.setSkyTexture(initialSkyTexture);
+    }
     scene.add(ocean.mesh);
 
     const seaIceFloes = createSeaIceFloes(ocean);
@@ -132,13 +195,13 @@ export default function VFXScene({
     scene.add(underwater.group);
 
     const buoy = createAutonomousBuoy();
-    scene.add(buoy.buoyRoot);
+    pickGroup.add(buoy.buoyRoot);
     if (buoy.mooringGroup) {
-      scene.add(buoy.mooringGroup);
+      pickGroup.add(buoy.mooringGroup);
     }
 
     const ctd = createCTDSonde();
-    scene.add(ctd.sondeGroup);
+    pickGroup.add(ctd.sondeGroup);
     scene.add(ctd.cableMesh);
     scene.add(ctd.trailGroup);
     if (ctd.abyssGroup) {
@@ -150,9 +213,9 @@ export default function VFXScene({
 
     const seal = createBiologgerSeal(splash);
     if (seal.podGroup) {
-      scene.add(seal.podGroup);
+      pickGroup.add(seal.podGroup);
     } else {
-      scene.add(seal.sealRoot);
+      pickGroup.add(seal.sealRoot);
       scene.add(seal.signalBeam);
       scene.add(seal.hopSphere);
     }
@@ -231,6 +294,8 @@ export default function VFXScene({
       explodedFactor: 0.0,
       targetDepth: currentDepth || 0.0,
       bloomEnabled: vfxSettings.bloom,
+      currentEnvMap: polarEnvMap,
+      currentSkyTexture: initialSkyTexture,
       clock: new THREE.Clock()
     };
 
@@ -241,95 +306,471 @@ export default function VFXScene({
       }
     });
 
-    // ── 3D Subsystem Raycasting & Interactive Inspection Click Listener ──
+    // ── Helper: Find mesh matching partId in pickGroup ──
+    function findMeshForPart(partId) {
+      let found = null;
+      pickGroup.traverse((child) => {
+        if (!found && child.isMesh && child.userData?.partId === partId) {
+          found = child;
+        }
+      });
+      return found;
+    }
+
+    // ── Helper: Hover Rim/Emissive Boost & Restore ──
+    function restoreHoverMaterials() {
+      if (!hoveredMeshesRef.current || !hoveredMeshesRef.current.length) return;
+      for (const m of hoveredMeshesRef.current) {
+        if (m.material) {
+          const mats = Array.isArray(m.material) ? m.material : [m.material];
+          mats.forEach((mat) => {
+            if (mat.userData._origEmissive !== undefined && mat.emissive) {
+              mat.emissive.setHex(mat.userData._origEmissive);
+              mat.emissiveIntensity = mat.userData._origEmissiveInt;
+              delete mat.userData._origEmissive;
+              delete mat.userData._origEmissiveInt;
+            }
+          });
+        }
+      }
+      hoveredMeshesRef.current = [];
+    }
+
+    function applyHoverBoost(partId) {
+      restoreHoverMaterials();
+      if (!partId) return;
+      const matched = [];
+      pickGroup.traverse((child) => {
+        if (child.isMesh && child.userData?.partId === partId && child.material) {
+          matched.push(child);
+          const mats = Array.isArray(child.material) ? child.material : [child.material];
+          mats.forEach((mat) => {
+            if (mat.emissive) {
+              if (mat.userData._origEmissive === undefined) {
+                mat.userData._origEmissive = mat.emissive.getHex();
+                mat.userData._origEmissiveInt = mat.emissiveIntensity || 0;
+              }
+              mat.emissive.setHex(0x38bdf8);
+              mat.emissiveIntensity = Math.max(0.7, (mat.userData._origEmissiveInt || 0) + 0.55);
+            }
+          });
+        }
+      });
+      hoveredMeshesRef.current = matched;
+    }
+
+    // ── Helper: Dim other parts to ~15% & Restore ──
+    function applyDimming(selectedId) {
+      pickGroup.traverse((child) => {
+        if (child.isMesh && child.material) {
+          const isSelected = child.userData?.partId === selectedId;
+          const mats = Array.isArray(child.material) ? child.material : [child.material];
+          mats.forEach((mat) => {
+            if (!mat.userData._dimSaved) {
+              mat.userData._dimSaved = true;
+              mat.userData._origOpacity = mat.opacity !== undefined ? mat.opacity : 1.0;
+              mat.userData._origTransparent = mat.transparent !== undefined ? mat.transparent : false;
+            }
+            if (isSelected) {
+              mat.opacity = mat.userData._origOpacity;
+              mat.transparent = mat.userData._origTransparent;
+            } else {
+              mat.transparent = true;
+              mat.opacity = 0.15;
+            }
+          });
+        }
+      });
+    }
+
+    function restoreDimming() {
+      pickGroup.traverse((child) => {
+        if (child.isMesh && child.material) {
+          const mats = Array.isArray(child.material) ? child.material : [child.material];
+          mats.forEach((mat) => {
+            if (mat.userData._dimSaved) {
+              mat.opacity = mat.userData._origOpacity;
+              mat.transparent = mat.userData._origTransparent;
+              delete mat.userData._dimSaved;
+              delete mat.userData._origOpacity;
+              delete mat.userData._origTransparent;
+            }
+          });
+        }
+      });
+    }
+
+    // ── Part Selection & Camera Flight ──
+    const selectPart = (partId) => {
+      if (!partId) {
+        deselectPart();
+        return;
+      }
+      const part = getPartById(partId);
+      if (!part) return;
+
+      if (!selectedPartIdRef.current) {
+        savedCameraStateRef.current = {
+          pos: camera.position.clone(),
+          target: controls.target.clone(),
+          fov: camera.fov
+        };
+      }
+
+      selectedPartIdRef.current = partId;
+      setSelectedPartId(partId);
+      restoreHoverMaterials();
+      setHoveredPart(null);
+
+      applyDimming(partId);
+
+      const pose = part.cameraPose;
+      if (pose) {
+        isTransitioningRef.current = true;
+        gsap.killTweensOf(camera.position);
+        gsap.killTweensOf(controls.target);
+        gsap.killTweensOf(camera);
+
+        gsap.to(camera.position, {
+          x: pose.pos[0],
+          y: pose.pos[1],
+          z: pose.pos[2],
+          duration: 0.9,
+          ease: "power2.inOut",
+          onComplete: () => {
+            isTransitioningRef.current = false;
+          }
+        });
+
+        gsap.to(controls.target, {
+          x: pose.target[0],
+          y: pose.target[1],
+          z: pose.target[2],
+          duration: 0.9,
+          ease: "power2.inOut"
+        });
+
+        gsap.to(camera, {
+          fov: pose.fov,
+          duration: 0.9,
+          ease: "power2.inOut",
+          onUpdate: () => camera.updateProjectionMatrix()
+        });
+      }
+
+      if (onSelectComponent) {
+        onSelectComponent(part.specKey || partId);
+      }
+    };
+
+    const deselectPart = () => {
+      restoreDimming();
+      restoreHoverMaterials();
+      setSelectedPartId(null);
+      selectedPartIdRef.current = null;
+      setConnectedPartPositions([]);
+
+      if (savedCameraStateRef.current) {
+        isTransitioningRef.current = true;
+        const { pos, target, fov } = savedCameraStateRef.current;
+        gsap.killTweensOf(camera.position);
+        gsap.killTweensOf(controls.target);
+        gsap.killTweensOf(camera);
+
+        gsap.to(camera.position, {
+          x: pos.x,
+          y: pos.y,
+          z: pos.z,
+          duration: 0.9,
+          ease: "power2.inOut",
+          onComplete: () => {
+            isTransitioningRef.current = false;
+          }
+        });
+
+        gsap.to(controls.target, {
+          x: target.x,
+          y: target.y,
+          z: target.z,
+          duration: 0.9,
+          ease: "power2.inOut"
+        });
+
+        gsap.to(camera, {
+          fov: fov,
+          duration: 0.9,
+          ease: "power2.inOut",
+          onUpdate: () => camera.updateProjectionMatrix()
+        });
+      }
+    };
+
+    selectPartRef.current = selectPart;
+    deselectPartRef.current = deselectPart;
+
+    // ── 3D PickGroup Raycasting & Interactive Inspection Listeners ──
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
     let pointerDownPos = { x: 0, y: 0 };
 
     const onPointerDown = (e) => {
+      if (isTransitioningRef.current || e.target !== renderer.domElement) return;
       pointerDownPos = { x: e.clientX, y: e.clientY };
     };
 
     const onPointerMove = (e) => {
-      if (!renderer || !camera || !buoy) return;
+      if (!renderer || !camera || isTransitioningRef.current) return;
       const rect = renderer.domElement.getBoundingClientRect();
       pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
       raycaster.setFromCamera(pointer, camera);
-      const candidates = buoy.interactiveMeshes || [];
-      const intersects = raycaster.intersectObjects(candidates, true);
+      const intersects = raycaster.intersectObject(pickGroup, true);
 
       if (intersects.length > 0) {
-        let hit = null;
+        let hitInter = null;
+        let hitPartId = null;
         for (const inter of intersects) {
-          if (inter.object.userData?.subsystemId) {
-            hit = inter.object;
-            break;
+          let cur = inter.object;
+          while (cur && cur !== pickGroup && cur !== scene) {
+            if (cur.userData?.partId) {
+              hitInter = inter;
+              hitPartId = cur.userData.partId;
+              break;
+            }
+            cur = cur.parent;
+          }
+          if (hitPartId) break;
+        }
+
+        if (hitPartId && hitInter) {
+          const part = getPartById(hitPartId);
+          if (part) {
+            renderer.domElement.style.cursor = 'pointer';
+            applyHoverBoost(hitPartId);
+            const screenPos = hitInter.point.clone().project(camera);
+            const sx = (screenPos.x * 0.5 + 0.5) * rect.width;
+            const sy = (-screenPos.y * 0.5 + 0.5) * rect.height;
+            setHoveredPart({
+              id: hitPartId,
+              name: part.name,
+              group: part.group,
+              screenX: sx,
+              screenY: sy
+            });
+            return;
           }
         }
-        if (hit) {
-          renderer.domElement.style.cursor = 'pointer';
-          setHoveredSubsystem({
-            name: hit.userData.name,
-            subsystemId: hit.userData.subsystemId,
-            x: e.clientX,
-            y: e.clientY
-          });
-          return;
-        }
       }
+
       renderer.domElement.style.cursor = 'default';
-      setHoveredSubsystem(null);
+      restoreHoverMaterials();
+      setHoveredPart(null);
     };
 
     const onPointerUp = (e) => {
+      if (isTransitioningRef.current || e.target !== renderer.domElement) return;
       const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
       if (dist > 8) return; // User was dragging/orbiting the scene
 
-      if (!renderer || !camera || !buoy) return;
       const rect = renderer.domElement.getBoundingClientRect();
       pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
       raycaster.setFromCamera(pointer, camera);
-      const candidates = buoy.interactiveMeshes || [];
-      const intersects = raycaster.intersectObjects(candidates, true);
+      const intersects = raycaster.intersectObject(pickGroup, true);
 
       if (intersects.length > 0) {
         for (const inter of intersects) {
-          if (inter.object.userData?.subsystemId) {
-            if (onSelectComponent) {
-              onSelectComponent(inter.object.userData.subsystemId);
+          let cur = inter.object;
+          let hitPartId = null;
+          while (cur && cur !== pickGroup && cur !== scene) {
+            if (cur.userData?.partId) {
+              hitPartId = cur.userData.partId;
+              break;
             }
+            cur = cur.parent;
+          }
+          if (hitPartId) {
+            selectPart(hitPartId);
             break;
           }
         }
+      }
+    };
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        deselectPart();
       }
     };
 
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
     renderer.domElement.addEventListener('pointermove', onPointerMove);
     renderer.domElement.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('keydown', onKeyDown);
 
-    // 8. Render Loop
+    // 8. Render Loop & Deterministic Debug Clock Hook
     let animationFrameId;
     let lastTime = 0;
+    let isTimeFrozen = false;
+    let frozenTimestamp = 10.0;
+    let frameCount = 0;
+    let frameTimeSum = 0;
+    let probeComplete = false;
+
+    window.__debug = window.__debug || {};
+    console.log('VFXScene: window.__debug initialized!');
+    window.__debug.selectPart = (id) => {
+      if (selectPartRef.current) {
+        selectPartRef.current(id);
+        return true;
+      }
+      return false;
+    };
+    window.__debug.hoverPart = (id) => {
+      const p = getPartById(id);
+      if (p) {
+        const mesh = findMeshForPart(id);
+        if (mesh && container) {
+          const wp = new THREE.Vector3();
+          mesh.getWorldPosition(wp);
+          const proj = wp.clone().project(camera);
+          const w = container.clientWidth;
+          const h = container.clientHeight;
+          applyHoverBoost(id);
+          setHoveredPart({
+            id,
+            name: p.name,
+            group: p.group,
+            screenX: (proj.x * 0.5 + 0.5) * w,
+            screenY: (-proj.y * 0.5 + 0.5) * h
+          });
+          return true;
+        }
+      }
+      return false;
+    };
+    window.__debug.deselectPart = () => {
+      if (deselectPartRef.current) {
+        deselectPartRef.current();
+      }
+    };
+    window.__debug.getSelectedPart = () => selectedPartIdRef.current;
+
+    let simTimeOffset = 0;
+    window.__debug.setWinchDepth = (m) => {
+      sceneElementsRef.current.targetDepth = Number(m);
+    };
+
+    window.__debug.stepTime = (seconds) => {
+      simTimeOffset += Number(seconds);
+      const curTime = (isTimeFrozen ? frozenTimestamp : sceneElementsRef.current.clock.getElapsedTime()) + simTimeOffset;
+      if (window.__stepSimFrame) {
+        window.__stepSimFrame(curTime, 0.016);
+      }
+    };
+
+    window.__debug.setSeed = (n) => {
+      currentModel.setSeed(n);
+      const curTime = (isTimeFrozen ? frozenTimestamp : sceneElementsRef.current.clock.getElapsedTime()) + simTimeOffset;
+      const data = currentModel.get(curTime);
+      setCurrentTelemetry({
+        headingDeg: data.headingDeg,
+        speedMps: data.speedMps,
+        speedCmpSec: data.speedCmpSec,
+        seed: Number(n),
+        seasonName: data.seasonName
+      });
+      return data;
+    };
+
+    window.__debug.getSeed = () => currentModel.getSeed();
+
+    window.__debug.getCurrent = () => {
+      const curTime = (isTimeFrozen ? frozenTimestamp : sceneElementsRef.current.clock.getElapsedTime()) + simTimeOffset;
+      return currentModel.get(curTime);
+    };
+
+    window.__debug.setSeason = (s) => {
+      const curTime = (isTimeFrozen ? frozenTimestamp : sceneElementsRef.current.clock.getElapsedTime()) + simTimeOffset;
+      currentModel.setSeason(s, curTime);
+    };
+
+    window.__debug.getPositions = () => {
+      const bPos = buoy.buoyRoot.position;
+      const sPos = ctd.sondeGroup.position;
+      const wExit = buoy.getWinchExitWorldPosition ? buoy.getWinchExitWorldPosition(new THREE.Vector3()) : new THREE.Vector3();
+      const cableArr = ctd.cableMesh.geometry.attributes.position.array;
+      const topCable = new THREE.Vector3(cableArr[0], cableArr[1], cableArr[2]);
+      const bottomIdx = (cableArr.length / 3 - 1) * 3;
+      const bottomCable = new THREE.Vector3(cableArr[bottomIdx], cableArr[bottomIdx + 1], cableArr[bottomIdx + 2]);
+      
+      const topDist = topCable.distanceTo(wExit);
+      const eyeletPos = new THREE.Vector3(0, 0.98, 0).applyMatrix4(ctd.sondeGroup.matrixWorld);
+      const bottomDist = bottomCable.distanceTo(eyeletPos);
+      const tetherConnected = topDist < 0.05 && bottomDist < 0.05;
+
+      return {
+        buoy: { x: Number(bPos.x.toFixed(4)), y: Number(bPos.y.toFixed(4)), z: Number(bPos.z.toFixed(4)) },
+        sonde: { x: Number(sPos.x.toFixed(4)), y: Number(sPos.y.toFixed(4)), z: Number(sPos.z.toFixed(4)) },
+        winchExit: { x: Number(wExit.x.toFixed(4)), y: Number(wExit.y.toFixed(4)), z: Number(wExit.z.toFixed(4)) },
+        tetherConnected,
+        topDist: Number(topDist.toFixed(4)),
+        bottomDist: Number(bottomDist.toFixed(4)),
+        depth: sceneElementsRef.current.targetDepth || 0
+      };
+    };
+
+    window.__debugVFX = {
+      freezeTime: (freeze = true, fixedT = 10.0) => {
+        isTimeFrozen = freeze;
+        frozenTimestamp = fixedT;
+      }
+    };
+
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
-      const time = sceneElementsRef.current.clock.getElapsedTime();
-      const delta = Math.min(0.1, time - lastTime);
-      lastTime = time;
+      const rawTime = sceneElementsRef.current.clock.getElapsedTime();
+      const time = isTimeFrozen ? frozenTimestamp : rawTime;
+      const delta = isTimeFrozen ? 0.0 : Math.min(0.1, time - lastTime);
+      lastTime = rawTime;
+
+      // Quality tier frame-time probe (first 30 frames)
+      if (!probeComplete && delta > 0) {
+        frameCount++;
+        frameTimeSum += delta;
+        if (frameCount >= 30) {
+          probeComplete = true;
+          const avgMs = (frameTimeSum / 30) * 1000;
+          let tier = 'high';
+          if (avgMs > 28) tier = 'low';
+          else if (avgMs > 18) tier = 'medium';
+          if (window.__debug) {
+            window.__debug.detectedTier = tier;
+            window.__debug.avgFrameTimeMs = avgMs.toFixed(1);
+          }
+        }
+      }
 
       // ── Physical Atmospheric Horizon vs. Subsea Ocean Depth Extinction ──
       const camY = camera.position.y;
-      if (camY >= 0.0) {
-        // Above water: Polar sky horizon haze matching active season
-        const skyHex = season === 'winter' ? 0x030712 : (season === 'autumn' ? 0x071526 : 0x091e38);
+      if (camY >= -0.2) {
+        // Above water: Render full 360° equirectangular polar sky panorama
+        if (sceneElementsRef.current.currentSkyTexture && scene.background !== sceneElementsRef.current.currentSkyTexture) {
+          scene.background = sceneElementsRef.current.currentSkyTexture;
+        }
+        // Atmospheric horizon haze matching active polar season
+        const skyHex = season === 'winter'
+          ? 0x020617 // Deep polar night obsidian
+          : season === 'autumn'
+          ? 0x334155 // Slate overcast blizzard haze
+          : season === 'spring'
+          ? 0x0f2942 // Crisp cyan azure thaw
+          : 0x1e3a5f; // Summer midnight sun golden aerosol haze
         const targetColor = new THREE.Color(skyHex);
         scene.fog.color.lerp(targetColor, 0.08);
-        scene.fog.density = 0.0075;
-        scene.background.lerp(targetColor, 0.08);
+        scene.fog.density = season === 'autumn' ? 0.016 : 0.0065;
         renderer.setClearColor(scene.fog.color, 1.0);
       } else {
         // Underwater: Physical Beer-Lambert Ocean Depth Extinction Gradient
@@ -337,8 +778,8 @@ export default function VFXScene({
         const depthNorm = Math.min(1.0, subDepth / 45.0);
 
         // Subsea Antarctic Water Colors:
-        // Shallow (0-15m): Luminous glacier turquoise-sapphire (0x0284c7 to 0x025687)
-        // Deep Halocline/Abyss (15-60m): Deep Antarctic marine navy (0x011a38 to 0x010e1f)
+        // Shallow (0-15m): Luminous glacier turquoise-sapphire (0x025687)
+        // Deep Halocline/Abyss (15-60m): Deep Antarctic marine navy (0x011326)
         const shallowSubsea = new THREE.Color(0x025687);
         const deepAbyss = new THREE.Color(0x011326);
         const targetSubseaColor = shallowSubsea.clone().lerp(deepAbyss, depthNorm);
@@ -346,61 +787,116 @@ export default function VFXScene({
         scene.fog.color.lerp(targetSubseaColor, 0.12);
         // Rich subsea turbidity so objects naturally emerge from the glowing blue haze
         scene.fog.density = 0.016 + depthNorm * 0.012;
-        scene.background.lerp(targetSubseaColor, 0.12);
+        scene.background = targetSubseaColor;
         renderer.setClearColor(scene.fog.color, 1.0);
       }
 
-      // Buoyancy Wave Displacement & Surface Slope Normal at buoy's instantaneous position!
-      const buoyX = buoy.buoyRoot.position.x;
-      const buoyZ = buoy.buoyRoot.position.z;
+      const stepSimulationFrame = (t, dt) => {
+        // Buoyancy Wave Displacement & Surface Slope Normal at buoy's instantaneous position!
+        const buoyX = buoy.buoyRoot.position.x;
+        const buoyZ = buoy.buoyRoot.position.z;
 
-      const waveElev = ocean.getWaveHeight(buoyX, buoyZ);
-      const waveSlopeX = (ocean.getWaveHeight(buoyX + 1.0, buoyZ) - ocean.getWaveHeight(buoyX - 1.0, buoyZ)) * 0.5;
-      const waveSlopeZ = (ocean.getWaveHeight(buoyX, buoyZ + 1.0) - ocean.getWaveHeight(buoyX, buoyZ - 1.0)) * 0.5;
-      const pitch = -waveSlopeZ * 0.32;
-      const roll = waveSlopeX * 0.32;
+        const waveElev = ocean.getWaveHeight(buoyX, buoyZ);
+        const waveSlopeX = (ocean.getWaveHeight(buoyX + 1.0, buoyZ) - ocean.getWaveHeight(buoyX - 1.0, buoyZ)) * 0.5;
+        const waveSlopeZ = (ocean.getWaveHeight(buoyX, buoyZ + 1.0) - ocean.getWaveHeight(buoyX, buoyZ - 1.0)) * 0.5;
+        const pitch = -waveSlopeZ * 0.32;
+        const roll = waveSlopeX * 0.32;
 
-      // Wave orbital horizontal surge velocity from wave gradients
-      const waveSurgeX = -waveSlopeX * 1.8;
-      const waveSurgeZ = -waveSlopeZ * 1.8;
+        // Wave orbital horizontal surge velocity from wave gradients
+        const waveSurgeX = -waveSlopeX * 1.8;
+        const waveSurgeZ = -waveSlopeZ * 1.8;
 
-      // Current flow vector based on active polar region
-      const currentFlow = (activeRegion && activeRegion.id === 'southern_ocean_open')
-        ? { x: 0.85, z: 0.35 }
-        : (activeRegion && activeRegion.id === 'bharati_station')
-        ? { x: 0.22, z: 0.14 }
-        : { x: 0.45, z: 0.25 }; // Prydz Bay MIZ
+        // Evaluate unified Prydz Bay MIZ current & drift model (one current vector drives all consumers)
+        const currentData = currentModel.get(t);
+        const currentFlow = { x: currentData.x, z: currentData.z };
 
-      // Updates
-      ocean.material.uniforms.u_buoyPos.value.set(buoyX, buoyZ);
-      ocean.update(time, delta);
-      seaIceFloes.update(time);
-      bharatiStation.update(time);
-      atmosphere.update(time);
-      underwater.update(time);
-      splash.update(delta);
+        // Updates
+        if (ocean.setFlowDirection) {
+          ocean.setFlowDirection(currentData.x, currentData.z);
+        }
+        ocean.material.uniforms.u_buoyPos.value.set(buoyX, buoyZ);
+        ocean.update(t, dt);
+        seaIceFloes.update(t, currentData);
+        bharatiStation.update(t);
+        atmosphere.update(t);
+        underwater.update(t, dt, buoy.buoyRoot.position, currentData);
+        splash.update(dt, currentData.wind);
 
-      // Orbiting ISRO Oceansat-3 satellite trajectory
-      const satAngle = time * 0.12;
-      isroSatellite.position.set(Math.cos(satAngle) * 58, 68 + Math.sin(time * 0.5) * 2.5, Math.sin(satAngle) * 58);
-      isroSatellite.lookAt(buoy.buoyRoot.position.x, buoy.buoyRoot.position.y + 1.2, buoy.buoyRoot.position.z);
-      laserBeam.rotation.x = Math.PI / 2;
+        // Update telemetry readout HUD state every 10 frames
+        if (frameCount % 10 === 0) {
+          setCurrentTelemetry({
+            headingDeg: currentData.headingDeg,
+            speedMps: currentData.speedMps,
+            speedCmpSec: currentData.speedCmpSec,
+            seed: currentData.seed,
+            seasonName: currentData.seasonName
+          });
+        }
 
-      // Update Buoy with damped 6-DOF spar hydrodynamics, current drift, and watch circle
-      const isBursting = sealBreachRef.current ? sealBreachRef.current.isBreaching : false;
-      const isInspecting = !!(sceneElementsRef.current.cameraPreset?.startsWith('electronics'));
-      buoy.update(time, waveElev, waveSurgeX, waveSurgeZ, sceneElementsRef.current.explodedFactor || 0, pitch, roll, isBursting, delta, currentFlow, isInspecting);
+        // Orbiting ISRO Oceansat-3 satellite trajectory
+        const satAngle = t * 0.12;
+        isroSatellite.position.set(Math.cos(satAngle) * 58, 68 + Math.sin(t * 0.5) * 2.5, Math.sin(satAngle) * 58);
+        isroSatellite.lookAt(buoy.buoyRoot.position.x, buoy.buoyRoot.position.y + 1.2, buoy.buoyRoot.position.z);
+        laserBeam.rotation.x = Math.PI / 2;
 
-      const targetDepth = sceneElementsRef.current.targetDepth || 0;
-      ctd.update(time, targetDepth, buoy.buoyRoot.position);
+        // Update Buoy with damped 6-DOF spar hydrodynamics, current drift, and watch circle
+        const isBursting = sealBreachRef.current ? sealBreachRef.current.isBreaching : false;
+        const isInspecting = !!(sceneElementsRef.current.cameraPreset?.startsWith('electronics'));
+        buoy.update(t, waveElev, waveSurgeX, waveSurgeZ, sceneElementsRef.current.explodedFactor || 0, pitch, roll, isBursting, dt, currentFlow, isInspecting, heaterStateRef.current);
 
-      const sealData = seal.update(time, buoy.buoyRoot.position);
-      if (onSealBreachUpdate) {
-        onSealBreachUpdate(sealData);
+        const targetDepth = sceneElementsRef.current.targetDepth || 0;
+        ctd.update(t, targetDepth, buoy, currentFlow, dt);
+
+        const sealData = seal.update(t, buoy.buoyRoot.position);
+        if (onSealBreachUpdate) {
+          onSealBreachUpdate(sealData);
+        }
+      };
+
+      window.__stepSimFrame = stepSimulationFrame;
+      stepSimulationFrame(time, delta);
+
+      // ── Animate Dynamic Network Dash Lines between Selected Part and Connected Parts ──
+      if (selectedPartIdRef.current && (isTransitioningRef.current || frameCount % 3 === 0)) {
+        const selPart = getPartById(selectedPartIdRef.current);
+        if (selPart && container) {
+          const selMesh = findMeshForPart(selectedPartIdRef.current);
+          if (selMesh) {
+            const selWorld = new THREE.Vector3();
+            selMesh.getWorldPosition(selWorld);
+            const selProj = selWorld.clone().project(camera);
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            const targetX = (selProj.x * 0.5 + 0.5) * w;
+            const targetY = (-selProj.y * 0.5 + 0.5) * h;
+
+            const nodes = [];
+            for (const connId of (selPart.connectsTo || [])) {
+              const connPart = getPartById(connId);
+              const connMesh = findMeshForPart(connId);
+              if (connPart && connMesh) {
+                const cWorld = new THREE.Vector3();
+                connMesh.getWorldPosition(cWorld);
+                const cProj = cWorld.clone().project(camera);
+                if (cProj.z < 1.0) {
+                  nodes.push({
+                    id: connId,
+                    name: connPart.name,
+                    x: (cProj.x * 0.5 + 0.5) * w,
+                    y: (-cProj.y * 0.5 + 0.5) * h,
+                    targetX,
+                    targetY
+                  });
+                }
+              }
+            }
+            setConnectedPartPositions(nodes);
+          }
+        }
       }
 
       // Continuous Dead-Center Gimbal Camera Tracking (Zero Disturbances)
-      if (!isTransitioningRef.current) {
+      if (!isTransitioningRef.current && !selectedPartIdRef.current) {
         if (sceneElementsRef.current.isFollowingCTD || sceneElementsRef.current.cameraPreset === 'ctd') {
           // Unobstructed Underwater CTD View: Positioned below buoy hull, looking at titanium rosette & flow cell
           const sondePos = new THREE.Vector3();
@@ -422,17 +918,17 @@ export default function VFXScene({
           let localCam, localTarget;
 
           if (sceneElementsRef.current.cameraPreset === 'electronics_a') {
-            // Part A: Gateway Mast, Whip Antenna & Flexible Solar Panels Wiring
-            localCam = new THREE.Vector3(1.20, CONFIG.BUOY_RADIUS_3D + 0.90, 2.10);
-            localTarget = new THREE.Vector3(0, CONFIG.BUOY_RADIUS_3D + 0.35, 0.10);
+            // Part A: Mast, Whip Antenna, GPS Patch, Anemometer & Flexible Solar Wrap Framing
+            localCam = new THREE.Vector3(2.10, CONFIG.BUOY_RADIUS_3D + 1.25, 3.60);
+            localTarget = new THREE.Vector3(0, CONFIG.BUOY_RADIUS_3D + 0.85, 0.05);
           } else if (sceneElementsRef.current.cameraPreset === 'electronics_c') {
-            // Part C: Subsea Winch Motor, Rotary Slip Rings & HDPE Keel Tubes
-            localCam = new THREE.Vector3(1.35, -CONFIG.BUOY_RADIUS_3D - 0.45, 1.95);
-            localTarget = new THREE.Vector3(0, -CONFIG.BUOY_RADIUS_3D - 0.75, 0);
+            // Part C: Subsea Winch Mechanism, BLDC Motor, Slip Rings, HDPE Keel Tubes & Docking Cradle
+            localCam = new THREE.Vector3(2.20, -CONFIG.BUOY_RADIUS_3D - 0.50, 3.40);
+            localTarget = new THREE.Vector3(0.0, -CONFIG.BUOY_RADIUS_3D - 0.90, 0.10);
           } else {
-            // Part B (Default): Main Hull with Motherboard PCB, Electronics & Kapton Heating Pads
-            localCam = new THREE.Vector3(0, 0.32, 1.70);
-            localTarget = new THREE.Vector3(0, 0.14, 0.0);
+            // Part B: Watertight Avionics Bay, PCB & LiFePO4 Battery Compartment
+            localCam = new THREE.Vector3(0.70, 0.40, 1.45);
+            localTarget = new THREE.Vector3(0.0, 0.02, 0.22);
           }
 
           const idealCamPos = localCam.clone().applyMatrix4(buoy.buoyRoot.matrixWorld);
@@ -485,8 +981,9 @@ export default function VFXScene({
         }
       }
 
-      // Problem 1: In Part B (PCB & heating pads inspection), ocean is not needed so everything is 100% clear
-      // while buoy vertical heave continues naturally
+      // In Part B (PCB & heating pads macro inspection), hide distracting exterior elements
+      // (ocean, glaciers, atmosphere, and outer hull shell) so the internal avionics chamber
+      // is 100% crisp, studio-isolated, and free of clipping slabs, floating pad-eyes, or square pixel bands
       const isPartB = sceneElementsRef.current.cameraPreset === 'electronics' || sceneElementsRef.current.cameraPreset === 'electronics_b';
       if (ocean && ocean.mesh) {
         ocean.mesh.visible = !isPartB;
@@ -497,15 +994,34 @@ export default function VFXScene({
       if (seaIceFloes && seaIceFloes.group) {
         seaIceFloes.group.visible = !isPartB;
       }
+      if (glaciers) {
+        glaciers.visible = !isPartB;
+      }
+      if (atmosphere && atmosphere.group) {
+        atmosphere.group.visible = !isPartB;
+      }
+      if (underwater && underwater.group) {
+        underwater.group.visible = !isPartB;
+      }
+      if (ctd && ctd.sondeGroup) {
+        ctd.sondeGroup.visible = !isPartB;
+      }
+      if (seal && seal.sealRoot) {
+        seal.sealRoot.visible = !isPartB;
+      }
+      if (buoy) {
+        if (buoy.acrylicWindow) buoy.acrylicWindow.visible = !isPartB;
+        if (buoy.hullGroup) buoy.hullGroup.visible = !isPartB;
+        if (buoy.solarGroup) buoy.solarGroup.visible = !isPartB;
+      }
 
       controls.update();
 
-      // Render via Post-Processing Composer (or direct renderer fallback)
-      if (sceneElementsRef.current.bloomEnabled) {
-        postProcessing.composer.render();
-      } else {
-        renderer.render(scene, camera);
-      }
+      // Update post-processing uniforms (vignette, analog film grain & lens spray)
+      postProcessing.update(time, camera.position.y, sceneElementsRef.current.cameraPreset);
+
+      // Render via Post-Processing Composer (ACES tone mapping, bloom, vignette, grain, FXAA)
+      postProcessing.composer.render();
     };
 
     animate();
@@ -523,12 +1039,33 @@ export default function VFXScene({
 
     window.addEventListener('resize', handleResize);
 
+    // Deep-link query param support for inspection / hover testing (?inspect=partId or ?hover=partId)
+    const urlParams = new URLSearchParams(window.location.search);
+    const inspectParam = urlParams.get('inspect');
+    const hoverParam = urlParams.get('hover');
+    if (inspectParam) {
+      setTimeout(() => {
+        if (selectPartRef.current) selectPartRef.current(inspectParam);
+      }, 800);
+    } else if (hoverParam) {
+      setTimeout(() => {
+        if (window.__debug && window.__debug.hoverPart) window.__debug.hoverPart(hoverParam);
+      }, 800);
+    }
+
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', onKeyDown);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
       renderer.domElement.removeEventListener('pointermove', onPointerMove);
       renderer.domElement.removeEventListener('pointerup', onPointerUp);
+      if (sceneElementsRef.current.currentEnvMap) {
+        sceneElementsRef.current.currentEnvMap.dispose();
+      }
+      if (sceneElementsRef.current.currentSkyTexture) {
+        sceneElementsRef.current.currentSkyTexture.dispose();
+      }
       renderer.dispose();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
@@ -555,12 +1092,29 @@ export default function VFXScene({
     }
   }, [explodedView]);
 
-  // Update VFX Quality Settings
+  // Update VFX Quality Settings & Tier
   useEffect(() => {
     if (sceneElementsRef.current && sceneElementsRef.current.postProcessing) {
-      sceneElementsRef.current.bloomEnabled = vfxSettings.bloom;
-      sceneElementsRef.current.postProcessing.setBloomEnabled(vfxSettings.bloom);
-      sceneElementsRef.current.postProcessing.setBloomStrength(vfxSettings.bloomStrength || 0.65);
+      const pp = sceneElementsRef.current.postProcessing;
+      sceneElementsRef.current.bloomEnabled = vfxSettings.bloom !== false;
+      pp.setBloomEnabled(vfxSettings.bloom !== false);
+      if (vfxSettings.bloomStrength !== undefined) {
+        pp.setBloomStrength(vfxSettings.bloomStrength);
+      }
+      if (vfxSettings.quality) {
+        pp.setQualityTier(vfxSettings.quality);
+        if (sceneElementsRef.current.sunLight) {
+          const mapSize = vfxSettings.quality === 'low' ? 512 : (vfxSettings.quality === 'medium' ? 1024 : 2048);
+          sceneElementsRef.current.sunLight.shadow.mapSize.set(mapSize, mapSize);
+          sceneElementsRef.current.sunLight.castShadow = vfxSettings.quality !== 'low';
+        }
+      }
+      if (vfxSettings.toneMapping) {
+        pp.setToneMapping(vfxSettings.toneMapping);
+      }
+      if (vfxSettings.vignette !== undefined) {
+        pp.setVignetteGrainEnabled(vfxSettings.vignette);
+      }
     }
   }, [vfxSettings]);
 
@@ -583,7 +1137,9 @@ export default function VFXScene({
     if (scene && scene.fog && activeRegion.seaPhysics) {
       scene.fog.color.setHex(activeRegion.seaPhysics.fogColor);
       scene.fog.density = activeRegion.seaPhysics.fogDensity;
-      scene.background.setHex(activeRegion.seaPhysics.fogColor);
+      if (scene.background && scene.background.isColor) {
+        scene.background.setHex(activeRegion.seaPhysics.fogColor);
+      }
     }
   }, [activeRegion]);
 
@@ -605,9 +1161,29 @@ export default function VFXScene({
   // Handle Antarctic Seasonal Weather & Atmospheric Lighting
   useEffect(() => {
     if (!sceneElementsRef.current) return;
-    const { sunLight, skyLight, atmosphere, scene } = sceneElementsRef.current;
+    const curTime = sceneElementsRef.current?.clock ? sceneElementsRef.current.clock.getElapsedTime() : 0;
+    currentModel.setSeason(season, curTime);
+
+    const { sunLight, skyLight, atmosphere, scene, renderer } = sceneElementsRef.current;
     if (atmosphere && atmosphere.setSeason) {
       atmosphere.setSeason(season);
+    }
+
+    // Update Seasonal HDR Polar Environment Map
+    if (renderer && scene) {
+      if (sceneElementsRef.current.currentEnvMap) {
+        sceneElementsRef.current.currentEnvMap.dispose();
+      }
+      if (sceneElementsRef.current.currentSkyTexture) {
+        sceneElementsRef.current.currentSkyTexture.dispose();
+      }
+      const { envMap: newEnvMap, skyTexture: newSkyTexture } = generatePolarEnvironmentMap(renderer, season);
+      sceneElementsRef.current.currentEnvMap = newEnvMap;
+      sceneElementsRef.current.currentSkyTexture = newSkyTexture;
+      scene.environment = newEnvMap;
+      if (sceneElementsRef.current.ocean && sceneElementsRef.current.ocean.setSkyTexture) {
+        sceneElementsRef.current.ocean.setSkyTexture(newSkyTexture);
+      }
     }
 
     if (sunLight && skyLight) {
@@ -692,26 +1268,26 @@ export default function VFXScene({
       case 'electronics':
       case 'electronics_b':
       case 'exploded': // backward compatibility for booth view
-        // Part B: Main Hull with PCB Electronics & Heating Pads
+        // Part B: Watertight Avionics Bay, PCB & LiFePO4 Battery Compartment
         buoy.buoyRoot.updateMatrixWorld(true);
-        localCam = new THREE.Vector3(0, 0.32, 1.70);
-        localTarget = new THREE.Vector3(0, 0.14, 0.0);
+        localCam = new THREE.Vector3(0.70, 0.40, 1.45);
+        localTarget = new THREE.Vector3(0.0, 0.02, 0.22);
         targetCamPos = localCam.clone().applyMatrix4(buoy.buoyRoot.matrixWorld);
         targetLookAt = localTarget.clone().applyMatrix4(buoy.buoyRoot.matrixWorld);
         break;
       case 'electronics_a':
-        // Part A: Gateway Mast, Whip Antenna & Flexible Solar PV Conduit Wiring
+        // Part A: Mast, Whip Antenna, GPS Patch, Anemometer & Flexible Solar Wrap Framing
         buoy.buoyRoot.updateMatrixWorld(true);
-        localCam = new THREE.Vector3(1.20, CONFIG.BUOY_RADIUS_3D + 0.90, 2.10);
-        localTarget = new THREE.Vector3(0, CONFIG.BUOY_RADIUS_3D + 0.35, 0.10);
+        localCam = new THREE.Vector3(2.10, CONFIG.BUOY_RADIUS_3D + 1.25, 3.60);
+        localTarget = new THREE.Vector3(0, CONFIG.BUOY_RADIUS_3D + 0.85, 0.05);
         targetCamPos = localCam.clone().applyMatrix4(buoy.buoyRoot.matrixWorld);
         targetLookAt = localTarget.clone().applyMatrix4(buoy.buoyRoot.matrixWorld);
         break;
       case 'electronics_c':
-        // Part C: Subsea Winch Motor, Rotary Slip Rings & HDPE Keel Tubes
+        // Part C: Subsea Winch Mechanism, BLDC Motor, Slip Rings, HDPE Keel Tubes & Docking Cradle
         buoy.buoyRoot.updateMatrixWorld(true);
-        localCam = new THREE.Vector3(1.35, -CONFIG.BUOY_RADIUS_3D - 0.45, 1.95);
-        localTarget = new THREE.Vector3(0, -CONFIG.BUOY_RADIUS_3D - 0.75, 0);
+        localCam = new THREE.Vector3(2.20, -CONFIG.BUOY_RADIUS_3D - 0.50, 3.40);
+        localTarget = new THREE.Vector3(0.0, -CONFIG.BUOY_RADIUS_3D - 0.90, 0.10);
         targetCamPos = localCam.clone().applyMatrix4(buoy.buoyRoot.matrixWorld);
         targetLookAt = localTarget.clone().applyMatrix4(buoy.buoyRoot.matrixWorld);
         break;
@@ -745,6 +1321,30 @@ export default function VFXScene({
       default:
         break;
     }
+
+    let targetFov = 45;
+    switch (cameraPreset) {
+      case 'wide': targetFov = 52; break;
+      case 'buoy': targetFov = 44; break;
+      case 'electronics':
+      case 'electronics_b':
+      case 'exploded': targetFov = 40; break;
+      case 'electronics_a': targetFov = 44; break;
+      case 'electronics_c': targetFov = 42; break;
+      case 'ctd': targetFov = 38; break;
+      case 'seal': targetFov = 42; break;
+      case 'anchor': targetFov = 38; break;
+      case 'station': targetFov = 50; break;
+      case 'ship': targetFov = 48; break;
+      default: targetFov = 45; break;
+    }
+
+    gsap.to(camera, {
+      fov: targetFov,
+      duration: 1.5,
+      ease: "power3.inOut",
+      onUpdate: () => camera.updateProjectionMatrix()
+    });
 
     gsap.to(camera.position, {
       x: targetCamPos.x,
@@ -786,23 +1386,144 @@ export default function VFXScene({
         zIndex: 1
       }}
     >
-      {/* 3D Interactive Subsystem Hover Tag */}
-      {hoveredSubsystem && (
+      <PartInspector
+        selectedPartId={selectedPartId}
+        hoveredPart={hoveredPart}
+        onSelectPart={(id) => {
+          if (selectPartRef.current) selectPartRef.current(id);
+        }}
+        onDeselectPart={() => {
+          if (deselectPartRef.current) deselectPartRef.current();
+        }}
+        connectedPartPositions={connectedPartPositions}
+        heaterState={heaterState}
+        onSetHeaterState={onSetHeaterState}
+        onResetTrip={onResetTrip}
+        onInjectFault={onInjectFault}
+      />
+
+      {/* ── Regional Ocean Current & Drift Readout (Prydz Bay MIZ) ── */}
+      <div
+        id="current-drift-hud"
+        style={{
+          position: 'absolute',
+          top: 76,
+          right: 20,
+          background: 'rgba(7, 15, 29, 0.88)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(56, 189, 248, 0.35)',
+          borderRadius: '12px',
+          padding: '9px 13px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          color: '#f8fafc',
+          fontFamily: "'Inter', system-ui, sans-serif",
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+          zIndex: 20,
+          pointerEvents: 'auto',
+          userSelect: 'none'
+        }}
+      >
+        {/* Rotating Compass Dial */}
         <div
-          className="subsystem-3d-hover-tag"
           style={{
-            position: 'fixed',
-            left: `${hoveredSubsystem.x + 14}px`,
-            top: `${hoveredSubsystem.y - 14}px`,
-            pointerEvents: 'none',
-            zIndex: 60
+            position: 'relative',
+            width: 38,
+            height: 38,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(14, 165, 233, 0.18) 0%, rgba(2, 6, 23, 0.9) 100%)',
+            border: '1.5px solid rgba(56, 189, 248, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
+          title={`Heading: ${currentTelemetry.headingDeg}° (Westward Antarctic Slope Current)`}
         >
-          <span className="hover-tag-dot pulse-anim" />
-          <span className="hover-tag-text">{hoveredSubsystem.name}</span>
-          <span className="hover-tag-hint">Click 3D Model to Inspect</span>
+          <span style={{ position: 'absolute', top: 1, fontSize: '8px', fontWeight: 800, color: '#ef4444', lineHeight: 1 }}>N</span>
+          <span style={{ position: 'absolute', bottom: 1, fontSize: '7px', fontWeight: 700, color: '#64748b', lineHeight: 1 }}>S</span>
+          <span style={{ position: 'absolute', left: 2, fontSize: '7px', fontWeight: 700, color: '#38bdf8', lineHeight: 1 }}>W</span>
+          <span style={{ position: 'absolute', right: 2, fontSize: '7px', fontWeight: 700, color: '#64748b', lineHeight: 1 }}>E</span>
+          <div
+            style={{
+              transform: `rotate(${currentTelemetry.headingDeg}deg)`,
+              transformOrigin: 'center center',
+              transition: 'transform 0.15s ease-out',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <Navigation size={17} style={{ color: '#38bdf8', filter: 'drop-shadow(0 0 3px rgba(56, 189, 248, 0.8))' }} />
+          </div>
         </div>
-      )}
+
+        {/* Readout Numbers & Seed Controls */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+          <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', color: '#94a3b8', textTransform: 'uppercase' }}>
+            Prydz Bay Current
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+            <span
+              id="current-heading-val"
+              style={{
+                fontSize: '15px',
+                fontWeight: 700,
+                color: '#38bdf8',
+                fontVariantNumeric: 'tabular-nums',
+                letterSpacing: '-0.02em'
+              }}
+            >
+              {currentTelemetry.headingDeg.toFixed(1)}°
+            </span>
+            <span
+              id="current-speed-val"
+              style={{
+                fontSize: '13px',
+                fontWeight: 600,
+                color: '#e2e8f0',
+                fontVariantNumeric: 'tabular-nums'
+              }}
+            >
+              {currentTelemetry.speedCmpSec.toFixed(1)} cm/s
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+            <span
+              id="current-seed-val"
+              style={{
+                fontSize: '10px',
+                color: '#64748b',
+                fontVariantNumeric: 'tabular-nums'
+              }}
+            >
+              Seed #{currentTelemetry.seed}
+            </span>
+            <button
+              id="reroll-seed-btn"
+              type="button"
+              onClick={handleRerollSeed}
+              style={{
+                background: 'rgba(56, 189, 248, 0.14)',
+                border: '1px solid rgba(56, 189, 248, 0.35)',
+                borderRadius: '4px',
+                color: '#38bdf8',
+                fontSize: '10px',
+                fontWeight: 600,
+                padding: '1px 6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px'
+              }}
+              title="Re-roll current drift seed"
+            >
+              <RefreshCw size={9} />
+              Re-roll
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

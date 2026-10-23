@@ -12,6 +12,7 @@ import { generateBrushedMetalMap } from './ProceduralTextures';
 export function createCTDSonde() {
   const sondeGroup = new THREE.Group();
   sondeGroup.name = "ctdSondeGroup";
+  sondeGroup.position.set(0, -3.95, 0);
 
   const brushedMetal = generateBrushedMetalMap();
 
@@ -25,6 +26,8 @@ export function createCTDSonde() {
     bumpScale: 0.008
   });
   const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+  bodyMesh.name = "ctd_body";
+  bodyMesh.userData.partId = "ctd_sonde";
   bodyMesh.castShadow = true;
   sondeGroup.add(bodyMesh);
 
@@ -37,6 +40,8 @@ export function createCTDSonde() {
   });
   const dockingCollar = new THREE.Mesh(dockingCollarGeo, dockingCollarMat);
   dockingCollar.position.y = 0.72;
+  dockingCollar.name = "ctd_docking_collar";
+  dockingCollar.userData.partId = "ctd_sonde";
   sondeGroup.add(dockingCollar);
 
   // Inductive Contact & Latching Ring (Gold band that seals into guide tube)
@@ -45,6 +50,8 @@ export function createCTDSonde() {
   const latchRing = new THREE.Mesh(latchRingGeo, latchRingMat);
   latchRing.rotation.x = Math.PI / 2;
   latchRing.position.y = 0.62;
+  latchRing.name = "ctd_latch_ring";
+  latchRing.userData.partId = "ctd_sonde";
   sondeGroup.add(latchRing);
 
   // Flexible Neoprene Strain-Relief Cable Boot
@@ -52,6 +59,8 @@ export function createCTDSonde() {
   const bootMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8, metalness: 0.1 });
   const bootMesh = new THREE.Mesh(bootGeo, bootMat);
   bootMesh.position.y = 0.98;
+  bootMesh.name = "ctd_boot";
+  bootMesh.userData.partId = "ctd_sonde";
   sondeGroup.add(bootMesh);
 
   // SBE-49 Yellow/Orange High-Visibility Band
@@ -63,10 +72,14 @@ export function createCTDSonde() {
   });
   const stripeMesh = new THREE.Mesh(stripeGeo, stripeMat);
   stripeMesh.position.y = 0.25;
+  stripeMesh.name = "ctd_stripe";
+  stripeMesh.userData.partId = "ctd_sonde";
   sondeGroup.add(stripeMesh);
 
   // Protective Titanium Rosette Cage Bars around lower sensor array
   const cageGroup = new THREE.Group();
+  cageGroup.name = "ctd_cage";
+  cageGroup.userData.partId = "ctd_sonde";
   const barGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.55, 8);
   const barMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.9, roughness: 0.15 });
 
@@ -74,6 +87,7 @@ export function createCTDSonde() {
     const barAngle = (bi / 6) * Math.PI * 2;
     const bar = new THREE.Mesh(barGeo, barMat);
     bar.position.set(Math.cos(barAngle) * 0.26, -0.72, Math.sin(barAngle) * 0.26);
+    bar.userData.partId = "ctd_sonde";
     cageGroup.add(bar);
   }
 
@@ -82,11 +96,13 @@ export function createCTDSonde() {
   const ring1 = new THREE.Mesh(cageRingGeo, barMat);
   ring1.rotation.x = Math.PI / 2;
   ring1.position.y = -0.48;
+  ring1.userData.partId = "ctd_sonde";
   cageGroup.add(ring1);
 
   const ring2 = new THREE.Mesh(cageRingGeo, barMat);
   ring2.rotation.x = Math.PI / 2;
   ring2.position.y = -0.98;
+  ring2.userData.partId = "ctd_sonde";
   cageGroup.add(ring2);
 
   sondeGroup.add(cageGroup);
@@ -102,6 +118,8 @@ export function createCTDSonde() {
   });
   const cellMesh = new THREE.Mesh(cellGeo, cellMat);
   cellMesh.position.set(0.07, -0.72, 0);
+  cellMesh.name = "ctd_conductivity_cell";
+  cellMesh.userData.partId = "ctd_sensors";
   sondeGroup.add(cellMesh);
 
   // Pt1000 RTD Temperature Needle Probe (Gold-plated micro-needle)
@@ -113,6 +131,8 @@ export function createCTDSonde() {
   });
   const rtdMesh = new THREE.Mesh(rtdGeo, rtdMat);
   rtdMesh.position.set(-0.07, -0.72, 0);
+  rtdMesh.name = "ctd_rtd_probe";
+  rtdMesh.userData.partId = "ctd_sensors";
   sondeGroup.add(rtdMesh);
 
   // Pulsing Telemetry LED Beacon (Pulsing emerald green)
@@ -120,6 +140,8 @@ export function createCTDSonde() {
   const ledMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
   const ledMesh = new THREE.Mesh(ledGeo, ledMat);
   ledMesh.position.set(0, 0.62, 0);
+  ledMesh.name = "ctd_led_beacon";
+  ledMesh.userData.partId = "ctd_sensors";
   sondeGroup.add(ledMesh);
 
   // Sonar / Acoustic Doppler Profiler Ripple Ring
@@ -164,7 +186,34 @@ export function createCTDSonde() {
   }
   sondeGroup.add(pumpBubbleGroup);
 
-  // 2. High-Visibility 3D Billboard HUD Label for CTD Sonde
+  // 1D. Subsea LED Survey Cluster & Volumetric Deep-Water Floodlight
+  const subseaSpot = new THREE.SpotLight(0xdbeafe, 3.5, 30, Math.PI / 3.2, 0.45, 1.2);
+  subseaSpot.position.set(0, -0.65, 0);
+  subseaSpot.target.position.set(0, -12.0, 0);
+  sondeGroup.add(subseaSpot);
+  sondeGroup.add(subseaSpot.target);
+
+  const subseaPoint = new THREE.PointLight(0x38bdf8, 1.0, 6.0, 1.5);
+  subseaPoint.position.set(0, -0.75, 0);
+  sondeGroup.add(subseaPoint);
+
+  // Subtle downward volumetric cone mesh (water turbidity scattering)
+  const coneGeo = new THREE.ConeGeometry(2.0, 5.0, 16, 1, true);
+  coneGeo.translate(0, -2.5, 0);
+  coneGeo.rotateX(Math.PI);
+  const coneMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8,
+    transparent: true,
+    opacity: 0.08,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  });
+  const coneMesh = new THREE.Mesh(coneGeo, coneMat);
+  coneMesh.position.set(0, -0.65, 0);
+  sondeGroup.add(coneMesh);
+
+  // 2. High-Precision SCADA Micro-Callout Tag with Optical Leader Line
   const labelCanvas = document.createElement('canvas');
   labelCanvas.width = 512;
   labelCanvas.height = 160;
@@ -174,36 +223,37 @@ export function createCTDSonde() {
     labelCtx.clearRect(0, 0, 512, 160);
 
     // Glowing dark translucent background card
-    labelCtx.fillStyle = 'rgba(7, 16, 32, 0.88)';
-    labelCtx.strokeStyle = '#38bdf8';
-    labelCtx.lineWidth = 4;
+    labelCtx.fillStyle = 'rgba(6, 15, 30, 0.92)';
+    labelCtx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+    labelCtx.lineWidth = 3;
     labelCtx.beginPath();
-    labelCtx.roundRect(8, 8, 496, 144, 16);
+    labelCtx.roundRect(6, 6, 500, 148, 12);
     labelCtx.fill();
     labelCtx.stroke();
 
     // Indicator dot
     labelCtx.fillStyle = '#10b981';
     labelCtx.beginPath();
-    labelCtx.arc(36, 46, 12, 0, Math.PI * 2);
+    labelCtx.arc(32, 44, 10, 0, Math.PI * 2);
     labelCtx.fill();
 
     // Instrument Title
     labelCtx.fillStyle = '#ffffff';
-    labelCtx.font = 'bold 30px "Oswald", sans-serif';
-    labelCtx.fillText('CTD PROFILER SONDE (SBE-49)', 62, 54);
+    labelCtx.font = '600 24px "JetBrains Mono", monospace';
+    labelCtx.fillText('SBE-49 FASTCAT CTD', 54, 50);
 
     // Live Depth Metric
     labelCtx.fillStyle = '#38bdf8';
-    labelCtx.font = 'bold 36px "Bebas Neue", sans-serif';
-    labelCtx.fillText(`DEPTH: -${depthMeters.toFixed(1)} M  |  TI MSP430`, 32, 118);
+    labelCtx.font = '700 32px "JetBrains Mono", monospace';
+    labelCtx.fillText(`Z: -${depthMeters.toFixed(1)}m | TI MSP430`, 28, 114);
   }
 
   renderLabel(0.0);
   const labelTexture = new THREE.CanvasTexture(labelCanvas);
   labelTexture.minFilter = THREE.LinearFilter;
 
-  const labelGeo = new THREE.PlaneGeometry(2.4, 0.75);
+  // Sleek, compact plane geometry positioned comfortably without screen-edge clipping
+  const labelGeo = new THREE.PlaneGeometry(1.25, 0.39);
   const labelMat = new THREE.MeshBasicMaterial({
     map: labelTexture,
     transparent: true,
@@ -211,15 +261,31 @@ export function createCTDSonde() {
     depthWrite: false
   });
   const labelMesh = new THREE.Mesh(labelGeo, labelMat);
-  labelMesh.position.set(1.5, 0.2, 0);
+  labelMesh.position.set(1.05, 0.32, 0);
   sondeGroup.add(labelMesh);
 
-  // 3. Winch Cable (Line between Buoy and Sonde)
-  const cablePoints = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -10, 0)];
+  // Optical leader line connecting callout tag to titanium sonde collar
+  const leaderGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0.24, 0.22, 0),
+    new THREE.Vector3(0.42, 0.32, 0),
+    new THREE.Vector3(0.58, 0.32, 0)
+  ]);
+  const leaderMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.75 });
+  const leaderLine = new THREE.Line(leaderGeo, leaderMat);
+  sondeGroup.add(leaderLine);
+
+  // 3. Flexible Multi-Segment Winch Cable (Hydrodynamic Catenary under tension & current drag)
+  const cableSegments = 16;
+  const cablePoints = [];
+  for (let ci = 0; ci <= cableSegments; ci++) {
+    cablePoints.push(new THREE.Vector3(0, -ci * 0.25, 0));
+  }
   const cableGeo = new THREE.BufferGeometry().setFromPoints(cablePoints);
   const cableMat = new THREE.LineBasicMaterial({
     color: 0x38bdf8,
-    linewidth: 3
+    linewidth: 2,
+    transparent: true,
+    opacity: 0.85
   });
   const cableMesh = new THREE.Line(cableGeo, cableMat);
 
@@ -372,41 +438,123 @@ export function createCTDSonde() {
   let lastTrailY = 0;
   let lastRenderedDepth = -999;
 
+  const _tempExit = new THREE.Vector3();
+  const _tempDocked = new THREE.Vector3();
+  const _tempEyelet = new THREE.Vector3();
+  let sondeVelX = 0;
+  let sondeVelZ = 0;
+
   return {
     sondeGroup,
     cableMesh,
     trailGroup,
     abyssGroup,
-    update: (time, targetDepthMeters, buoyWorldPos) => {
-      const bX = (typeof buoyWorldPos === 'object' && buoyWorldPos.x !== undefined) ? buoyWorldPos.x : 0;
-      const bY = (typeof buoyWorldPos === 'object' && buoyWorldPos.y !== undefined) ? buoyWorldPos.y : (typeof buoyWorldPos === 'number' ? buoyWorldPos : 0);
-      const bZ = (typeof buoyWorldPos === 'object' && buoyWorldPos.z !== undefined) ? buoyWorldPos.z : 0;
+    update: (time, targetDepthMeters, buoyObj, currentFlow = { x: 0.45, z: 0.25 }, delta = 0.016) => {
+      // 1. One Source of Truth: derive position from the buoy's winch exit port
+      let exitPos = _tempExit;
+      let dockedPos = _tempDocked;
+      let buoyQuat = null;
 
-      // When parked at depth 0: CTD Sonde docks directly into the Keel Moonpool Receiver Collar
-      // Docking throat is at (bY - CONFIG.BUOY_RADIUS_3D - 1.95 = bY - 3.20m).
-      // Sonde upper collar (y=+0.72) seats cleanly inside the funnel at y = bY - 2.70m.
-      const dockedWorldY = bY - CONFIG.BUOY_RADIUS_3D - 2.70;
-      const profilingDrop = (targetDepthMeters / CONFIG.MAX_DEPTH_METERS) * 38.0;
-      const targetWorldY = dockedWorldY - profilingDrop;
+      if (buoyObj && typeof buoyObj.getWinchExitWorldPosition === 'function') {
+        buoyObj.getWinchExitWorldPosition(exitPos);
+        buoyObj.getDockedWorldPosition(dockedPos);
+        buoyQuat = buoyObj.buoyRoot.quaternion;
+      } else if (buoyObj && typeof buoyObj === 'object' && buoyObj.x !== undefined) {
+        exitPos.set(buoyObj.x, buoyObj.y - CONFIG.BUOY_RADIUS_3D - 1.95, buoyObj.z);
+        dockedPos.set(buoyObj.x, buoyObj.y - CONFIG.BUOY_RADIUS_3D - 2.70, buoyObj.z);
+      } else {
+        exitPos.set(0, -CONFIG.BUOY_RADIUS_3D - 1.95, 0);
+        dockedPos.set(0, -CONFIG.BUOY_RADIUS_3D - 2.70, 0);
+      }
 
-      sondeGroup.position.y += (targetWorldY - sondeGroup.position.y) * 0.12;
+      // 2. Docked state (0 m): sonde is seated in its cradle and moves rigidly with the buoy
+      if (targetDepthMeters <= 0.05) {
+        sondeGroup.position.copy(dockedPos);
+        if (buoyQuat) {
+          sondeGroup.quaternion.copy(buoyQuat);
+        } else {
+          sondeGroup.rotation.set(0, 0, 0);
+        }
+        sondeVelX = 0;
+        sondeVelZ = 0;
+      } else {
+        // 3. Deployed state (>0 m):
+        // Depth (y) comes from the winch state
+        const profilingDrop = (targetDepthMeters / CONFIG.MAX_DEPTH_METERS) * 38.0;
+        const targetWorldY = dockedPos.y - profilingDrop;
+        sondeGroup.position.y += (targetWorldY - sondeGroup.position.y) * 0.14;
 
-      // Horizontal compliance: When docked (targetDepthMeters == 0), firmly locks to buoy keel axis!
-      // When deployed, smoothly pendulum swings with current
-      const swayFactor = Math.min(1.0, targetDepthMeters / 10.0);
-      const swayX = Math.sin(time * 0.8) * 0.22 * swayFactor;
-      const swayZ = Math.cos(time * 0.6) * 0.22 * swayFactor;
-      sondeGroup.position.x += (bX + swayX - sondeGroup.position.x) * (0.15 - 0.08 * swayFactor);
-      sondeGroup.position.z += (bZ + swayZ - sondeGroup.position.z) * (0.15 - 0.08 * swayFactor);
+        // Hydrodynamic downstream lag bounded by tether length
+        const flow = currentFlow || { x: 0.45, z: 0.25 };
+        const cSpeed = Math.hypot(flow.x, flow.z);
+        const dirX = cSpeed > 1e-4 ? flow.x / cSpeed : 0;
+        const dirZ = cSpeed > 1e-4 ? flow.z / cSpeed : 0;
 
-      // Update Cable endpoints (from winch drum down to CTD strain relief boot)
+        const tetherDeployed = Math.max(0.5, profilingDrop + 0.75);
+        const maxAllowedLag = tetherDeployed * 0.35;
+        // Bounded lag: proportional to depth and current speed
+        const trailOffset = Math.min(maxAllowedLag, targetDepthMeters * 0.025 * cSpeed);
+
+        const targetX = exitPos.x + dirX * trailOffset;
+        const targetZ = exitPos.z + dirZ * trailOffset;
+
+        // Critically damped smoothing (zeta = 1.0, no overshoot)
+        const dt = Math.min(Math.max(delta, 0.001), 0.05);
+        const omega = 4.5;
+        const fX = -omega * omega * (sondeGroup.position.x - targetX) - 2 * omega * sondeVelX;
+        const fZ = -omega * omega * (sondeGroup.position.z - targetZ) - 2 * omega * sondeVelZ;
+        sondeVelX += fX * dt;
+        sondeVelZ += fZ * dt;
+        sondeGroup.position.x += sondeVelX * dt;
+        sondeGroup.position.z += sondeVelZ * dt;
+
+        // Strict clamp: never detach or exceed max tether lag
+        const dx = sondeGroup.position.x - exitPos.x;
+        const dz = sondeGroup.position.z - exitPos.z;
+        const hDist = Math.hypot(dx, dz);
+        if (hDist > maxAllowedLag) {
+          const ratio = maxAllowedLag / hDist;
+          sondeGroup.position.x = exitPos.x + dx * ratio;
+          sondeGroup.position.z = exitPos.z + dz * ratio;
+          sondeVelX *= 0.5;
+          sondeVelZ *= 0.5;
+        }
+
+        // Sonde orientation follows tether drag angle
+        const tilt = Math.min(0.22, (trailOffset / tetherDeployed) * 0.5);
+        sondeGroup.rotation.x = dirZ * tilt;
+        sondeGroup.rotation.z = -dirX * tilt;
+        sondeGroup.rotation.y = Math.atan2(dirX, dirZ);
+      }
+
+      // 4. Tether: top end at the winch port, bottom end at the sonde eyelet, existing catenary between them
+      sondeGroup.updateMatrixWorld(true);
+      _tempEyelet.set(0, 0.98, 0).applyMatrix4(sondeGroup.matrixWorld);
+
       const cablePositions = cableGeo.attributes.position.array;
-      cablePositions[0] = bX;
-      cablePositions[1] = bY - CONFIG.BUOY_RADIUS_3D - 0.55;
-      cablePositions[2] = bZ;
-      cablePositions[3] = sondeGroup.position.x;
-      cablePositions[4] = sondeGroup.position.y + 0.98;
-      cablePositions[5] = sondeGroup.position.z;
+      const startX = exitPos.x;
+      const startY = exitPos.y;
+      const startZ = exitPos.z;
+      const endX = _tempEyelet.x;
+      const endY = _tempEyelet.y;
+      const endZ = _tempEyelet.z;
+
+      const flow = currentFlow || { x: 0.45, z: 0.25 };
+      const cSpeed = Math.hypot(flow.x, flow.z);
+      const dirX = cSpeed > 1e-4 ? flow.x / cSpeed : 0;
+      const dirZ = cSpeed > 1e-4 ? flow.z / cSpeed : 0;
+      const spanY = Math.abs(startY - endY);
+
+      for (let ci = 0; ci <= cableSegments; ci++) {
+        const t = ci / cableSegments;
+        const sag = Math.sin(t * Math.PI) * 0.18 * Math.min(1.0, spanY / 6.0);
+        const dragX = dirX * Math.sin(t * Math.PI) * 0.12 * Math.min(1.0, spanY / 6.0);
+        const dragZ = dirZ * Math.sin(t * Math.PI) * 0.12 * Math.min(1.0, spanY / 6.0);
+
+        cablePositions[ci * 3] = startX + (endX - startX) * t + dragX;
+        cablePositions[ci * 3 + 1] = startY + (endY - startY) * t - sag;
+        cablePositions[ci * 3 + 2] = startZ + (endZ - startZ) * t + dragZ;
+      }
       cableGeo.attributes.position.needsUpdate = true;
 
       // Real-time Depth HUD Billboard texture refresh
@@ -418,6 +566,12 @@ export function createCTDSonde() {
 
       // Keep label facing viewer's general direction
       labelMesh.rotation.y = Math.sin(time * 0.3) * 0.15;
+
+      // Dynamic Deep-Water Subsea LED Floodlight Scaling (intensifies as sunlight fades)
+      const depthFactor = Math.min(1.0, targetDepthMeters / 30.0);
+      subseaSpot.intensity = 2.0 + depthFactor * 4.5;
+      subseaPoint.intensity = 0.8 + depthFactor * 1.8;
+      coneMat.opacity = 0.04 + depthFactor * 0.12;
 
       // Sonar active acoustic ping
       const pingScale = ((time * 2.2) % 2.0) * 2.4 + 0.5;

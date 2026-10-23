@@ -47,6 +47,8 @@ export function createAutonomousBuoy() {
   // Main hull hemisphere (Rear & sides, leaving front +Z open for inspection window)
   const hullBackGeo = new THREE.SphereGeometry(CONFIG.BUOY_RADIUS_3D, 48, 32, 0.80 * Math.PI, 1.40 * Math.PI, Math.PI * 0.32, Math.PI * 0.26);
   const hullBackMesh = new THREE.Mesh(hullBackGeo, hullMat);
+  hullBackMesh.name = "hull_back";
+  hullBackMesh.userData.partId = "hull";
   hullBackMesh.castShadow = true;
   hullBackMesh.receiveShadow = true;
   hullGroup.add(hullBackMesh);
@@ -54,11 +56,15 @@ export function createAutonomousBuoy() {
   // Bottom hull cap
   const hullBottomGeo = new THREE.SphereGeometry(CONFIG.BUOY_RADIUS_3D, 48, 16, 0, Math.PI * 2, Math.PI * 0.58, Math.PI * 0.42);
   const hullBottomMesh = new THREE.Mesh(hullBottomGeo, hullMat);
+  hullBottomMesh.name = "hull_bottom";
+  hullBottomMesh.userData.partId = "hull";
   hullGroup.add(hullBottomMesh);
 
   // Top collar rim
   const hullTopGeo = new THREE.SphereGeometry(CONFIG.BUOY_RADIUS_3D, 48, 16, 0, Math.PI * 2, 0, Math.PI * 0.32);
   const hullTopMesh = new THREE.Mesh(hullTopGeo, hullMat);
+  hullTopMesh.name = "hull_top";
+  hullTopMesh.userData.partId = "hull";
   hullGroup.add(hullTopMesh);
 
   // IP68 Clear Optical Acrylic Inspection Window (Centered symmetrically on front +Z face)
@@ -81,6 +87,7 @@ export function createAutonomousBuoy() {
   const acrylicWindowGeo = new THREE.SphereGeometry(CONFIG.BUOY_RADIUS_3D * 1.002, 32, 24, 0.20 * Math.PI, 0.60 * Math.PI, Math.PI * 0.32, Math.PI * 0.26);
   const acrylicWindow = new THREE.Mesh(acrylicWindowGeo, acrylicMat);
   acrylicWindow.name = "acrylicInspectionWindow";
+  acrylicWindow.userData.partId = "hull";
   hullGroup.add(acrylicWindow);
 
   // SOLAS Waterline Reflective Equator Band (with opening for front cutaway window)
@@ -229,7 +236,8 @@ export function createAutonomousBuoy() {
     const { phiStart, phiLength } = solarSectors[i];
     const patchGeo = new THREE.SphereGeometry(CONFIG.BUOY_RADIUS_3D * 1.012, 24, 16, phiStart, phiLength, 0.34, 0.24);
     const patch = new THREE.Mesh(patchGeo, solarMat);
-    patch.userData = { subsystemId: 'solar', name: 'Conformal Solar Photovoltaic Shell' };
+    patch.name = `solar_patch_${i}`;
+    patch.userData = { subsystemId: 'solar', partId: 'pv_strips', name: 'Conformal Solar Photovoltaic Shell' };
     solarGroup.add(patch);
     solarPatches.push(patch);
   }
@@ -275,13 +283,46 @@ export function createAutonomousBuoy() {
   // ════════════════════════════════════════════════════════════════════════
   electronicsBayGroup.position.set(0, 0.08, 0.25);
 
-  // Internal Payload Bay Illumination (Studio glow for inspection - calibrated for clean bloom)
-  const bayCyanLight = new THREE.PointLight(0x38bdf8, 0.45, 1.8);
-  bayCyanLight.position.set(0.12, 0.30, 0.35);
+  // Dedicated Anodized Instrument Bay Enclosure Bulkhead (Matte graphite rear chamber)
+  // Generously envelopes the avionics deck to prevent any background void or external objects showing
+  const chamberGeo = new THREE.CylinderGeometry(1.15, 1.15, 1.50, 48, 1, true, 0.65 * Math.PI, 1.70 * Math.PI);
+  const chamberMat = new THREE.MeshStandardMaterial({
+    color: 0x0b1120, // Matte aerospace deep graphite
+    roughness: 0.92,
+    metalness: 0.20,
+    side: THREE.BackSide,
+    bumpMap: brushedMetal,
+    bumpScale: 0.005
+  });
+  const chamberBacking = new THREE.Mesh(chamberGeo, chamberMat);
+  chamberBacking.position.set(0, 0.04, 0.05);
+  electronicsBayGroup.add(chamberBacking);
+
+  // Top and bottom sealed bulkhead pressure caps (Matte non-reflective finish)
+  const bulkheadMat = new THREE.MeshStandardMaterial({
+    color: 0x111827,
+    roughness: 0.95,
+    metalness: 0.15
+  });
+  const topBulkhead = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.04, 48), bulkheadMat);
+  topBulkhead.position.set(0, 0.72, 0.05);
+  electronicsBayGroup.add(topBulkhead);
+
+  const bottomBulkhead = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.04, 48), bulkheadMat);
+  bottomBulkhead.position.set(0, -0.68, 0.05);
+  electronicsBayGroup.add(bottomBulkhead);
+
+  // Internal Payload Bay Illumination (Studio diffuse fill positioned to evenly illuminate PCB and components without ceiling burn)
+  const bayOverheadLight = new THREE.PointLight(0xf8fafc, 0.26, 1.6, 2.0);
+  bayOverheadLight.position.set(0, 0.45, 0.28);
+  electronicsBayGroup.add(bayOverheadLight);
+
+  const bayCyanLight = new THREE.PointLight(0x38bdf8, 0.18, 1.2, 2.0);
+  bayCyanLight.position.set(0.24, 0.24, 0.28);
   electronicsBayGroup.add(bayCyanLight);
 
-  const bayAmberLight = new THREE.PointLight(0xf59e0b, 0.35, 1.6);
-  bayAmberLight.position.set(-0.20, 0.25, 0.30);
+  const bayAmberLight = new THREE.PointLight(0xf59e0b, 0.16, 1.2, 2.0);
+  bayAmberLight.position.set(-0.24, 0.22, 0.28);
   electronicsBayGroup.add(bayAmberLight);
 
   // Internal Aluminum Payload Mounting Standoff Chassis
@@ -295,6 +336,15 @@ export function createAutonomousBuoy() {
   const chassisDeck = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 0.04, 32), chassisMat);
   chassisDeck.position.y = -0.35;
   electronicsBayGroup.add(chassisDeck);
+
+  // 4x Brass Hex Standoffs supporting the Motherboard
+  const standoffMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.2 });
+  const standoffGeo = new THREE.CylinderGeometry(0.009, 0.009, 0.065, 6);
+  [[-0.32, -0.31], [0.32, -0.31], [-0.32, 0.31], [0.32, 0.31]].forEach(([sx, sz]) => {
+    const post = new THREE.Mesh(standoffGeo, standoffMat);
+    post.position.set(sx, 0.045, sz + 0.05);
+    electronicsBayGroup.add(post);
+  });
 
   // A. Custom FR4 PCB Motherboard with Gold ENIG Traces & Silkscreen
   const pcbBoardGeo = new THREE.BoxGeometry(0.72, 0.025, 0.72);
@@ -317,16 +367,19 @@ export function createAutonomousBuoy() {
   });
   const esp32Can = new THREE.Mesh(esp32CanGeo, esp32CanMat);
   esp32Can.position.set(-0.16, 0.11, -0.06);
-  esp32Can.userData = { subsystemId: 'pcb', name: 'Avionics Motherboard & Dual-Core Gateway' };
+  esp32Can.name = "esp32_can";
+  esp32Can.userData = { subsystemId: 'pcb', partId: 'esp32_s3', name: 'Avionics Motherboard & Dual-Core Gateway' };
   electronicsBayGroup.add(esp32Can);
 
   // ESP32 Chip Pins / Lead frame
   const pinMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.95, roughness: 0.1 });
   const pinStripL = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.012, 0.22), pinMat);
   pinStripL.position.set(-0.29, 0.10, -0.06);
+  pinStripL.userData.partId = "esp32_s3";
   electronicsBayGroup.add(pinStripL);
   const pinStripR = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.012, 0.22), pinMat);
   pinStripR.position.set(-0.03, 0.10, -0.06);
+  pinStripR.userData.partId = "esp32_s3";
   electronicsBayGroup.add(pinStripR);
 
   // Animated Telemetry Status LEDs on Motherboard
@@ -334,18 +387,21 @@ export function createAutonomousBuoy() {
   const ledSysOkMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
   const ledSysOk = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.02, 8), ledSysOkMat);
   ledSysOk.position.set(-0.24, 0.11, 0.10);
+  ledSysOk.userData.partId = "esp32_s3";
   electronicsBayGroup.add(ledSysOk);
 
   // 2. LORA_TX (Flashing Amber Burst LED)
   const ledLoraTxMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
   const ledLoraTx = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.02, 8), ledLoraTxMat);
   ledLoraTx.position.set(-0.20, 0.11, 0.10);
+  ledLoraTx.userData.partId = "esp32_s3";
   electronicsBayGroup.add(ledLoraTx);
 
   // 3. CTD_RX (Blinking Cyan Sensor Bus LED)
   const ledCtdRxMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
   const ledCtdRx = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.02, 8), ledCtdRxMat);
   ledCtdRx.position.set(-0.16, 0.11, 0.10);
+  ledCtdRx.userData.partId = "esp32_s3";
   electronicsBayGroup.add(ledCtdRx);
 
   // C. LoRa SX1278 (433MHz) RF Transceiver Module
@@ -368,9 +424,9 @@ export function createAutonomousBuoy() {
   electronicsBayGroup.add(smaNut);
 
   // D. Physical 3D SMD Components on PCB
-  // Electrolytic Power Decoupling Capacitors (Metallic silver cylinders with black ground stripe)
+  // Electrolytic Power Decoupling Capacitors (Metallic silver cylinders with satin finish)
   const capMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.8 });
-  const capTopMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 });
+  const capTopMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.6, roughness: 0.45 });
   for (let c = 0; c < 3; c++) {
     const capCan = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.055, 12), capMat);
     capCan.position.set(-0.28 + c * 0.06, 0.12, 0.20);
@@ -379,6 +435,24 @@ export function createAutonomousBuoy() {
     electronicsBayGroup.add(capCan);
     electronicsBayGroup.add(capTop);
   }
+
+  // Micro-SD Black Box Flash Memory Slot (Subsea CTD Mission Logging)
+  const sdSlot = new THREE.Mesh(
+    new THREE.BoxGeometry(0.045, 0.008, 0.055),
+    new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.3 })
+  );
+  sdSlot.position.set(0.28, 0.098, -0.22);
+  sdSlot.name = "sd_card_slot";
+  sdSlot.userData.partId = "sd_module";
+  electronicsBayGroup.add(sdSlot);
+
+  // TCXO 26MHz Temperature-Compensated Crystal Oscillator (Gold can)
+  const tcxo = new THREE.Mesh(
+    new THREE.BoxGeometry(0.03, 0.012, 0.025),
+    new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.95, roughness: 0.15 })
+  );
+  tcxo.position.set(-0.06, 0.10, -0.18);
+  electronicsBayGroup.add(tcxo);
 
   // Multi-pin Nylon Terminal Blocks (Off-white Molex engineering nylon headers)
   const molexMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.65, metalness: 0.1 });
@@ -396,6 +470,8 @@ export function createAutonomousBuoy() {
     new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.25 })
   );
   mpptHeatSink.position.set(-0.16, 0.11, 0.20);
+  mpptHeatSink.name = "mppt_heatsink";
+  mpptHeatSink.userData.partId = "mppt_regulator";
   electronicsBayGroup.add(mpptHeatSink);
 
   const toroidGeo = new THREE.TorusGeometry(0.035, 0.015, 8, 20);
@@ -403,23 +479,96 @@ export function createAutonomousBuoy() {
   const toroidMesh = new THREE.Mesh(toroidGeo, coilMat);
   toroidMesh.rotation.x = Math.PI / 2;
   toroidMesh.position.set(-0.04, 0.11, 0.20);
+  toroidMesh.name = "toroid_power_inductor";
+  toroidMesh.userData.partId = "inductor";
   electronicsBayGroup.add(toroidMesh);
 
-  // E. 4S2P LiFePO4 Subsea Battery Bank (Transparent blue wrap with gold copper busbars)
+  // E. 4S2P LiFePO4 Subsea Battery Bank with CNC Anodized Enclosure Tray
+  const batteryTrayMat = new THREE.MeshStandardMaterial({
+    color: 0x1e293b, // Dark anodized marine aluminum
+    metalness: 0.8,
+    roughness: 0.3,
+    bumpMap: brushedMetal,
+    bumpScale: 0.006
+  });
+
+  const batteryTray = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.24, 0.28), batteryTrayMat);
+  batteryTray.position.set(0.05, -0.20, -0.10);
+  batteryTray.name = "battery_tray";
+  batteryTray.userData = { subsystemId: 'battery', partId: 'battery_pack', name: '4S2P LiFePO4 Marine Battery Enclosure' };
+  electronicsBayGroup.add(batteryTray);
+
+  // Front viewing cutaway exposing cell insulated array
+  const batteryWindowMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(0.44, 0.20, 0.02),
+    new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 })
+  );
+  batteryWindowMesh.position.set(0.05, -0.20, 0.035);
+  batteryWindowMesh.userData.partId = "battery_pack";
+  electronicsBayGroup.add(batteryWindowMesh);
+
+  // Stainless steel tie-down retention brackets across battery tray
+  const bracketMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 });
+  for (let s = -1; s <= 1; s += 2) {
+    const strap = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.25, 0.29), bracketMat);
+    strap.position.set(0.05 + s * 0.16, -0.20, -0.10);
+    strap.name = s === -1 ? "retention_strap_l" : "retention_strap_r";
+    strap.userData.partId = "retention_straps";
+    electronicsBayGroup.add(strap);
+
+    const thumbScrew = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.02, 12), bracketMat);
+    thumbScrew.position.set(0.05 + s * 0.16, -0.07, -0.10);
+    thumbScrew.name = s === -1 ? "thumbscrew_l" : "thumbscrew_r";
+    thumbScrew.userData.partId = "retention_straps";
+    electronicsBayGroup.add(thumbScrew);
+  }
+
+  // Heavy-duty Marine Brass Terminal Studs (+12.8V and GND)
+  const termPosStud = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.03, 12), new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.2 }));
+  termPosStud.position.set(0.22, -0.065, 0.0);
+  termPosStud.name = "term_pos_stud";
+  termPosStud.userData.partId = "brass_terminals";
+  electronicsBayGroup.add(termPosStud);
+  const termPosCap = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.015, 12), new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.5 }));
+  termPosCap.position.set(0.22, -0.05, 0.0);
+  termPosCap.name = "term_pos_cap";
+  termPosCap.userData.partId = "brass_terminals";
+  electronicsBayGroup.add(termPosCap);
+
+  const termNegStud = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.03, 12), new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.2 }));
+  termNegStud.position.set(-0.12, -0.065, 0.0);
+  termNegStud.name = "term_neg_stud";
+  termNegStud.userData.partId = "brass_terminals";
+  electronicsBayGroup.add(termNegStud);
+  const termNegCap = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.015, 12), new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.5 }));
+  termNegCap.position.set(-0.12, -0.05, 0.0);
+  termNegCap.name = "term_neg_cap";
+  termNegCap.userData.partId = "brass_terminals";
+  electronicsBayGroup.add(termNegCap);
+
+  // Smart BMS Balancing Controller
+  const bmsMat = new THREE.MeshStandardMaterial({ color: 0x065f46, roughness: 0.4, metalness: 0.3 });
+  const bmsBoard = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 0.012), bmsMat);
+  bmsBoard.position.set(0.05, -0.20, 0.045);
+  bmsBoard.name = "bms_board";
+  bmsBoard.userData = { subsystemId: 'battery', partId: 'battery_pack', name: '4S LiFePO4 Smart BMS Controller' };
+  electronicsBayGroup.add(bmsBoard);
+
   const cellMat = new THREE.MeshPhysicalMaterial({
     color: 0x0284c7,
-    roughness: 0.2,
-    metalness: 0.75,
-    clearcoat: 0.8
+    roughness: 0.25,
+    metalness: 0.7,
+    clearcoat: 0.6
   });
-  const cellGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.24, 16);
+  const cellGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.22, 16);
   const batteryCells = [];
 
   for (let row = 0; row < 2; row++) {
     for (let col = -1; col <= 2; col++) {
       const cell = new THREE.Mesh(cellGeo, cellMat);
       cell.position.set(col * 0.10 - 0.05, -0.20, row * 0.10 - 0.15);
-      cell.userData = { subsystemId: 'battery', name: '4S2P LiFePO4 Polar Battery Bank' };
+      cell.name = `battery_cell_${batteryCells.length}`;
+      cell.userData = { subsystemId: 'battery', partId: 'battery_pack', name: '4S2P LiFePO4 Polar Battery Bank' };
       electronicsBayGroup.add(cell);
       batteryCells.push(cell);
     }
@@ -429,7 +578,9 @@ export function createAutonomousBuoy() {
   const busbarMat = new THREE.MeshStandardMaterial({ color: 0xb45309, metalness: 0.92, roughness: 0.15 });
   for (let b = 0; b < 3; b++) {
     const bar = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.006, 0.02), busbarMat);
-    bar.position.set(-0.10 + b * 0.10, -0.075, -0.15);
+    bar.position.set(-0.10 + b * 0.10, -0.085, -0.15);
+    bar.name = `busbar_${b}`;
+    bar.userData.partId = "battery_pack";
     electronicsBayGroup.add(bar);
   }
 
@@ -449,13 +600,15 @@ export function createAutonomousBuoy() {
   // 1. Battery Pack Flexible Heating Pad Jacket (Surrounds the 4S2P LiFePO4 cells to prevent cold charging lockout)
   const batteryHeaterPad = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.22, 0.26), heatingPadMat);
   batteryHeaterPad.position.set(0.05, -0.20, -0.10);
-  batteryHeaterPad.userData = { subsystemId: 'heater', name: 'Flexible Polyimide Kapton Battery Heating Pad (-40°C)' };
+  batteryHeaterPad.name = "battery_heater_pad";
+  batteryHeaterPad.userData = { subsystemId: 'heater', partId: 'kapton_pads', name: 'Flexible Polyimide Kapton Battery Heating Pad (-40°C)' };
   heaterGroup.add(batteryHeaterPad);
 
   // 2. Chassis Under-Deck Heating Pad (Thermal bed for avionics chamber)
   const chassisHeaterPad = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.012, 0.55), heatingPadMat);
   chassisHeaterPad.position.set(0, -0.345, 0.05);
-  chassisHeaterPad.userData = { subsystemId: 'heater', name: 'Avionics Deck Thermal Anti-Freeze Heating Pad' };
+  chassisHeaterPad.name = "chassis_heater_pad";
+  chassisHeaterPad.userData = { subsystemId: 'heater', partId: 'kapton_pads', name: 'Avionics Deck Thermal Anti-Freeze Heating Pad' };
   heaterGroup.add(chassisHeaterPad);
 
   // 3. Copper heat-pipe running along the battery tray
@@ -464,15 +617,60 @@ export function createAutonomousBuoy() {
   const heatPipe = new THREE.Mesh(heatPipeGeo, heaterBlockMat);
   heatPipe.rotation.z = Math.PI / 2.5;
   heatPipe.position.set(0.08, -0.18, 0.02);
-  heatPipe.userData = { subsystemId: 'heater', name: 'Sub-Zero PTC Thermal Anti-Freeze Core' };
+  heatPipe.name = "copper_heat_pipe";
+  heatPipe.userData = { subsystemId: 'heater', partId: 'kapton_pads', name: 'Sub-Zero PTC Thermal Anti-Freeze Core' };
   heaterGroup.add(heatPipe);
 
   // 4. Polar Thermal Active Status LED (Warm amber glow on PCB)
   const ledHeaterMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
   const ledHeater = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.02, 8), ledHeaterMat);
   ledHeater.position.set(-0.12, 0.11, 0.10);
-  ledHeater.userData = { subsystemId: 'heater', name: 'Polar Thermal Control Active Indicator' };
+  ledHeater.name = "led_heater";
+  ledHeater.userData = { subsystemId: 'heater', partId: 'kapton_pads', name: 'Polar Thermal Control Active Indicator' };
   heaterGroup.add(ledHeater);
+
+  // 5. Heat Shimmer above Kapton Battery Pad (Phase 6B Thermal Visuals)
+  const heatShimmerMat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    uniforms: {
+      uTime: { value: 0 },
+      uIntensity: { value: 0.0 }
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      uniform float uTime;
+      uniform float uIntensity;
+      void main() {
+        vUv = uv;
+        vec3 pos = position;
+        pos.y += sin(pos.x * 24.0 + uTime * 7.0) * 0.008 * uIntensity;
+        pos.x += cos(pos.z * 20.0 + uTime * 6.0) * 0.005 * uIntensity;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying vec2 vUv;
+      uniform float uTime;
+      uniform float uIntensity;
+      void main() {
+        if (uIntensity <= 0.01) discard;
+        float ripple = sin(vUv.x * 35.0 + uTime * 9.0) * cos(vUv.y * 30.0 - uTime * 7.0);
+        float edgeFade = smoothstep(0.0, 0.2, vUv.x) * smoothstep(1.0, 0.8, vUv.x)
+                       * smoothstep(0.0, 0.2, vUv.y) * smoothstep(1.0, 0.8, vUv.y);
+        float alpha = edgeFade * (0.20 + 0.35 * ripple) * uIntensity;
+        vec3 shimmerCol = mix(vec3(1.0, 0.60, 0.15), vec3(1.0, 0.95, 0.85), uIntensity * 0.6);
+        gl_FragColor = vec4(shimmerCol, alpha);
+      }
+    `
+  });
+  const heatShimmerMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.48, 0.28), heatShimmerMat);
+  heatShimmerMesh.rotation.x = -Math.PI / 2;
+  heatShimmerMesh.position.set(0.05, -0.075, -0.10);
+  heatShimmerMesh.name = "heat_shimmer_mesh";
+  heaterGroup.add(heatShimmerMesh);
 
   electronicsBayGroup.add(heaterGroup);
 
@@ -498,6 +696,8 @@ export function createAutonomousBuoy() {
     [0.12, 0.09, 0.16],
     [-0.05, 0.09, 0.22]
   ], 0.009, 0xef4444); // Silicone Red
+  wireBatPos.name = "wire_bat_pos";
+  wireBatPos.userData.partId = "wiring_harness";
   electronicsBayGroup.add(wireBatPos);
 
   const wireBatNeg = createCurvedWire([
@@ -507,6 +707,8 @@ export function createAutonomousBuoy() {
     [-0.18, 0.09, 0.16],
     [-0.08, 0.09, 0.22]
   ], 0.009, 0x09090b); // Silicone Black
+  wireBatNeg.name = "wire_bat_neg";
+  wireBatNeg.userData.partId = "wiring_harness";
   electronicsBayGroup.add(wireBatNeg);
 
   // 2. Solar PV Infeed Wire Pair (Curving from Upper Dome through hull gland to MPPT)
@@ -515,7 +717,9 @@ export function createAutonomousBuoy() {
     [-0.22, 0.26, 0.05],
     [-0.18, 0.16, 0.18],
     [-0.12, 0.10, 0.24]
-  ], 0.007, 0xf8fafc); // Solar White
+  ], 0.007, 0x475569); // Industrial Slate Silicone (avoids bloom specular blowout)
+  wireSolar1.name = "wire_solar_1";
+  wireSolar1.userData.partId = "wiring_harness";
   electronicsBayGroup.add(wireSolar1);
 
   const wireSolar2 = createCurvedWire([
@@ -524,6 +728,8 @@ export function createAutonomousBuoy() {
     [-0.16, 0.16, 0.16],
     [-0.10, 0.10, 0.22]
   ], 0.007, 0x0284c7); // Solar Blue
+  wireSolar2.name = "wire_solar_2";
+  wireSolar2.userData.partId = "wiring_harness";
   electronicsBayGroup.add(wireSolar2);
 
   // 3. Winch Stepper Motor 4-Wire Loom (Routing from TMC2209 driver to bottom pass-through)
@@ -533,24 +739,32 @@ export function createAutonomousBuoy() {
     [-0.28, -0.15, -0.16],
     [-0.24, -0.32, -0.10]
   ], 0.006, 0xef4444); // Stepper Coil A+ (Red)
+  wireWinch1.name = "wire_winch_1";
+  wireWinch1.userData.partId = "wiring_harness";
   const wireWinch2 = createCurvedWire([
     [-0.26, 0.09, -0.14],
     [-0.28, 0.02, -0.16],
     [-0.26, -0.15, -0.16],
     [-0.22, -0.32, -0.10]
   ], 0.006, 0x10b981); // Stepper Coil A- (Green)
+  wireWinch2.name = "wire_winch_2";
+  wireWinch2.userData.partId = "wiring_harness";
   const wireWinch3 = createCurvedWire([
     [-0.24, 0.09, -0.14],
     [-0.26, 0.02, -0.16],
     [-0.24, -0.15, -0.16],
     [-0.20, -0.32, -0.10]
   ], 0.006, 0x38bdf8); // Stepper Coil B+ (Cyan)
+  wireWinch3.name = "wire_winch_3";
+  wireWinch3.userData.partId = "wiring_harness";
   const wireWinch4 = createCurvedWire([
     [-0.22, 0.09, -0.14],
     [-0.24, 0.02, -0.16],
     [-0.22, -0.15, -0.16],
     [-0.18, -0.32, -0.10]
   ], 0.006, 0xfbbf24); // Stepper Coil B- (Yellow)
+  wireWinch4.name = "wire_winch_4";
+  wireWinch4.userData.partId = "wiring_harness";
   electronicsBayGroup.add(wireWinch1);
   electronicsBayGroup.add(wireWinch2);
   electronicsBayGroup.add(wireWinch3);
@@ -564,6 +778,8 @@ export function createAutonomousBuoy() {
     [0.15, 0.42, -0.08],
     [0.08, 0.55, -0.02]
   ], 0.006, 0x78716c); // Braided Gold/Brown Sheath
+  wireCoax.name = "wire_coax";
+  wireCoax.userData.partId = "wiring_harness";
   electronicsBayGroup.add(wireCoax);
 
   // 5. Sensor Bus Twisted Pair to Slip Ring (Green/Yellow I2C telemetry)
@@ -573,12 +789,16 @@ export function createAutonomousBuoy() {
     [0.18, -0.14, 0.16],
     [0.18, -0.32, 0.08]
   ], 0.005, 0x10b981);
+  wireI2C_A.name = "wire_i2c_a";
+  wireI2C_A.userData.partId = "wiring_harness";
   const wireI2C_B = createCurvedWire([
     [0.10, 0.09, 0.24],
     [0.16, 0.02, 0.22],
     [0.20, -0.14, 0.16],
     [0.20, -0.32, 0.08]
   ], 0.005, 0xf59e0b);
+  wireI2C_B.name = "wire_i2c_b";
+  wireI2C_B.userData.partId = "wiring_harness";
   electronicsBayGroup.add(wireI2C_A);
   electronicsBayGroup.add(wireI2C_B);
 
@@ -598,7 +818,8 @@ export function createAutonomousBuoy() {
     new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.2 })
   );
   antMesh.position.set(0.08, CONFIG.BUOY_RADIUS_3D + 1.60, 0);
-  antMesh.userData = { subsystemId: 'antenna', name: 'LoRa SX1278 433MHz High-Gain Whip Antenna' };
+  antMesh.name = "lora_whip_antenna";
+  antMesh.userData = { subsystemId: 'antenna', partId: 'antenna', name: 'LoRa SX1278 433MHz High-Gain Whip Antenna' };
   mastGroup.add(antMesh);
 
   // Copper loading coil at base of whip antenna
@@ -606,6 +827,8 @@ export function createAutonomousBuoy() {
   const coilMesh = new THREE.Mesh(coilGeo, new THREE.MeshStandardMaterial({ color: 0xb45309, metalness: 0.95, roughness: 0.15 }));
   coilMesh.rotation.x = Math.PI / 2;
   coilMesh.position.set(0.08, CONFIG.BUOY_RADIUS_3D + 1.15, 0);
+  coilMesh.name = "copper_loading_coil";
+  coilMesh.userData.partId = "antenna";
   mastGroup.add(coilMesh);
 
   // NavIC / GPS L1 Ceramic Patch Antenna on cross-arm
@@ -621,7 +844,8 @@ export function createAutonomousBuoy() {
     new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.2, metalness: 0.9 })
   );
   gpsPatch.position.set(-0.18, CONFIG.BUOY_RADIUS_3D + 1.27, 0);
-  gpsPatch.userData = { subsystemId: 'antenna', name: 'NavIC / GPS L1 Polar Positioning Patch' };
+  gpsPatch.name = "navic_gps_patch";
+  gpsPatch.userData = { subsystemId: 'antenna', partId: 'antenna', name: 'NavIC / GPS L1 Polar Positioning Patch' };
   mastGroup.add(gpsPatch);
 
   // 4B. Ultrasonic Anemometer & Met Sensor Suite (Real MoES/NIOT Polar Specification)
@@ -735,7 +959,8 @@ export function createAutonomousBuoy() {
   const drumMesh = new THREE.Mesh(drumGeo, drumMat);
   drumMesh.rotation.z = Math.PI / 2;
   drumMesh.position.set(0, -CONFIG.BUOY_RADIUS_3D - 0.55, 0);
-  drumMesh.userData = { subsystemId: 'motor', name: 'Winch Spool & CTD Cable Reel' };
+  drumMesh.name = "winch_drum";
+  drumMesh.userData = { subsystemId: 'motor', partId: 'winch_drum', name: 'Winch Spool & CTD Cable Reel' };
   winchGroup.add(drumMesh);
 
   const cableCoil = new THREE.Mesh(
@@ -744,7 +969,8 @@ export function createAutonomousBuoy() {
   );
   cableCoil.rotation.z = Math.PI / 2;
   cableCoil.position.copy(drumMesh.position);
-  cableCoil.userData = { subsystemId: 'motor', name: 'Winch Spool & CTD Cable Reel' };
+  cableCoil.name = "cable_coil";
+  cableCoil.userData = { subsystemId: 'motor', partId: 'winch_drum', name: 'Winch Spool & CTD Cable Reel' };
   winchGroup.add(cableCoil);
 
   // Winch Stepper Motor & Planetary Gearbox
@@ -754,7 +980,8 @@ export function createAutonomousBuoy() {
   );
   motorMesh.rotation.z = Math.PI / 2;
   motorMesh.position.set(-0.35, drumMesh.position.y, 0);
-  motorMesh.userData = { subsystemId: 'motor', name: 'NEMA-17 Winch Stepper Motor & Planetary Gearbox' };
+  motorMesh.name = "winch_motor";
+  motorMesh.userData = { subsystemId: 'motor', partId: 'winch_drum', name: 'NEMA-17 Winch Stepper Motor & Planetary Gearbox' };
   winchGroup.add(motorMesh);
 
   // Planetary Gearbox Reduction Flange
@@ -764,6 +991,8 @@ export function createAutonomousBuoy() {
   );
   gearboxFlange.rotation.z = Math.PI / 2;
   gearboxFlange.position.set(-0.20, drumMesh.position.y, 0);
+  gearboxFlange.name = "gearbox_flange";
+  gearboxFlange.userData.partId = "winch_drum";
   winchGroup.add(gearboxFlange);
 
   // High-Precision 12-Channel Gold-Alloy Sealed Rotary Slip Ring Capsule
@@ -774,7 +1003,8 @@ export function createAutonomousBuoy() {
   );
   slipRingCapsule.rotation.z = Math.PI / 2;
   slipRingCapsule.position.set(0.30, drumMesh.position.y, 0);
-  slipRingCapsule.userData = { subsystemId: 'motor', name: '12-Channel Gold Rotary Slip Ring Capsule' };
+  slipRingCapsule.name = "slip_ring_capsule";
+  slipRingCapsule.userData = { subsystemId: 'motor', partId: 'winch_drum', name: '12-Channel Gold Rotary Slip Ring Capsule' };
   winchGroup.add(slipRingCapsule);
 
   // Gold Collector Track Rings on Slip Ring Rotor
@@ -889,6 +1119,8 @@ export function createAutonomousBuoy() {
   );
   standoffArm.rotation.z = Math.PI / 3.8;
   standoffArm.position.set(0.32, -CONFIG.BUOY_RADIUS_3D - 1.70, 0);
+  standoffArm.name = "standoff_arm";
+  standoffArm.userData.partId = "tether";
   keelGroup.add(standoffArm);
 
   // Duplex 2205 Subsea Mooring Swivel
@@ -897,7 +1129,8 @@ export function createAutonomousBuoy() {
     new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.95, roughness: 0.1 })
   );
   swivelRing.position.set(0.56, -CONFIG.BUOY_RADIUS_3D - 1.95, 0);
-  swivelRing.userData = { subsystemId: 'mooring', name: 'Duplex 2205 Subsea Mooring Swivel' };
+  swivelRing.name = "swivel_ring";
+  swivelRing.userData = { subsystemId: 'mooring', partId: 'tether', name: 'Duplex 2205 Subsea Mooring Swivel' };
   keelGroup.add(swivelRing);
 
   // ════════════════════════════════════════════════════════════════════════
@@ -923,7 +1156,8 @@ export function createAutonomousBuoy() {
   anchorBlock.position.set(0, anchorY, 0);
   anchorBlock.castShadow = true;
   anchorBlock.receiveShadow = true;
-  anchorBlock.userData = { subsystemId: 'mooring', name: '350kg Cast-Iron Clump Anchor (Benthic Biofouling)' };
+  anchorBlock.name = "anchor_block";
+  anchorBlock.userData = { subsystemId: 'mooring', partId: 'tether', name: '350kg Cast-Iron Clump Anchor (Benthic Biofouling)' };
   mooringGroup.add(anchorBlock);
 
   // Anti-drag Seabed Mud Flukes (digging teeth)
@@ -1002,7 +1236,8 @@ export function createAutonomousBuoy() {
     new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8, roughness: 0.25 })
   );
   releaseCanister.position.set(0, anchorY + 1.1, 0);
-  releaseCanister.userData = { subsystemId: 'mooring', name: 'Acoustic Release Transponder' };
+  releaseCanister.name = "release_canister";
+  releaseCanister.userData = { subsystemId: 'mooring', partId: 'tether', name: 'Acoustic Release Transponder' };
   mooringGroup.add(releaseCanister);
 
   // Golden-Yellow High-Visibility Kevlar-29 Braided Mooring Line
@@ -1018,6 +1253,8 @@ export function createAutonomousBuoy() {
     linewidth: 3
   });
   const tetherLine = new THREE.Line(tetherGeo, tetherMat);
+  tetherLine.name = "tether_line";
+  tetherLine.userData.partId = "tether";
   mooringGroup.add(tetherLine);
 
   buoyRoot.add(hullGroup);
@@ -1069,8 +1306,17 @@ export function createAutonomousBuoy() {
     keelGroup,
     strobeMat,
     drumMesh,
+    acrylicWindow,
     interactiveMeshes,
-    update: (time, waveElevation, waveSurgeX = 0, waveSurgeZ = 0, explodedFactor = 0, targetPitch = 0, targetRoll = 0, isBursting = false, delta = 0.016, currentFlow = { x: 0.45, z: 0.25 }, isInspecting = false) => {
+    getWinchExitWorldPosition: (target = new THREE.Vector3()) => {
+      buoyRoot.updateMatrixWorld(true);
+      return target.set(0, -CONFIG.BUOY_RADIUS_3D - 1.95, 0).applyMatrix4(buoyRoot.matrixWorld);
+    },
+    getDockedWorldPosition: (target = new THREE.Vector3()) => {
+      buoyRoot.updateMatrixWorld(true);
+      return target.set(0, -CONFIG.BUOY_RADIUS_3D - 2.70, 0).applyMatrix4(buoyRoot.matrixWorld);
+    },
+    update: (time, waveElevation, waveSurgeX = 0, waveSurgeZ = 0, explodedFactor = 0, targetPitch = 0, targetRoll = 0, isBursting = false, delta = 0.016, currentFlow = { x: 0.45, z: 0.25 }, isInspecting = false, heaterState = null) => {
       // ════════════════════════════════════════════════════════════════════════
       // 1. HORIZONTAL WATCH CIRCLE & CURRENT FLOW HYDRODYNAMICS
       // ════════════════════════════════════════════════════════════════════════
@@ -1178,9 +1424,126 @@ export function createAutonomousBuoy() {
       const ctdPulse = Math.sin(time * 6.0) > 0.4 ? 1.0 : 0.08;
       ledCtdRxMat.color.setRGB(0.22 * ctdPulse, 0.74 * ctdPulse, 0.97 * ctdPulse);
 
-      // HEATER_ON: Warm breathing pulse when thermal management is active
-      const heatPulse = 0.4 + 0.6 * (Math.sin(time * 2.5) * 0.5 + 0.5);
-      ledHeaterMat.color.setRGB(0.96 * heatPulse, 0.58 * heatPulse, 0.08 * heatPulse);
+      // ════════════════════════════════════════════════════════════════════════
+      // 5B. PHASE 6B: THERMAL & POWER-BUDGET DYNAMIC VISUALS
+      // ════════════════════════════════════════════════════════════════════════
+      if (heaterState) {
+        const isTripped = !!heaterState.isTripped;
+        const isOverheat = !!heaterState.isOverheat;
+        const isOverWattage = !!heaterState.isOverWattage;
+        const temp = heaterState.temperature !== undefined ? heaterState.temperature : 3.8;
+        const power = heaterState.powerWatts || 0.0;
+        const isPowerOn = power > 0.05 && !isTripped;
+
+        // 1. OVER-WATTAGE VISUALS:
+        // Total load > source limit => battery supply wires pulse rapidly, power chip/MPPT blinks alert color
+        if (isOverWattage) {
+          const wirePulse = (Math.sin(time * 20.0) * 0.5 + 0.5);
+          if (wireBatPos && wireBatPos.material) {
+            wireBatPos.material.emissive = wireBatPos.material.emissive || new THREE.Color();
+            wireBatPos.material.emissive.setRGB(1.0 * wirePulse, 0.18 * wirePulse, 0.02 * wirePulse);
+            wireBatPos.material.emissiveIntensity = 2.2;
+          }
+          if (wireBatNeg && wireBatNeg.material) {
+            wireBatNeg.material.emissive = wireBatNeg.material.emissive || new THREE.Color();
+            wireBatNeg.material.emissive.setRGB(0.85 * wirePulse, 0.15 * wirePulse, 0.02 * wirePulse);
+            wireBatNeg.material.emissiveIntensity = 1.6;
+          }
+
+          // MPPT Heat Sink & BMS board alert blink (6 Hz square wave)
+          const alertBlink = (Math.sin(time * 12.0) > 0.0 ? 1.0 : 0.0);
+          if (mpptHeatSink && mpptHeatSink.material) {
+            mpptHeatSink.material.emissive = mpptHeatSink.material.emissive || new THREE.Color();
+            mpptHeatSink.material.emissive.setRGB(0.95 * alertBlink, 0.25 * alertBlink, 0.05 * alertBlink);
+            mpptHeatSink.material.emissiveIntensity = 1.4;
+          }
+          if (bmsBoard && bmsBoard.material) {
+            bmsBoard.material.emissive = bmsBoard.material.emissive || new THREE.Color();
+            bmsBoard.material.emissive.setRGB(0.90 * alertBlink, 0.15 * alertBlink, 0.05 * alertBlink);
+            bmsBoard.material.emissiveIntensity = 1.2;
+          }
+        } else {
+          // Normal wiring & power chip
+          if (wireBatPos && wireBatPos.material && wireBatPos.material.emissive) wireBatPos.material.emissive.setRGB(0, 0, 0);
+          if (wireBatNeg && wireBatNeg.material && wireBatNeg.material.emissive) wireBatNeg.material.emissive.setRGB(0, 0, 0);
+          if (mpptHeatSink && mpptHeatSink.material && mpptHeatSink.material.emissive) mpptHeatSink.material.emissive.setRGB(0, 0, 0);
+          if (bmsBoard && bmsBoard.material && bmsBoard.material.emissive) bmsBoard.material.emissive.setRGB(0, 0, 0);
+        }
+
+        // 2. OVERHEAT & HEATER PAD VISUALS:
+        // Overheat => pad gradient orange to white-hot, heat shimmer above pad, faint thermal glow on neighbors
+        // Protection trip => pad goes dark, chip says CUTOFF
+        if (isTripped) {
+          // PROTECTION TRIP: Pad goes dark, heat shimmer disappears, LED cutoff alert
+          heatingPadMat.emissive = heatingPadMat.emissive || new THREE.Color();
+          heatingPadMat.emissive.setRGB(0.0, 0.0, 0.0);
+          heatingPadMat.emissiveIntensity = 0.0;
+          heatShimmerMat.uniforms.uIntensity.value = 0.0;
+
+          // LED indicates bimetallic cutoff (solid red warning)
+          ledHeaterMat.color.setRGB(0.95, 0.05, 0.05);
+
+          // Neighbors return to cold dark
+          if (batteryTrayMat.emissive) batteryTrayMat.emissive.setRGB(0, 0, 0);
+          if (cellMat.emissive) cellMat.emissive.setRGB(0, 0, 0);
+        } else if (temp > 35.0 || isOverheat) {
+          // OVERHEAT: Severe thermal state (>35°C up to +65°C)
+          // Pad gradient: from fiery orange (0xf97316) to incandescent white-hot (0xffffff)
+          const overheatNorm = Math.min(1.0, Math.max(0.0, (temp - 35.0) / 25.0));
+          const r = 1.0;
+          const g = 0.45 + 0.55 * overheatNorm; // 0.45 -> 1.0
+          const b = 0.08 + 0.92 * overheatNorm; // 0.08 -> 1.0
+          heatingPadMat.emissive = heatingPadMat.emissive || new THREE.Color();
+          heatingPadMat.emissive.setRGB(r, g, b);
+          heatingPadMat.emissiveIntensity = 1.4 + 2.1 * overheatNorm; // Up to 3.5 intensity (incandescent white-hot)
+
+          // Heat shimmer active and undulating above the battery pad
+          heatShimmerMat.uniforms.uIntensity.value = 0.4 + 0.6 * overheatNorm;
+          heatShimmerMat.uniforms.uTime.value = time;
+
+          // Faint thermal glow on neighboring battery enclosure, cells and heat pipe
+          const neighborGlow = 0.25 + 0.55 * overheatNorm;
+          batteryTrayMat.emissive = batteryTrayMat.emissive || new THREE.Color();
+          batteryTrayMat.emissive.setRGB(0.55 * neighborGlow, 0.12 * neighborGlow, 0.02 * neighborGlow);
+          batteryTrayMat.emissiveIntensity = 0.8;
+
+          cellMat.emissive = cellMat.emissive || new THREE.Color();
+          cellMat.emissive.setRGB(0.40 * neighborGlow, 0.08 * neighborGlow, 0.01 * neighborGlow);
+          cellMat.emissiveIntensity = 0.6;
+
+          // LED burns bright emergency red-amber
+          ledHeaterMat.color.setRGB(1.0, 0.25, 0.02);
+        } else if (isPowerOn) {
+          // NORMAL HEATING: Pad emits warm amber glow (0xb45309)
+          const heatBreath = 0.5 + 0.5 * (Math.sin(time * 3.0) * 0.5 + 0.5);
+          heatingPadMat.emissive = heatingPadMat.emissive || new THREE.Color();
+          heatingPadMat.emissive.setRGB(0.85 * heatBreath, 0.42 * heatBreath, 0.05 * heatBreath);
+          heatingPadMat.emissiveIntensity = 0.5;
+
+          // Heat shimmer zero at normal low temperature
+          heatShimmerMat.uniforms.uIntensity.value = 0.0;
+
+          // Normal amber telemetry LED
+          const heatPulse = 0.4 + 0.6 * (Math.sin(time * 2.5) * 0.5 + 0.5);
+          ledHeaterMat.color.setRGB(0.96 * heatPulse, 0.58 * heatPulse, 0.08 * heatPulse);
+
+          if (batteryTrayMat.emissive) batteryTrayMat.emissive.setRGB(0, 0, 0);
+          if (cellMat.emissive) cellMat.emissive.setRGB(0, 0, 0);
+        } else {
+          // NORMAL IDLE: Heater off (within hysteresis comfort band 3.0°C - 5.0°C)
+          heatingPadMat.emissive = heatingPadMat.emissive || new THREE.Color();
+          heatingPadMat.emissive.setRGB(0.0, 0.0, 0.0);
+          heatingPadMat.emissiveIntensity = 0.0;
+          heatShimmerMat.uniforms.uIntensity.value = 0.0;
+          ledHeaterMat.color.setRGB(0.12, 0.08, 0.02); // Dim standby amber
+          if (batteryTrayMat.emissive) batteryTrayMat.emissive.setRGB(0, 0, 0);
+          if (cellMat.emissive) cellMat.emissive.setRGB(0, 0, 0);
+        }
+      } else {
+        // Fallback when heaterState is not supplied
+        const heatPulse = 0.4 + 0.6 * (Math.sin(time * 2.5) * 0.5 + 0.5);
+        ledHeaterMat.color.setRGB(0.96 * heatPulse, 0.58 * heatPulse, 0.08 * heatPulse);
+      }
 
       // 6. IALA-Standard Polar Maritime Strobe (Fl (2) Y 4s Rhythmic Double-Burst)
       const strobeCycle = time % 4.0;

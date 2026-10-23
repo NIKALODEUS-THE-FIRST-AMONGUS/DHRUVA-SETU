@@ -1,16 +1,38 @@
 import * as THREE from 'three';
+import { generatePolarCloudMap } from './ProceduralTextures';
 
 /**
  * Polar Atmospheric & Seasonal Weather VFX Engine
  * Accurately models the 4 extreme Antarctic seasonal cycles:
- * 1. Austral Summer (Midnight Sun) — 24-hour continuous low-angle golden sunlight, parhelion glints
+ * 1. Austral Summer (Midnight Sun) — 24-hour continuous low-angle golden sunlight, parhelion glints, crepuscular sun shafts
  * 2. Austral Winter (Polar Night / No Sun) — Sun below horizon, brilliant Aurora Australis ribbons & celestial starfield
- * 3. Autumn Freeze-up (Blizzard & Ice Flurries) — Freezing gale-force blizzard with 2500 swirling snow particles
+ * 3. Autumn Freeze-up (Blizzard & Ice Flurries) — Freezing gale-force blizzard with 2500 swirling snow particles & spindrift
  * 4. Spring Thaw (Breakup & Polar Sleet) — Drifting ice melt, high-velocity polar sleet & freezing drizzle
  */
+// Procedural soft radial circle texture for point particles (prevents square pixel banding)
+function createParticleCircleTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 32;
+  canvas.height = 32;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+  gradient.addColorStop(0.35, 'rgba(255, 255, 255, 0.7)');
+  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 32, 32);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 export function createAtmosphere() {
   const group = new THREE.Group();
   group.name = "atmosphereGroup";
+  const particleCircleTex = createParticleCircleTexture();
+  const cloudMap = generatePolarCloudMap();
 
   // 1. Celestial Starfield (Visible in Winter / Polar Night)
   const starCount = 2000;
@@ -33,6 +55,7 @@ export function createAtmosphere() {
   starGeo.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
 
   const starMat = new THREE.PointsMaterial({
+    map: particleCircleTex,
     color: 0xe0f2fe,
     size: 1.6,
     transparent: true,
@@ -149,11 +172,13 @@ export function createAtmosphere() {
   snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
 
   const snowMat = new THREE.PointsMaterial({
+    map: particleCircleTex,
     color: 0xffffff,
     size: 1.4,
     transparent: true,
     opacity: 0.0, // enabled in autumn/winter
-    blending: THREE.NormalBlending
+    blending: THREE.NormalBlending,
+    depthWrite: false
   });
 
   const snowMesh = new THREE.Points(snowGeo, snowMat);
@@ -253,16 +278,91 @@ export function createAtmosphere() {
 
   smokeGeo.setAttribute('position', new THREE.BufferAttribute(smokePos, 3));
   const smokeMat = new THREE.PointsMaterial({
+    map: particleCircleTex,
     color: 0xe2e8f0,
-    size: 2.8,
+    size: 2.2,
     transparent: true,
-    opacity: 0.24,
+    opacity: 0.18,
     blending: THREE.NormalBlending,
     depthWrite: false
   });
   const seaSmokeMesh = new THREE.Points(smokeGeo, smokeMat);
   seaSmokeMesh.name = "arcticSeaSmoke";
   group.add(seaSmokeMesh);
+
+  // 7. Volumetric Polar Stratus Cloud Deck on the Horizon
+  const cloudGeo = new THREE.CylinderGeometry(210, 210, 36, 48, 1, true);
+  const cloudMat = new THREE.MeshBasicMaterial({
+    map: cloudMap,
+    color: 0xfef08a,
+    transparent: true,
+    opacity: 0.42,
+    side: THREE.BackSide,
+    depthWrite: false
+  });
+  const cloudMesh = new THREE.Mesh(cloudGeo, cloudMat);
+  cloudMesh.position.y = 18;
+  group.add(cloudMesh);
+
+  // 8. Low-Sun Crepuscular Sun Rays / Atmospheric God-Rays
+  const godRaysGroup = new THREE.Group();
+  godRaysGroup.name = "godRaysGroup";
+  const rayMat = new THREE.MeshBasicMaterial({
+    color: 0xfef08a,
+    transparent: true,
+    opacity: 0.22,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+
+  for (let r = 0; r < 7; r++) {
+    const rayGeo = new THREE.BufferGeometry();
+    const angle = (r - 3) * 0.14;
+    const spread = 8.0;
+    const length = 110.0;
+    const vertices = new Float32Array([
+      0, 0, 0,
+      Math.sin(angle - 0.05) * length - spread, -length * 0.42, Math.cos(angle - 0.05) * length,
+      Math.sin(angle + 0.05) * length + spread, -length * 0.42, Math.cos(angle + 0.05) * length
+    ]);
+    rayGeo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    const rayMesh = new THREE.Mesh(rayGeo, rayMat);
+    godRaysGroup.add(rayMesh);
+  }
+  godRaysGroup.position.set(45, 28, 40);
+  godRaysGroup.lookAt(0, 0, 0);
+  group.add(godRaysGroup);
+
+  // 9. Waterline Spindrift Spray Particles
+  const spindriftCount = 450;
+  const spindriftGeo = new THREE.BufferGeometry();
+  const spindriftPos = new Float32Array(spindriftCount * 3);
+  const spindriftVel = [];
+
+  for (let s = 0; s < spindriftCount; s++) {
+    spindriftPos[s * 3] = (Math.random() - 0.5) * 80;
+    spindriftPos[s * 3 + 1] = 0.2 + Math.random() * 1.4;
+    spindriftPos[s * 3 + 2] = (Math.random() - 0.5) * 80;
+    spindriftVel.push({
+      vx: 1.2 + Math.random() * 0.9,
+      vy: (Math.random() - 0.4) * 0.2,
+      vz: 0.5 + Math.random() * 0.4
+    });
+  }
+  spindriftGeo.setAttribute('position', new THREE.BufferAttribute(spindriftPos, 3));
+  const spindriftMat = new THREE.PointsMaterial({
+    map: particleCircleTex,
+    color: 0xf1f5f9,
+    size: 0.9,
+    transparent: true,
+    opacity: 0.28,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  const spindriftMesh = new THREE.Points(spindriftGeo, spindriftMat);
+  spindriftMesh.name = "waterlineSpindrift";
+  group.add(spindriftMesh);
 
   // Current Season State
   let currentSeason = 'summer';
@@ -279,6 +379,11 @@ export function createAtmosphere() {
           haloMat.opacity = 0.24;
           sunDogMat.opacity = 0.40;
           smokeMat.opacity = 0.14;
+          cloudMat.color.setHex(0xfef08a);
+          cloudMat.opacity = 0.42;
+          rayMat.color.setHex(0xfef08a);
+          rayMat.opacity = 0.22;
+          spindriftMat.opacity = 0.25;
           auroraRibbons.forEach(m => { m.uniforms.u_globalOpacity.value = 0.05; });
           break;
         case 'winter': // Polar Night / No Sun
@@ -288,6 +393,10 @@ export function createAtmosphere() {
           haloMat.opacity = 0.0;
           sunDogMat.opacity = 0.0;
           smokeMat.opacity = 0.34; // Deep frost smoke over freezing sea
+          cloudMat.color.setHex(0x064e3b);
+          cloudMat.opacity = 0.26;
+          rayMat.opacity = 0.0;
+          spindriftMat.opacity = 0.20;
           auroraRibbons.forEach(m => { m.uniforms.u_globalOpacity.value = 1.0; });
           break;
         case 'autumn': // Gale-force Blizzard & Snow Flurries
@@ -297,6 +406,10 @@ export function createAtmosphere() {
           haloMat.opacity = 0.12;
           sunDogMat.opacity = 0.22;
           smokeMat.opacity = 0.38; // Dense freeze-up steam fog
+          cloudMat.color.setHex(0x475569);
+          cloudMat.opacity = 0.82;
+          rayMat.opacity = 0.0;
+          spindriftMat.opacity = 0.65; // Gale spindrift spray
           auroraRibbons.forEach(m => { m.uniforms.u_globalOpacity.value = 0.1; });
           break;
         case 'spring': // Austral Spring Thaw & Sleet
@@ -306,6 +419,11 @@ export function createAtmosphere() {
           haloMat.opacity = 0.20;
           sunDogMat.opacity = 0.35;
           smokeMat.opacity = 0.25;
+          cloudMat.color.setHex(0xbae6fd);
+          cloudMat.opacity = 0.50;
+          rayMat.color.setHex(0xfef9c3);
+          rayMat.opacity = 0.20;
+          spindriftMat.opacity = 0.35;
           auroraRibbons.forEach(m => { m.uniforms.u_globalOpacity.value = 0.35; });
           break;
         default:
@@ -317,6 +435,9 @@ export function createAtmosphere() {
       auroraRibbons.forEach(mat => {
         mat.uniforms.u_time.value = time;
       });
+
+      // Slowly drift horizon stratus cloud deck
+      cloudMesh.rotation.y = time * 0.003;
 
       // Animate Blizzard Snow Particles
       if (snowMat.opacity > 0.02) {
@@ -370,6 +491,23 @@ export function createAtmosphere() {
           if (smPos[i * 3 + 2] > 60) smPos[i * 3 + 2] = -60;
         }
         smokeGeo.attributes.position.needsUpdate = true;
+      }
+
+      // Animate Waterline Spindrift Spray along wind vector
+      if (spindriftMat.opacity > 0.02) {
+        const sPos = spindriftGeo.attributes.position.array;
+        for (let s = 0; s < spindriftCount; s++) {
+          sPos[s * 3] += spindriftVel[s].vx;
+          sPos[s * 3 + 1] += spindriftVel[s].vy;
+          sPos[s * 3 + 2] += spindriftVel[s].vz;
+
+          if (sPos[s * 3] > 40) sPos[s * 3] = -40;
+          if (sPos[s * 3 + 2] > 40) sPos[s * 3 + 2] = -40;
+          if (sPos[s * 3 + 1] < 0.1 || sPos[s * 3 + 1] > 1.8) {
+            sPos[s * 3 + 1] = 0.2 + Math.random() * 0.6;
+          }
+        }
+        spindriftGeo.attributes.position.needsUpdate = true;
       }
     }
   };

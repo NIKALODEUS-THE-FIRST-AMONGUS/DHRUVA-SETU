@@ -9,10 +9,48 @@ import OnboardingTutorial from './components/ui/OnboardingTutorial';
 import { CONFIG } from './constants/config';
 import { POLAR_REGIONS, DEFAULT_REGION_ID } from './constants/polarRegions';
 import { Sliders, X, Box, Cpu, Radio, Waves, Sun, Anchor, Play, Award, Sparkles, RotateCcw, HelpCircle } from 'lucide-react';
+import {
+  createInitialHeaterState,
+  stepHeaterSimulation,
+  HEATER_CONSTANTS,
+  SEASON_AMBIENTS
+} from './constants/heaterSimulation';
 
 export default function App() {
+  // Dev-only URL Parameter Initializers (?view=partB&season=summer&area=prydz&freeze=true)
+  const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const initialAreaParam = urlParams?.get('area')?.toLowerCase();
+  const initialSeasonParam = urlParams?.get('season')?.toLowerCase();
+  const initialViewParam = urlParams?.get('view')?.toLowerCase();
+
+  const resolvedInitialArea = (initialAreaParam === 'bharati' || initialAreaParam === 'bharati_station')
+    ? 'bharati_station'
+    : ((initialAreaParam === 'prydz' || initialAreaParam === 'prydz_bay_miz') ? 'prydz_bay_miz' : DEFAULT_REGION_ID);
+
+  const resolvedInitialSeason = ['summer', 'autumn', 'winter', 'spring'].includes(initialSeasonParam)
+    ? initialSeasonParam
+    : 'summer';
+
+  const viewParamMap = {
+    partb: 'electronics_b',
+    parta: 'electronics_a',
+    partc: 'electronics_c',
+    electronics: 'electronics_b',
+    electronics_b: 'electronics_b',
+    electronics_a: 'electronics_a',
+    electronics_c: 'electronics_c',
+    wide: 'wide',
+    buoy: 'buoy',
+    ctd: 'ctd',
+    seal: 'seal',
+    station: 'station',
+    anchor: 'anchor'
+  };
+
+  const resolvedInitialView = initialViewParam ? (viewParamMap[initialViewParam] || initialViewParam) : 'wide';
+
   // Polar Region State (Isolated between Prydz Bay MIZ and Bharati Base)
-  const [activeRegionId, setActiveRegionId] = useState(DEFAULT_REGION_ID);
+  const [activeRegionId, setActiveRegionId] = useState(resolvedInitialArea);
   const activeRegion = POLAR_REGIONS[activeRegionId] || POLAR_REGIONS.prydz_bay_miz;
 
   // Independent weather & sea physics state stored separately for each polar region
@@ -51,19 +89,136 @@ export default function App() {
   const [profileDirection, setProfileDirection] = useState(1);
   const [battery, setBattery] = useState(100.0); // Starts at 100% (real-time buoy battery calculation)
   const [solarWatts, setSolarWatts] = useState(2.2);
-  const [cameraPreset, setCameraPreset] = useState('wide');
+  const [cameraPreset, setCameraPreset] = useState(resolvedInitialView);
   const [explodedView, setExplodedView] = useState(false);
   const [sealBreachData, setSealBreachData] = useState({ isBreaching: false, sealDepth: 20 });
   const [selectedSubsystem, setSelectedSubsystem] = useState(null);
-  const [vfxSettings, setVfxSettings] = useState({
-    bloom: true,
-    bloomStrength: 0.65,
-    volumetricRays: true
+  const [vfxSettings, setVfxSettings] = useState(() => {
+    let savedQuality = 'high';
+    try {
+      savedQuality = localStorage.getItem('dhruva_quality_tier') || 'high';
+    } catch {
+      // fallback
+    }
+    return {
+      bloom: true,
+      bloomStrength: 0.38,
+      vignette: true,
+      grain: true,
+      toneMapping: 'aces',
+      quality: savedQuality
+    };
   });
 
   // Antarctic 4-Season Climate Cycle: 'summer' (Midnight Sun), 'autumn' (Blizzard), 'winter' (Polar Night), 'spring' (Thaw)
-  const [activeSeason, setActiveSeason] = useState('summer');
+  const [activeSeason, setActiveSeason] = useState(resolvedInitialSeason);
   const [isAutoSeasonCycle, setIsAutoSeasonCycle] = useState(false);
+
+  // Phase 6B: Kapton Heater & Thermal Power Budget Simulation State
+  const initialHeaterFault = urlParams?.get('heaterFault')?.toLowerCase() || 'none';
+  const [heaterState, setHeaterState] = useState(() => {
+    const init = createInitialHeaterState(resolvedInitialSeason);
+    if (['stuck_on', 'thermostat_failure', 'overvoltage'].includes(initialHeaterFault)) {
+      init.fault = initialHeaterFault;
+    }
+    return init;
+  });
+  const heaterStateRef = useRef(heaterState);
+  heaterStateRef.current = heaterState;
+
+  const handleSetHeaterState = (patch) => {
+    setHeaterState(prev => {
+      const updated = typeof patch === 'function' ? patch(prev) : { ...prev, ...patch };
+      return updated;
+    });
+  };
+  const handleResetHeaterTrip = () => {
+    setHeaterState(prev => ({ ...prev, isTripped: false, tripReason: null }));
+  };
+  const handleInjectHeaterFault = (fault) => {
+    setHeaterState(prev => ({ ...prev, fault }));
+  };
+  const handleSelectPart = (partId) => {
+    if (window.__debug?.selectPart) {
+      window.__debug.selectPart(partId);
+    }
+  };
+
+  // Phase 6B: Update ambient temperature on season change
+  useEffect(() => {
+    if (SEASON_AMBIENTS[activeSeason] !== undefined) {
+      setHeaterState(prev => ({
+        ...prev,
+        ambientTemperature: SEASON_AMBIENTS[activeSeason]
+      }));
+    }
+  }, [activeSeason]);
+
+  // Phase 6B: 100ms Lumped 1D Thermal Simulation Step
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHeaterState(prev => stepHeaterSimulation(prev, 0.1, activeSeason));
+    }, 100);
+    return () => clearInterval(timer);
+  }, [activeSeason]);
+
+  // Dev-only Window Debug Hooks
+  useEffect(() => {
+    window.__debug = {
+      ...(window.__debug || {}),
+      setView: (v) => {
+        const key = String(v).toLowerCase();
+        setCameraPreset(viewParamMap[key] || v);
+      },
+      setSeason: (s) => {
+        const season = String(s).toLowerCase();
+        if (['summer', 'autumn', 'winter', 'spring'].includes(season)) {
+          setActiveSeason(season);
+        }
+      },
+      setArea: (a) => {
+        const area = String(a).toLowerCase();
+        if (area === 'prydz' || area === 'prydz_bay_miz') {
+          setActiveRegionId('prydz_bay_miz');
+        } else if (area === 'bharati' || area === 'bharati_station') {
+          setActiveRegionId('bharati_station');
+        }
+      },
+      setQuality: (tier) => {
+        const q = String(tier).toLowerCase();
+        if (['low', 'medium', 'high'].includes(q)) {
+          setVfxSettings(prev => ({ ...prev, quality: q }));
+          try { localStorage.setItem('dhruva_quality_tier', q); } catch {}
+        }
+      },
+      setToneMapping: (tm) => {
+        const t = String(tm).toLowerCase();
+        if (['aces', 'agx'].includes(t)) {
+          setVfxSettings(prev => ({ ...prev, toneMapping: t }));
+        }
+      },
+      freezeTime: (freeze = true, fixedT = 10.0) => {
+        if (window.__debugVFX?.freezeTime) {
+          window.__debugVFX.freezeTime(freeze, fixedT);
+        }
+      },
+      setHeaterState: (patch) => {
+        setHeaterState(prev => {
+          const updated = typeof patch === 'function' ? patch(prev) : { ...prev, ...patch };
+          return updated;
+        });
+      },
+      getHeaterState: () => heaterStateRef.current,
+      resetHeaterTrip: handleResetHeaterTrip,
+      injectHeaterFault: handleInjectHeaterFault
+    };
+
+    if (urlParams?.get('freeze') === 'true' || urlParams?.get('freeze') === '1') {
+      setTimeout(() => {
+        window.__debug?.freezeTime(true, 10.0);
+      }, 50);
+    }
+  }, []);
 
   // CTD Chase Camera lock/disengage state
   const [isFollowingCTD, setIsFollowingCTD] = useState(false);
@@ -458,6 +613,10 @@ export default function App() {
         onSealBreachUpdate={setSealBreachData}
         isFollowingCTD={isFollowingCTD}
         onDisengageCTD={handleDisengageCTDCam}
+        heaterState={heaterState}
+        onSetHeaterState={handleSetHeaterState}
+        onResetTrip={handleResetHeaterTrip}
+        onInjectFault={handleInjectHeaterFault}
       />
 
       {/* Clean HUD Overlay Layer */}
@@ -466,7 +625,7 @@ export default function App() {
         {!isTourRunning && (
           <TopBar
             battery={battery}
-            powerWatts={powerWatts}
+            powerWatts={heaterState.powerWatts + 0.65}
             solarWatts={solarWatts}
             isBreaching={sealBreachData.isBreaching}
             activeRegion={activeRegion}
@@ -483,6 +642,19 @@ export default function App() {
             isAutoSeasonCycle={isAutoSeasonCycle}
             onToggleAutoSeason={() => setIsAutoSeasonCycle(prev => !prev)}
             onOpenTeamDetails={handleOpenTeamModal}
+            qualityTier={vfxSettings.quality || 'high'}
+            heaterState={heaterState}
+            onSelectPart={handleSelectPart}
+            onToggleQuality={() => {
+              const tiers = ['high', 'medium', 'low'];
+              const currentIdx = tiers.indexOf(vfxSettings.quality || 'high');
+              const nextTier = tiers[(currentIdx + 1) % tiers.length];
+              const updated = { ...vfxSettings, quality: nextTier };
+              setVfxSettings(updated);
+              try {
+                localStorage.setItem('dhruva_quality_tier', nextTier);
+              } catch {}
+            }}
           />
         )}
 
@@ -568,34 +740,33 @@ export default function App() {
           </div>
         )}
 
-        {/* Clean, Icon-First Unified Bottom Control Deck (Hidden in Tour Mode) */}
-        {!isTourRunning && (
-          <UnifiedControlDeck
-            currentDepth={currentDepth}
-            onChangeDepth={setCurrentDepth}
-            isAutoProfiling={isAutoProfiling}
-            onToggleAutoProfile={() => setIsAutoProfiling(prev => !prev)}
-            activeRegion={activeRegion}
-            cameraPreset={cameraPreset}
-            onChangeCamera={handleCameraChange}
-            explodedView={explodedView}
-            onToggleExploded={(exp) => {
-              setExplodedView(exp);
-              if (exp) setCameraPreset('exploded');
-            }}
-            sealBreachData={sealBreachData}
-            isFollowingCTD={isFollowingCTD}
-            onDisengageCTD={handleDisengageCTDCam}
-            onEngageCTD={handleEngageCTDCam}
-            activeSeason={activeSeason}
-            onChangeSeason={setActiveSeason}
-            isAutoSeasonCycle={isAutoSeasonCycle}
-            onToggleAutoSeason={() => setIsAutoSeasonCycle(prev => !prev)}
-            isMinimizedProp={isDeckMinimized}
-            onToggleMinimize={() => setIsDeckMinimized(prev => !prev)}
-            onContractDeck={() => setIsDeckMinimized(true)}
-          />
-        )}
+        {/* Clean, Icon-First Unified Bottom Control Deck */}
+        <UnifiedControlDeck
+          currentDepth={currentDepth}
+          onChangeDepth={setCurrentDepth}
+          isAutoProfiling={isAutoProfiling}
+          onToggleAutoProfile={() => setIsAutoProfiling(prev => !prev)}
+          activeRegion={activeRegion}
+          cameraPreset={cameraPreset}
+          onChangeCamera={handleCameraChange}
+          explodedView={explodedView}
+          onToggleExploded={(exp) => {
+            setExplodedView(exp);
+            if (exp) setCameraPreset('exploded');
+          }}
+          sealBreachData={sealBreachData}
+          isFollowingCTD={isFollowingCTD}
+          onDisengageCTD={handleDisengageCTDCam}
+          onEngageCTD={handleEngageCTDCam}
+          activeSeason={activeSeason}
+          onChangeSeason={setActiveSeason}
+          isAutoSeasonCycle={isAutoSeasonCycle}
+          onToggleAutoSeason={() => setIsAutoSeasonCycle(prev => !prev)}
+          isMinimizedProp={isDeckMinimized}
+          onToggleMinimize={() => setIsDeckMinimized(prev => !prev)}
+          onContractDeck={() => setIsDeckMinimized(true)}
+          isTourRunning={isTourRunning}
+        />
 
         {/* Observatory Preferences & Sea Physics Drawer (Hardware Inspector removed, Default Mode added) */}
         {sidebarOpen && (
@@ -671,8 +842,76 @@ export default function App() {
               {/* VFX & Rendering Section */}
               <div className="sidebar-section">
                 <h4 className="sidebar-section-title">OPTICAL RENDER ENGINE</h4>
+
+                {/* Quality Tiers */}
+                <div className="sidebar-slider-item" style={{ marginBottom: '14px' }}>
+                  <div className="sidebar-slider-header">
+                    <span>Performance Tier</span>
+                    <span className="mono-readout font-bold uppercase accent-cyan">{vfxSettings.quality || 'HIGH'}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginTop: '6px' }}>
+                    {['low', 'medium', 'high'].map((tier) => (
+                      <button
+                        key={tier}
+                        type="button"
+                        onClick={() => {
+                          const updated = { ...vfxSettings, quality: tier };
+                          setVfxSettings(updated);
+                          try {
+                            localStorage.setItem('dhruva_quality_tier', tier);
+                          } catch {}
+                        }}
+                        style={{
+                          padding: '6px 8px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          borderRadius: '4px',
+                          border: vfxSettings.quality === tier ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.1)',
+                          background: vfxSettings.quality === tier ? 'rgba(56, 189, 248, 0.18)' : 'rgba(15, 23, 42, 0.6)',
+                          color: vfxSettings.quality === tier ? '#38bdf8' : '#94a3b8',
+                          cursor: 'pointer',
+                          textTransform: 'uppercase'
+                        }}
+                      >
+                        {tier}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tone Mapping */}
+                <div className="sidebar-slider-item" style={{ marginBottom: '14px' }}>
+                  <div className="sidebar-slider-header">
+                    <span>Color Tone Mapping</span>
+                    <span className="mono-readout uppercase">{vfxSettings.toneMapping || 'ACES'}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '6px' }}>
+                    {['aces', 'agx'].map((tm) => (
+                      <button
+                        key={tm}
+                        type="button"
+                        onClick={() => setVfxSettings({ ...vfxSettings, toneMapping: tm })}
+                        style={{
+                          padding: '6px 8px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          borderRadius: '4px',
+                          border: (vfxSettings.toneMapping || 'aces') === tm ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.1)',
+                          background: (vfxSettings.toneMapping || 'aces') === tm ? 'rgba(245, 158, 11, 0.18)' : 'rgba(15, 23, 42, 0.6)',
+                          color: (vfxSettings.toneMapping || 'aces') === tm ? '#f59e0b' : '#94a3b8',
+                          cursor: 'pointer',
+                          textTransform: 'uppercase'
+                        }}
+                      >
+                        {tm === 'aces' ? 'ACES Filmic' : 'AgX Polar'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Atmospheric Bloom */}
                 <label className="sidebar-toggle-row">
-                  <span>Atmospheric Bloom</span>
+                  <span>Emissive Bloom Halo</span>
                   <input
                     type="checkbox"
                     checked={vfxSettings.bloom}
@@ -688,7 +927,7 @@ export default function App() {
                     <input
                       type="range"
                       min="0.1"
-                      max="1.5"
+                      max="1.0"
                       step="0.05"
                       value={vfxSettings.bloomStrength}
                       onChange={(e) => setVfxSettings({ ...vfxSettings, bloomStrength: parseFloat(e.target.value) })}
@@ -696,6 +935,16 @@ export default function App() {
                     />
                   </div>
                 )}
+
+                {/* Optical Vignette & Film Grain */}
+                <label className="sidebar-toggle-row">
+                  <span>Cine Vignette & Film Grain</span>
+                  <input
+                    type="checkbox"
+                    checked={vfxSettings.vignette !== false}
+                    onChange={() => setVfxSettings({ ...vfxSettings, vignette: !(vfxSettings.vignette !== false) })}
+                  />
+                </label>
               </div>
 
               {/* Quick Onboarding & Tutorial Guide */}

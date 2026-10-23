@@ -5,9 +5,29 @@ import * as THREE from 'three';
  * Emits bursting water droplets when the seal or CTD crosses the surface,
  * and leaves micro-bubble wakes trailing behind underwater motion.
  */
+// Procedural soft circular texture for splash and bubble particles
+function createParticleCircleTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 32;
+  canvas.height = 32;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+  gradient.addColorStop(0.35, 'rgba(255, 255, 255, 0.7)');
+  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 32, 32);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 export function createSplashSystem() {
   const group = new THREE.Group();
   group.name = "splashSystemGroup";
+  const particleCircleTex = createParticleCircleTexture();
 
   // 1. Surface Droplet Splash Particles
   const maxSplashParticles = 120;
@@ -32,6 +52,7 @@ export function createSplashSystem() {
   splashGeo.setAttribute('position', new THREE.BufferAttribute(splashPositions, 3));
 
   const splashMat = new THREE.PointsMaterial({
+    map: particleCircleTex,
     color: 0xe0f2fe,
     size: 0.45,
     transparent: true,
@@ -64,6 +85,7 @@ export function createSplashSystem() {
   bubbleGeo.setAttribute('position', new THREE.BufferAttribute(bubblePositions, 3));
 
   const bubbleMat = new THREE.PointsMaterial({
+    map: particleCircleTex,
     color: 0x38bdf8,
     size: 0.28,
     transparent: true,
@@ -110,14 +132,19 @@ export function createSplashSystem() {
       nextBubbleIdx = (nextBubbleIdx + 1) % maxBubbles;
       bubbleGeo.attributes.position.needsUpdate = true;
     },
-    update: (delta) => {
-      // 1. Update Splash Particles (Gravity physics)
+    update: (delta, wind = null) => {
+      // 1. Update Splash & Spindrift Particles (Gravity & Aerodynamic Wind Drag)
+      const windAx = wind ? wind.x * 0.45 : -0.8;
+      const windAz = wind ? wind.z * 0.45 : 0.0;
+
       const splashPos = splashGeo.attributes.position.array;
       for (let i = 0; i < maxSplashParticles; i++) {
         const vel = splashVelocities[i];
         if (vel.life < vel.maxLife) {
           vel.life += delta;
           vel.vy -= 9.8 * delta * 0.8; // Gravity
+          vel.vx += windAx * delta;     // Airborne spray blown downwind by coastal wind
+          vel.vz += windAz * delta;     // Spindrift
 
           splashPos[i * 3] += vel.vx * delta;
           splashPos[i * 3 + 1] += vel.vy * delta;

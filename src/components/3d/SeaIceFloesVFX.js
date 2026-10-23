@@ -13,39 +13,45 @@ export function createSeaIceFloes(ocean) {
 
   const iceFractureMap = generateIceFractureMap();
 
-  // 1. Translucent Pancake Ice Material with Subsurface Ice Glow
+  // 1. Translucent Pancake Ice Material with Volume Absorption & Glacial Sheen
   const floeIceMat = new THREE.MeshPhysicalMaterial({
-    color: 0xbfdbfe,
-    emissive: 0x063a62,
-    emissiveIntensity: 0.32,
-    roughness: 0.22,
-    metalness: 0.04,
-    transmission: 0.38,
+    color: 0xe0f2fe,
+    emissive: 0x0284c7,
+    emissiveIntensity: 0.18,
+    roughness: 0.14,
+    metalness: 0.02,
+    transmission: 0.62,
     ior: 1.31,
-    thickness: 1.8,
+    thickness: 2.2,
+    attenuationColor: new THREE.Color(0x38bdf8),
+    attenuationDistance: 1.8,
     normalMap: iceFractureMap,
-    normalScale: new THREE.Vector2(0.8, 0.8),
+    normalScale: new THREE.Vector2(1.0, 1.0),
     specularIntensity: 1.0,
     specularColor: 0xffffff,
-    clearcoat: 0.45,
-    clearcoatRoughness: 0.2
+    clearcoat: 0.85,
+    clearcoatRoughness: 0.08
   });
 
   // 2. High-Albedo Antarctic Fresh Snow Cap
   const snowCapMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
+    color: 0xf8fafc,
     roughness: 0.94,
     metalness: 0.01,
     flatShading: false
   });
 
   // 3. Submerged Ice Keel Material (deep cyan glacial ice absorption)
-  const keelMat = new THREE.MeshStandardMaterial({
-    color: 0x0ea5e9,
-    roughness: 0.4,
-    metalness: 0.05,
+  const keelMat = new THREE.MeshPhysicalMaterial({
+    color: 0x0284c7,
+    roughness: 0.28,
+    metalness: 0.02,
+    transmission: 0.55,
+    thickness: 3.5,
+    attenuationColor: new THREE.Color(0x0369a1),
+    attenuationDistance: 1.5,
     transparent: true,
-    opacity: 0.75
+    opacity: 0.85
   });
 
   // 4. Upturned Slushy Ice Rims (formed by pancake floe edge-to-edge wave collisions)
@@ -185,13 +191,19 @@ export function createSeaIceFloes(ocean) {
         item.group.visible = i < activeCount;
       });
     },
-    update: (time) => {
+    update: (time, currentData = null) => {
+      const iceDrift = (currentData && currentData.iceDrift)
+        ? currentData.iceDrift
+        : { x: -0.09, z: 0.01 };
+
       floeMeshes.forEach(item => {
         if (!item.group.visible) return;
 
-        // Subtle orbital drift
-        const driftX = Math.sin(time * 0.1 + item.phase) * 1.2;
-        const driftZ = Math.cos(time * 0.08 + item.phase * 1.3) * 1.0;
+        // Floes drift with a mix of ocean current (85%) and surface wind drag (15%),
+        // with individual hydrodynamic variation per floe size and draft
+        const floeDragFactor = 0.85 + Math.sin(item.phase) * 0.3;
+        const driftX = (iceDrift.x * 14.0 * floeDragFactor) + Math.sin(time * 0.09 + item.phase) * 1.2;
+        const driftZ = (iceDrift.z * 14.0 * floeDragFactor) + Math.cos(time * 0.07 + item.phase * 1.3) * 1.0;
         const posX = item.baseX + driftX;
         const posZ = item.baseZ + driftZ;
 

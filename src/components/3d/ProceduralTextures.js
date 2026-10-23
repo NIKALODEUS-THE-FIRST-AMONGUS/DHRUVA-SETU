@@ -967,7 +967,7 @@ export function generateHeatingPadTexture() {
 }
 
 // 12. Studio-Grade Procedural Antarctic Polar IBL Environment Map (PMREM Filtered)
-export function generatePolarEnvironmentMap(renderer) {
+export function generatePolarEnvironmentMap(renderer, season = 'summer') {
   const width = 1024;
   const height = 512;
   const canvas = document.createElement('canvas');
@@ -975,51 +975,137 @@ export function generatePolarEnvironmentMap(renderer) {
   canvas.height = height;
   const ctx = canvas.getContext('2d');
 
-  // Upper Hemisphere (Polar Sky & Golden Sun)
-  const skyGrad = ctx.createLinearGradient(0, 0, 0, height * 0.5);
-  skyGrad.addColorStop(0.0, '#0c2a4d'); // Deep zenith polar navy
-  skyGrad.addColorStop(0.35, '#0284c7'); // Mid-sky electric blue
-  skyGrad.addColorStop(0.70, '#38bdf8'); // Low sky icy cyan
-  skyGrad.addColorStop(0.92, '#bae6fd'); // Polar horizon pale haze
-  skyGrad.addColorStop(1.0, '#fef08a'); // Horizon sun glow
-  ctx.fillStyle = skyGrad;
-  ctx.fillRect(0, 0, width, height * 0.5);
+  if (season === 'winter') {
+    // ── Austral Winter: Polar Night (Sub-horizon sun, Aurora Australis emerald/cyan ionosphere) ──
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, height * 0.5);
+    skyGrad.addColorStop(0.0, '#020617'); // Obsidian polar night zenith
+    skyGrad.addColorStop(0.35, '#064e3b'); // Aurora emerald ionospheric curtain
+    skyGrad.addColorStop(0.65, '#083344'); // Electric cyan atmospheric haze
+    skyGrad.addColorStop(1.0, '#020617'); // Deep obsidian horizon
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, width, height * 0.5);
 
-  // Intense low-angle polar sun disc & parhelion glints
-  const sunX = width * 0.35;
-  const sunY = height * 0.42;
-  const sunGrad = ctx.createRadialGradient(sunX, sunY, 2, sunX, sunY, 80);
-  sunGrad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
-  sunGrad.addColorStop(0.15, 'rgba(254, 240, 138, 0.95)');
-  sunGrad.addColorStop(0.45, 'rgba(253, 186, 116, 0.45)');
-  sunGrad.addColorStop(1.0, 'rgba(254, 240, 138, 0.0)');
-  ctx.fillStyle = sunGrad;
-  ctx.beginPath();
-  ctx.arc(sunX, sunY, 80, 0, Math.PI * 2);
-  ctx.fill();
+    // Aurora curtain diffuse ribbons in equirectangular projection
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.28)';
+    ctx.beginPath();
+    ctx.ellipse(width * 0.45, height * 0.20, 320, 55, -0.12, 0, Math.PI * 2);
+    ctx.fill();
 
-  // Lower Hemisphere (Antarctic Southern Ocean & Sea Ice Shelf Reflections)
-  const groundGrad = ctx.createLinearGradient(0, height * 0.5, 0, height);
-  groundGrad.addColorStop(0.0, '#e0f2fe'); // Ice shelf compaction reflection
-  groundGrad.addColorStop(0.15, '#0369a1'); // Surface meltwater reflection
-  groundGrad.addColorStop(0.50, '#0c4a6e'); // Deep Southern Ocean body
-  groundGrad.addColorStop(1.0, '#021329'); // Abyssal nadir navy
-  ctx.fillStyle = groundGrad;
-  ctx.fillRect(0, height * 0.5, width, height * 0.5);
+    ctx.fillStyle = 'rgba(6, 182, 212, 0.22)';
+    ctx.beginPath();
+    ctx.ellipse(width * 0.58, height * 0.16, 260, 42, 0.08, 0, Math.PI * 2);
+    ctx.fill();
 
-  // Specular sun path reflection across water plane
-  const waterSunGrad = ctx.createLinearGradient(sunX - 40, height * 0.5, sunX + 40, height);
-  waterSunGrad.addColorStop(0.0, 'rgba(254, 240, 138, 0.85)');
-  waterSunGrad.addColorStop(0.3, 'rgba(253, 186, 116, 0.45)');
-  waterSunGrad.addColorStop(1.0, 'rgba(14, 165, 233, 0.0)');
-  ctx.fillStyle = waterSunGrad;
-  ctx.beginPath();
-  ctx.moveTo(sunX - 12, height * 0.5);
-  ctx.lineTo(sunX + 12, height * 0.5);
-  ctx.lineTo(sunX + 65, height);
-  ctx.lineTo(sunX - 65, height);
-  ctx.closePath();
-  ctx.fill();
+    // Ground: Antarctic Sea Ice Shelf reflection under starlight and aurora
+    const groundGrad = ctx.createLinearGradient(0, height * 0.5, 0, height);
+    groundGrad.addColorStop(0.0, '#06202a'); // Faint emerald sea ice sheen
+    groundGrad.addColorStop(0.3, '#021324');
+    groundGrad.addColorStop(1.0, '#010814');
+    ctx.fillStyle = groundGrad;
+    ctx.fillRect(0, height * 0.5, width, height * 0.5);
+  } else if (season === 'autumn') {
+    // ── Austral Autumn: Freeze-up Gale (Muted low silver-slate sun 8° elevation, 6200K) ──
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, height * 0.5);
+    skyGrad.addColorStop(0.0, '#1e293b'); // Slate overcast zenith
+    skyGrad.addColorStop(0.45, '#475569'); // Steel mid-sky
+    skyGrad.addColorStop(0.85, '#94a3b8'); // Freezing haze
+    skyGrad.addColorStop(1.0, '#cbd5e1'); // Low cold sun horizon
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, width, height * 0.5);
+
+    // Muted low sun disc (8° elevation)
+    const sunX = width * 0.35;
+    const sunY = height * 0.45;
+    const sunGrad = ctx.createRadialGradient(sunX, sunY, 2, sunX, sunY, 65);
+    sunGrad.addColorStop(0.0, 'rgba(255, 255, 255, 0.85)');
+    sunGrad.addColorStop(0.3, 'rgba(226, 232, 240, 0.55)');
+    sunGrad.addColorStop(1.0, 'rgba(203, 213, 225, 0.0)');
+    ctx.fillStyle = sunGrad;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 65, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ground: Freezing leaden ocean and grease ice reflections
+    const groundGrad = ctx.createLinearGradient(0, height * 0.5, 0, height);
+    groundGrad.addColorStop(0.0, '#64748b'); // Grease ice slush reflection
+    groundGrad.addColorStop(0.2, '#1e293b');
+    groundGrad.addColorStop(1.0, '#090d16');
+    ctx.fillStyle = groundGrad;
+    ctx.fillRect(0, height * 0.5, width, height * 0.5);
+  } else if (season === 'spring') {
+    // ── Austral Spring: Thaw & Breakup (Crisp azure sky, rising 24° sun, sparkling sea ice) ──
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, height * 0.5);
+    skyGrad.addColorStop(0.0, '#0369a1'); // Crisp azure zenith
+    skyGrad.addColorStop(0.45, '#38bdf8'); // Brilliant sky blue
+    skyGrad.addColorStop(0.85, '#bae6fd'); // Ice crystal horizon
+    skyGrad.addColorStop(1.0, '#fef9c3'); // Warm rising spring sun
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, width, height * 0.5);
+
+    const sunX = width * 0.35;
+    const sunY = height * 0.36;
+    const sunGrad = ctx.createRadialGradient(sunX, sunY, 2, sunX, sunY, 75);
+    sunGrad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+    sunGrad.addColorStop(0.22, 'rgba(254, 249, 195, 0.95)');
+    sunGrad.addColorStop(1.0, 'rgba(254, 249, 195, 0.0)');
+    ctx.fillStyle = sunGrad;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 75, 0, Math.PI * 2);
+    ctx.fill();
+
+    const groundGrad = ctx.createLinearGradient(0, height * 0.5, 0, height);
+    groundGrad.addColorStop(0.0, '#f0f9ff'); // Glacial meltwater brilliance
+    groundGrad.addColorStop(0.2, '#0284c7');
+    groundGrad.addColorStop(1.0, '#011e3d');
+    ctx.fillStyle = groundGrad;
+    ctx.fillRect(0, height * 0.5, width, height * 0.5);
+  } else {
+    // ── Austral Summer: 24-Hour Midnight Sun (Golden low-angle 16° sun, parhelia, 4800K) ──
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, height * 0.5);
+    skyGrad.addColorStop(0.0, '#0c2a4d'); // Deep zenith polar navy
+    skyGrad.addColorStop(0.35, '#0284c7'); // Mid-sky electric blue
+    skyGrad.addColorStop(0.70, '#38bdf8'); // Low sky icy cyan
+    skyGrad.addColorStop(0.92, '#bae6fd'); // Polar horizon pale haze
+    skyGrad.addColorStop(1.0, '#fef08a'); // Horizon golden midnight sun glow
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, width, height * 0.5);
+
+    // Intense low-angle polar sun disc (16° elevation)
+    const sunX = width * 0.35;
+    const sunY = height * 0.41;
+    const sunGrad = ctx.createRadialGradient(sunX, sunY, 2, sunX, sunY, 80);
+    sunGrad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+    sunGrad.addColorStop(0.18, 'rgba(254, 240, 138, 0.95)');
+    sunGrad.addColorStop(0.50, 'rgba(253, 186, 116, 0.45)');
+    sunGrad.addColorStop(1.0, 'rgba(254, 240, 138, 0.0)');
+    ctx.fillStyle = sunGrad;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 80, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Lower Hemisphere (Southern Ocean & Sea Ice Shelf Reflections)
+    const groundGrad = ctx.createLinearGradient(0, height * 0.5, 0, height);
+    groundGrad.addColorStop(0.0, '#e0f2fe'); // Ice shelf reflection
+    groundGrad.addColorStop(0.15, '#0369a1'); // Surface meltwater reflection
+    groundGrad.addColorStop(0.50, '#0c4a6e'); // Deep Southern Ocean body
+    groundGrad.addColorStop(1.0, '#021329'); // Abyssal nadir navy
+    ctx.fillStyle = groundGrad;
+    ctx.fillRect(0, height * 0.5, width, height * 0.5);
+
+    // Specular golden sun glint track across water plane
+    const waterSunGrad = ctx.createLinearGradient(sunX - 40, height * 0.5, sunX + 40, height);
+    waterSunGrad.addColorStop(0.0, 'rgba(254, 240, 138, 0.85)');
+    waterSunGrad.addColorStop(0.3, 'rgba(253, 186, 116, 0.45)');
+    waterSunGrad.addColorStop(1.0, 'rgba(14, 165, 233, 0.0)');
+    ctx.fillStyle = waterSunGrad;
+    ctx.beginPath();
+    ctx.moveTo(sunX - 12, height * 0.5);
+    ctx.lineTo(sunX + 12, height * 0.5);
+    ctx.lineTo(sunX + 65, height);
+    ctx.lineTo(sunX - 65, height);
+    ctx.closePath();
+    ctx.fill();
+  }
 
   const canvasTexture = new THREE.CanvasTexture(canvas);
   canvasTexture.mapping = THREE.EquirectangularReflectionMapping;
@@ -1028,11 +1114,61 @@ export function generatePolarEnvironmentMap(renderer) {
   pmremGenerator.compileEquirectangularShader();
   const envMap = pmremGenerator.fromEquirectangular(canvasTexture).texture;
   pmremGenerator.dispose();
-  canvasTexture.dispose();
 
-  return envMap;
+  return { envMap, skyTexture: canvasTexture };
 }
 
+// 13. Procedural Polar Stratus Horizon Cloud Alpha & Density Map
+export function generatePolarCloudMap() {
+  const width = 512;
+  const height = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
 
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, width, height);
 
+  const imgData = ctx.getImageData(0, 0, width, height);
+  const data = imgData.data;
 
+  // Layered multi-octave Perlin-style turbulent cloud billows
+  for (let y = 0; y < height; y++) {
+    // Vertical soft bell envelope so clouds fade at top and bottom edges
+    const ny = y / height;
+    const vEnvelope = Math.sin(ny * Math.PI);
+    const vFade = Math.pow(vEnvelope, 1.6);
+
+    for (let x = 0; x < width; x++) {
+      const nx = (x / width) * Math.PI * 4;
+
+      // Octave 1: Major cloud mass rolls
+      const o1 = Math.sin(nx * 1.5 + Math.cos(ny * 4.0) * 1.2) * 0.5 + 0.5;
+      // Octave 2: Mid-frequency billows
+      const o2 = Math.cos(nx * 3.5 - ny * 6.0) * 0.5 + 0.5;
+      // Octave 3: High-frequency wisps
+      const o3 = Math.sin(nx * 8.0 + ny * 12.0) * 0.5 + 0.5;
+
+      const rawDensity = o1 * 0.55 + o2 * 0.30 + o3 * 0.15;
+      // Threshold and contrast for soft puffy Antarctic marine stratus
+      const density = Math.min(1.0, Math.max(0.0, (rawDensity - 0.28) * 1.55)) * vFade;
+      const alpha = Math.floor(density * 255);
+
+      const idx = (y * width + x) * 4;
+      data[idx] = 255;
+      data[idx + 1] = 255;
+      data[idx + 2] = 255;
+      data[idx + 3] = alpha;
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.repeat.set(3, 1);
+  texture.needsUpdate = true;
+  return texture;
+}

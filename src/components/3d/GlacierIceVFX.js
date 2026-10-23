@@ -15,41 +15,47 @@ export function createPolarGlaciers() {
 
   const iceFractureMap = generateIceFractureMap();
 
-  // Translucent deep compaction glacial ice material
+  // Translucent deep compaction glacial ice material with volume absorption
   const iceMat = new THREE.MeshPhysicalMaterial({
-    color: 0x93c5fd,
-    emissive: 0x063052,
-    emissiveIntensity: 0.28,
-    roughness: 0.18,
-    metalness: 0.04,
-    transmission: 0.42,
-    ior: 1.31, // Ice refractive index
-    thickness: 3.5,
+    color: 0xe0f2fe,
+    emissive: 0x0284c7,
+    emissiveIntensity: 0.22,
+    roughness: 0.16,
+    metalness: 0.02,
+    transmission: 0.65,
+    ior: 1.31, // Polar ice refractive index
+    thickness: 4.2,
+    attenuationColor: new THREE.Color(0x0284c7), // Cyan glacial absorption
+    attenuationDistance: 2.8,
     normalMap: iceFractureMap,
-    normalScale: new THREE.Vector2(0.9, 0.9),
+    normalScale: new THREE.Vector2(1.2, 1.2),
     specularIntensity: 1.0,
     specularColor: 0xffffff,
-    clearcoat: 0.55,
-    clearcoatRoughness: 0.15,
-    flatShading: true
+    clearcoat: 0.65,
+    clearcoatRoughness: 0.12,
+    flatShading: false
   });
 
   // Wind-packed Antarctic firn snow plateau material
   const snowMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    roughness: 0.92,
+    color: 0xf8fafc,
+    roughness: 0.94,
     metalness: 0.01,
     flatShading: false
   });
 
-  // Deep underwater glacial ice keel (cyan absorption)
-  const keelMat = new THREE.MeshStandardMaterial({
+  // Deep underwater glacial ice keel (cyan volume absorption)
+  const keelMat = new THREE.MeshPhysicalMaterial({
     color: 0x0284c7,
-    roughness: 0.35,
-    metalness: 0.05,
+    roughness: 0.28,
+    metalness: 0.02,
+    transmission: 0.52,
+    thickness: 5.5,
+    attenuationColor: new THREE.Color(0x0369a1),
+    attenuationDistance: 2.2,
     transparent: true,
-    opacity: 0.85,
-    flatShading: true
+    opacity: 0.88,
+    flatShading: false
   });
 
   // Helper: Create authentic tabular berg with irregular cliff perimeter

@@ -33,6 +33,7 @@ export function createOceanSurface(initialPhysics = {}) {
     uniform float u_waveSteepness;
     uniform float u_chaosFactor;
     uniform vec2 u_buoyPos;
+    uniform vec2 u_flowDir;
 
     varying vec2 vUv;
     varying vec3 vWorldPosition;
@@ -99,8 +100,8 @@ export function createOceanSurface(initialPhysics = {}) {
       float crestAccum = 0.0;
 
       // ── 7-OCTAVE GERSTNER WAVE SYSTEM ──
-      // Octave 1: Dominant Antarctic Swell (long-period rolling ocean swell)
-      vec3 w1 = gerstnerWave(pos, normalize(vec2(0.92, 0.38)), 56.0, 0.85, 1.15, 0.40, tangent, binormal, crestAccum);
+      // Octave 1: Dominant Antarctic Swell (Westward Antarctic Slope Current heading ~270°)
+      vec3 w1 = gerstnerWave(pos, normalize(vec2(-0.96, 0.26)), 56.0, 0.85, 1.15, 0.40, tangent, binormal, crestAccum);
 
       // Octave 2: Secondary Rolling Swell
       vec3 w2 = gerstnerWave(pos, normalize(vec2(-0.48, 0.88)), 34.0, 0.52, 1.28, 0.35, tangent, binormal, crestAccum);
@@ -145,8 +146,11 @@ export function createOceanSurface(initialPhysics = {}) {
   const oceanFragShader = `
     uniform float u_time;
     uniform vec2 u_buoyPos;
+    uniform vec2 u_flowDir;
     uniform sampler2D u_normalMap;
     uniform sampler2D u_foamMap;
+    uniform sampler2D u_skyEquirect;
+    uniform int u_hasSkyEquirect;
     uniform vec3 u_skyColor;
     uniform vec3 u_waterSurface;
     uniform vec3 u_waterDeep;
@@ -222,23 +226,25 @@ export function createOceanSurface(initialPhysics = {}) {
 
       // Reorient normal perturbation along tangent plane
       vec3 rippleTangent = normalize(n1 + n2 * 0.65 + n3 * 0.35);
-      vec3 perturb = vec3(rippleTangent.x * 0.32, rippleTangent.z * 0.18, rippleTangent.y * 0.32);
+      vec3 perturb = vec3(rippleTangent.x * 0.30, rippleTangent.z * 0.16, rippleTangent.y * 0.30);
       vec3 finalNormal = normalize(geomNormal + perturb);
 
       // 2. Physically-based Fresnel (polar seawater IOR ~ 1.338)
-      float r0 = 0.024;
+      float r0 = 0.021; // ((1.338 - 1.0) / (1.338 + 1.0))^2
       float NdotV = max(dot(viewDir, finalNormal), 0.0);
-      float fresnel = r0 + (1.0 - r0) * pow(1.0 - NdotV, 5.0);
+      float fresnel = r0 + (1.0 - r0) * pow(clamp(1.0 - NdotV, 0.0, 1.0), 5.0);
 
       // 3. Beer-Lambert physical water absorption gradient
-      // Rich Antarctic cyan melt layer on top, deep abyss navy in wave troughs
-      float depthGradient = clamp(-vElevation * 0.45 + 0.38, 0.0, 1.0);
-      vec3 waterBodyColor = mix(u_waterSurface, u_waterDeep, depthGradient);
+      // Red light absorbs 15x faster than blue in Antarctic water
+      float depthGradient = clamp(-vElevation * 0.48 + 0.42, 0.0, 1.4);
+      vec3 absorptionCoeff = vec3(0.38, 0.09, 0.022);
+      vec3 waterTransmittance = exp(-absorptionCoeff * (depthGradient * 4.2));
+      vec3 waterBodyColor = mix(u_waterDeep, u_waterSurface, waterTransmittance);
 
       // 4. Subsurface Light Scattering (SSS) inside wave crests (glowing emerald-cyan)
-      float sssSunFactor = pow(clamp(dot(viewDir, -sunDir), 0.0, 1.0), 3.5);
-      float crestTranslucency = smoothstep(-0.2, 0.8, vElevation);
-      vec3 sssGlow = u_subsurfaceColor * sssSunFactor * crestTranslucency * 1.35;
+      float sssSunFactor = pow(clamp(dot(viewDir, -sunDir), 0.0, 1.0), 3.2);
+      float crestTranslucency = smoothstep(0.12 * u_waveHeightMult, 0.85 * u_waveHeightMult, vElevation);
+      vec3 sssGlow = u_subsurfaceColor * sssSunFactor * crestTranslucency * 1.6;
 
       // 5. Crisp Anisotropic Sun Specular Glints & Path (tight GGX microfacets)
       vec3 halfVec = normalize(viewDir + sunDir);
@@ -250,37 +256,55 @@ export function createOceanSurface(initialPhysics = {}) {
       float sunPathSheen = pow(geomNdotH, 72.0) * 0.22;
       vec3 sunSpecular = vec3(1.0, 0.97, 0.90) * (sunGlintCore + sunPathSheen) * (1.0 - fresnel * 0.25);
 
-      // 6. Sky & Polar Horizon Reflection
+      // 6. Sky & Polar Horizon Reflection (Equirectangular Sky or Analytical fallback)
       vec3 refDir = reflect(-viewDir, finalNormal);
-      float skyElevation = max(refDir.y, 0.0);
-      vec3 zenithColor = u_skyColor * 0.65;
-      vec3 horizonGlowColor = u_skyColor * 1.25 + vec3(0.03, 0.06, 0.10);
-      vec3 skyReflection = mix(horizonGlowColor, zenithColor, pow(skyElevation, 0.55));
+      vec3 skyReflection;
+      if (u_hasSkyEquirect == 1) {
+        float phi = atan(refDir.z, refDir.x);
+        float theta = acos(clamp(refDir.y, -1.0, 1.0));
+        vec2 skyUv = vec2(phi * 0.15915494309 + 0.5, theta * 0.31830988618);
+        skyReflection = texture2D(u_skyEquirect, skyUv).rgb;
+      } else {
+        float skyElevation = max(refDir.y, 0.0);
+        vec3 zenithColor = u_skyColor * 0.65;
+        vec3 horizonGlowColor = u_skyColor * 1.25 + vec3(0.03, 0.06, 0.10);
+        skyReflection = mix(horizonGlowColor, zenithColor, pow(skyElevation, 0.55));
+      }
 
       // Combine water body with sky reflection via Fresnel
-      vec3 finalColor = mix(waterBodyColor + sssGlow, skyReflection, fresnel * 0.78);
+      vec3 finalColor = mix(waterBodyColor + sssGlow, skyReflection, fresnel * 0.82);
 
       // 7. Organic Whitecap Foam along breaking crests & Buoy contact collar
-      // Physical breaking whitecaps: only form on the steepest peaks of high waves
       float crestSteepness = max(0.0, vCrestFoam - 0.25);
       float peakElevation = smoothstep(0.40 * u_waveHeightMult, 0.90 * u_waveHeightMult, vElevation);
       float whitecapTrigger = smoothstep(0.18, 0.65, crestSteepness * peakElevation);
 
-      // Multi-scale cellular lace foam with turbulent stretching
-      vec2 foamUV1 = vWorldPosition.xz * 0.032 + vec2(u_time * 0.009, -u_time * 0.012);
-      vec2 foamUV2 = vWorldPosition.xz * 0.075 + vec2(-u_time * 0.015, u_time * 0.011);
+      // Multi-scale cellular lace foam with turbulent stretching scrolled along current flow
+      vec2 flowFoamOffset = u_flowDir * (u_time * 0.024);
+      vec2 foamUV1 = vWorldPosition.xz * 0.032 + flowFoamOffset;
+      vec2 foamUV2 = vWorldPosition.xz * 0.075 - flowFoamOffset * 1.35 + vec2(-u_time * 0.005, u_time * 0.004);
       float foamLace1 = texture2D(u_foamMap, foamUV1).a;
       float foamLace2 = texture2D(u_foamMap, foamUV2).a;
       float foamLace = smoothstep(0.22, 0.68, foamLace1 * 0.7 + foamLace2 * 0.3);
 
       float whitecapFoam = whitecapTrigger * foamLace * u_foamIntensity * 0.85;
 
-      // Realistic waterline contact collar around moving buoy hull (radius ~0.85m)
-      float hullDist = length(vWorldPosition.xz - u_buoyPos);
-      float buoyCollar = smoothstep(1.35, 0.95, hullDist) * smoothstep(0.68, 0.95, hullDist);
-      float buoyContactFoam = buoyCollar * (foamLace1 * 0.5 + 0.5) * 0.75;
+      // Realistic hydrodynamic Kelvin trailing wake & contact collar around moving buoy hull
+      vec2 relBuoy = vWorldPosition.xz - u_buoyPos;
+      float hullDist = length(relBuoy);
+      float downstream = dot(relBuoy, u_flowDir);
+      float crossStream = abs(dot(relBuoy, vec2(-u_flowDir.y, u_flowDir.x)));
 
-      float totalFoam = clamp(whitecapFoam + buoyContactFoam, 0.0, 0.92);
+      // Kelvin wake envelope (approx 19.5 degrees)
+      float wakeSpread = smoothstep(crossStream / (max(downstream, 0.1) + 0.65), 0.38, 0.26);
+      float wakeDecay = step(0.0, downstream) * smoothstep(16.0, 1.0, downstream);
+      float wakeTrailing = wakeSpread * wakeDecay;
+
+      // Collar around spar hull (radius ~0.85m)
+      float buoyCollar = smoothstep(1.35, 0.95, hullDist) * smoothstep(0.68, 0.95, hullDist);
+      float totalHullFoam = (buoyCollar * 0.78 + wakeTrailing * 0.38) * (foamLace1 * 0.6 + 0.4);
+
+      float totalFoam = clamp(whitecapFoam + totalHullFoam, 0.0, 0.94);
       vec3 polarFoamColor = vec3(0.95, 0.98, 1.0);
 
       // Blend whitecap foam with underlying ocean
@@ -312,8 +336,11 @@ export function createOceanSurface(initialPhysics = {}) {
       u_time: { value: 0.0 },
       u_waveTime: { value: 0.0 },
       u_buoyPos: { value: new THREE.Vector2(0, 0) },
+      u_flowDir: { value: new THREE.Vector2(0.45, 0.25).normalize() },
       u_normalMap: { value: waterNormalMap },
       u_foamMap: { value: oceanFoamMap },
+      u_skyEquirect: { value: null },
+      u_hasSkyEquirect: { value: 0 },
       u_waveHeightMult: { value: initialPhysics.waveHeightMult || 1.35 },
       u_waveSpeedMult: { value: initialPhysics.waveSpeedMult || 1.15 },
       u_waveSteepness: { value: initialPhysics.waveSteepness || 0.22 },
@@ -356,6 +383,20 @@ export function createOceanSurface(initialPhysics = {}) {
   return {
     mesh,
     material,
+
+    setSkyTexture: (tex) => {
+      if (tex) {
+        material.uniforms.u_skyEquirect.value = tex;
+        material.uniforms.u_hasSkyEquirect.value = 1;
+      } else {
+        material.uniforms.u_hasSkyEquirect.value = 0;
+      }
+    },
+
+    setFlowDirection: (dx, dz) => {
+      const len = Math.hypot(dx, dz) || 1.0;
+      material.uniforms.u_flowDir.value.set(dx / len, dz / len);
+    },
 
     // Smooth transition to a new region's physics
     setRegionPhysics: (physics) => {
@@ -416,12 +457,16 @@ export function createOceanSurface(initialPhysics = {}) {
       const steepness = material.uniforms.u_waveSteepness.value;
 
       // Invert horizontal trochoidal Gerstner displacement to locate exact un-displaced rest coordinate (x0, z0)
+      const flowDir = material.uniforms.u_flowDir.value;
+      const fDirX = flowDir.x;
+      const fDirZ = flowDir.y;
+
       const k1 = 2.0 * Math.PI / 56.0;
       const c1 = Math.sqrt(9.81 / k1) * 1.15;
-      const f1_approx = k1 * (x * 0.92 + z * 0.38) - c1 * wTime;
+      const f1_approx = k1 * (x * fDirX + z * fDirZ) - c1 * wTime;
       const q1 = steepness / (k1 * 0.85 * 7.0);
-      const dx1 = q1 * 0.85 * 0.92 * Math.cos(f1_approx);
-      const dz1 = q1 * 0.85 * 0.38 * Math.cos(f1_approx);
+      const dx1 = q1 * 0.85 * fDirX * Math.cos(f1_approx);
+      const dz1 = q1 * 0.85 * fDirZ * Math.cos(f1_approx);
 
       const k2 = 2.0 * Math.PI / 34.0;
       const c2 = Math.sqrt(9.81 / k2) * 1.28;
@@ -434,8 +479,8 @@ export function createOceanSurface(initialPhysics = {}) {
       const x0 = x - (dx1 + dx2);
       const z0 = z - (dz1 + dz2);
 
-      // Octave 1: Dominant Swell (wavelength 56m, speed 1.15, amp 0.85)
-      const f1 = k1 * (x0 * 0.92 + z0 * 0.38) - c1 * wTime;
+      // Octave 1: Dominant Swell (aligned with prevailing current flow)
+      const f1 = k1 * (x0 * fDirX + z0 * fDirZ) - c1 * wTime;
       const w1 = Math.sin(f1) * 0.85 * hMult;
 
       // Octave 2: Secondary Swell (wavelength 34m, speed 1.28, amp 0.52)

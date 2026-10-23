@@ -8,9 +8,29 @@ import * as THREE from 'three';
  * 4. Realistic Marine Snow (sinking organic flocculent aggregates)
  * NOTE: Removed the artificial conical light shafts per user instruction.
  */
+// Procedural soft circular texture for subsea point particles
+function createParticleCircleTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 32;
+  canvas.height = 32;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+  gradient.addColorStop(0.35, 'rgba(255, 255, 255, 0.7)');
+  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 32, 32);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 export function createUnderwaterVFX() {
   const group = new THREE.Group();
   group.name = "underwaterVFXGroup";
+  const particleCircleTex = createParticleCircleTexture();
 
   // 1. Antarctic Krill Swarm (Euphausia superba)
   // 450 individuals schooling with collective undulating fluid motion
@@ -43,6 +63,7 @@ export function createUnderwaterVFX() {
 
   // Translucent pinkish-amber chitinous krill with bioluminescent photophore spots
   const krillMat = new THREE.PointsMaterial({
+    map: particleCircleTex,
     color: 0xfb923c, // Antarctic krill orange/pink carotenoid pigmentation
     size: 0.45,
     transparent: true,
@@ -119,6 +140,7 @@ export function createUnderwaterVFX() {
   snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPositions, 3));
 
   const snowMat = new THREE.PointsMaterial({
+    map: particleCircleTex,
     color: 0x93c5fd, // Soft icy cyan-white marine snow
     size: 0.28,
     transparent: true,
@@ -130,19 +152,46 @@ export function createUnderwaterVFX() {
   const snowMesh = new THREE.Points(snowGeo, snowMat);
   group.add(snowMesh);
 
+  // 4. Antarctic Pycnocline / Halocline Density Interface (-22m)
+  // Physical boundary layer separating fresh polar surface water from deep high-salinity shelf water
+  const haloclineGeo = new THREE.PlaneGeometry(160, 160, 24, 24);
+  haloclineGeo.rotateX(-Math.PI / 2);
+  const haloclineMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8,
+    transparent: true,
+    opacity: 0.14,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  const haloclineMesh = new THREE.Mesh(haloclineGeo, haloclineMat);
+  haloclineMesh.position.y = -22.0;
+  group.add(haloclineMesh);
+
   return {
     group,
-    update: (time) => {
+    update: (time, delta = 0.016, buoyPos = null, current = null) => {
+      if (buoyPos && typeof buoyPos === 'object' && buoyPos.x !== undefined) {
+        group.position.x = buoyPos.x;
+        group.position.z = buoyPos.z;
+      }
+
+      const curX = current ? current.x : -0.10;
+      const curZ = current ? current.z : 0.0;
+
+      // Internal solitary wave oscillation along halocline pycnocline
+      haloclineMesh.position.y = -22.0 + Math.sin(time * 0.45) * 0.28;
+
       // 1. Undulating Krill swarm schooling motion
       const krillPosAttr = krillGeo.attributes.position;
       const kArr = krillPosAttr.array;
-      const swarmWave = Math.sin(time * 0.6) * 1.8;
-      const swarmSurge = Math.cos(time * 0.4) * 1.5;
+      const swarmWave = Math.sin(time * 0.6) * 1.8 + curX * 4.0;
+      const swarmSurge = Math.cos(time * 0.4) * 1.5 + curZ * 4.0;
 
       for (let i = 0; i < krillCount; i++) {
         const idx = i * 3;
         const phase = krillPhases[i];
-        // Swarm coordinated swimming loop
+        // Swarm coordinated swimming loop aligned with water mass
         kArr[idx] = krillOffsets[idx] + swarmWave + Math.sin(time * 1.2 + phase) * 0.6;
         kArr[idx + 1] = krillOffsets[idx + 1] + Math.sin(time * 0.8 + phase) * 0.5;
         kArr[idx + 2] = krillOffsets[idx + 2] + swarmSurge + Math.cos(time * 1.1 + phase) * 0.6;
@@ -156,10 +205,10 @@ export function createUnderwaterVFX() {
         const scaleXZ = 1.0 - pulse * 0.08;
         c.mesh.scale.set(scaleXZ, scaleY * 1.45, scaleXZ);
 
-        // Slow drifting in polar current
-        c.mesh.position.x = c.basePos.x + Math.sin(time * 0.25 * c.driftSpeed + c.pulsePhase) * 1.8;
+        // Drifting with regional polar current
+        c.mesh.position.x = c.basePos.x + (curX * 6.0) + Math.sin(time * 0.25 * c.driftSpeed + c.pulsePhase) * 1.8;
         c.mesh.position.y = c.basePos.y + Math.cos(time * 0.35 * c.driftSpeed) * 0.8;
-        c.mesh.position.z = c.basePos.z + Math.cos(time * 0.22 * c.driftSpeed + c.pulsePhase) * 1.4;
+        c.mesh.position.z = c.basePos.z + (curZ * 6.0) + Math.cos(time * 0.22 * c.driftSpeed + c.pulsePhase) * 1.4;
 
         // Bioluminescent rainbow neon emission shimmer
         const hue = (0.50 + Math.sin(time * 1.5 + c.pulsePhase) * 0.08); // Cyan-to-azure bioluminescence
@@ -167,7 +216,7 @@ export function createUnderwaterVFX() {
         c.mat.emissiveIntensity = 0.65 + pulse * 0.35;
       });
 
-      // 3. Sinking marine snow with current shear
+      // 3. Sinking marine snow with depth-dependent current shear
       const sArr = snowGeo.attributes.position.array;
       for (let i = 0; i < snowCount; i++) {
         const idx = i * 3;
@@ -177,9 +226,10 @@ export function createUnderwaterVFX() {
         if (sArr[idx + 1] < -50.0) {
           sArr[idx + 1] = -1.2;
         }
-        // Lateral fluid drift
-        sArr[idx] = snowInitPositions[idx] + Math.sin(time * 0.35 + snowInitPositions[idx + 1] * 0.1) * 1.8;
-        sArr[idx + 2] = snowInitPositions[idx + 2] + Math.cos(time * 0.28 + snowInitPositions[idx] * 0.08) * 1.4;
+        // Lateral fluid drift with vertical velocity shear (strongest near surface)
+        const depthShear = Math.max(0.25, (50.0 + sArr[idx + 1]) / 50.0);
+        sArr[idx] = snowInitPositions[idx] + (curX * 10.0 * depthShear) + Math.sin(time * 0.35 + snowInitPositions[idx + 1] * 0.1) * 1.6;
+        sArr[idx + 2] = snowInitPositions[idx + 2] + (curZ * 10.0 * depthShear) + Math.cos(time * 0.28 + snowInitPositions[idx] * 0.08) * 1.2;
       }
       snowGeo.attributes.position.needsUpdate = true;
     }
