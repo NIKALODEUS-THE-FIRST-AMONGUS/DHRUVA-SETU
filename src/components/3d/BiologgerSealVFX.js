@@ -380,6 +380,9 @@ export function createBiologgerSeal(splashSystem) {
     blending: THREE.AdditiveBlending,
     side: THREE.DoubleSide
   });
+  const signalBeam = new THREE.Mesh(beamGeo, beamMat);
+  podGroup.add(signalBeam);
+
   // Nostril Exhalation Micro-Bubble Particle System (Biological Realism)
   const bubbleGroup = new THREE.Group();
   bubbleGroup.name = "sealExhalationBubbles";
