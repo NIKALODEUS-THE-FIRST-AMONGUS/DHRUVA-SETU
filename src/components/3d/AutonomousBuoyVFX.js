@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../../constants/config';
-import { generateHDPEBumpMap, generateSolarCellTexture, generateBrushedMetalMap, generatePCBTexture, generateBenthicBiofoulingMap, generateHeatingPadTexture } from './ProceduralTextures';
+import { generateHDPEBumpMap, generateSolarCellTexture, generateBrushedMetalMap, generatePCBTexture, generateBenthicBiofoulingMap, generateHeatingPadTexture, generateRimeIceTexture } from './ProceduralTextures';
 
 /**
  * Photorealistic Autonomous Polar Ocean Buoy (Layer 1) & Nodal Centre Hardware Bay
@@ -88,6 +88,48 @@ export function createAutonomousBuoy() {
   const bandMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.15, metalness: 0.35 });
   const bandMesh = new THREE.Mesh(bandGeo, bandMat);
   hullGroup.add(bandMesh);
+
+  // 1B-2. Polar Waterline Rime Ice & Frozen Salt Crust Encrustation (Micro-Hardware Detail)
+  const rimeIceTex = generateRimeIceTexture();
+  const rimeIceMat = new THREE.MeshStandardMaterial({
+    map: rimeIceTex,
+    color: 0xf0fdf4,
+    roughness: 0.88,
+    metalness: 0.05,
+    transparent: true,
+    opacity: 0.90,
+    depthWrite: false
+  });
+  const rimeRingGeo = new THREE.CylinderGeometry(CONFIG.BUOY_RADIUS_3D * 1.014, CONFIG.BUOY_RADIUS_3D * 1.014, 0.28, 48, 1, true, 0.28 * Math.PI, 1.44 * Math.PI);
+  const rimeRing = new THREE.Mesh(rimeRingGeo, rimeIceMat);
+  rimeRing.position.y = -0.02;
+  hullGroup.add(rimeRing);
+
+  // Micro-nodules of crystalline hoarfrost on the upper hull rim
+  const rimeNoduleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0.05 });
+  const rimeNoduleGeo = new THREE.DodecahedronGeometry(0.025, 1);
+  for (let rn = 0; rn < 14; rn++) {
+    const rAng = (0.35 + (rn / 13) * 1.30) * Math.PI;
+    const nodule = new THREE.Mesh(rimeNoduleGeo, rimeNoduleMat);
+    const rad = CONFIG.BUOY_RADIUS_3D * 1.012;
+    nodule.position.set(Math.cos(rAng) * rad, 0.04 + (Math.random() - 0.5) * 0.06, Math.sin(rAng) * rad);
+    nodule.scale.set(0.8 + Math.random() * 0.6, 0.5 + Math.random() * 0.8, 0.8 + Math.random() * 0.6);
+    hullGroup.add(nodule);
+  }
+
+  // 1B-3. Waterline Contact Wake Foam Ring (Lapping polar sea froth clinging to spar hull)
+  const foamRingGeo = new THREE.RingGeometry(CONFIG.BUOY_RADIUS_3D * 0.98, CONFIG.BUOY_RADIUS_3D * 1.32, 36);
+  foamRingGeo.rotateX(-Math.PI / 2);
+  const foamRingMat = new THREE.MeshBasicMaterial({
+    color: 0xf1f5f9,
+    transparent: true,
+    opacity: 0.55,
+    depthWrite: false,
+    side: THREE.DoubleSide
+  });
+  const foamRingMesh = new THREE.Mesh(foamRingGeo, foamRingMat);
+  foamRingMesh.position.y = -0.01;
+  hullGroup.add(foamRingMesh);
 
   // 1C. CNC-Machined Anodized Bezel Frame with Stainless Hex Bolts around Acrylic Window
   const boltMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.95, roughness: 0.15 });
@@ -582,16 +624,108 @@ export function createAutonomousBuoy() {
   gpsPatch.userData = { subsystemId: 'antenna', name: 'NavIC / GPS L1 Polar Positioning Patch' };
   mastGroup.add(gpsPatch);
 
-  // Maritime Navigation Strobe LED
+  // 4B. Ultrasonic Anemometer & Met Sensor Suite (Real MoES/NIOT Polar Specification)
+  const metSuiteGroup = new THREE.Group();
+  metSuiteGroup.position.set(0.14, CONFIG.BUOY_RADIUS_3D + 1.25, 0.08);
+
+  // Stalk mounting bracket
+  const metStalk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.012, 0.014, 0.35, 12),
+    new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.9, roughness: 0.2 })
+  );
+  metStalk.position.y = 0.175;
+  metSuiteGroup.add(metStalk);
+
+  // Ultrasonic 3-prong acoustic wind sensor head
+  const usHeadGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.018, 12);
+  const usHeadMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.3 });
+  const usHead = new THREE.Mesh(usHeadGeo, usHeadMat);
+  usHead.position.y = 0.35;
+  metSuiteGroup.add(usHead);
+
+  const prongGeo = new THREE.CylinderGeometry(0.003, 0.003, 0.065, 8);
+  const prongMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.95, roughness: 0.15 }); // Gold-plated transducers
+  for (let pi = 0; pi < 3; pi++) {
+    const pAng = (pi / 3) * Math.PI * 2;
+    const prong = new THREE.Mesh(prongGeo, prongMat);
+    prong.position.set(Math.cos(pAng) * 0.026, 0.38, Math.sin(pAng) * 0.026);
+    metSuiteGroup.add(prong);
+  }
+
+  // Gill Multi-Plate Temperature & Relative Humidity Radiation Shield (Stack of 5 conical louvers)
+  const louverMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25, metalness: 0.05 });
+  for (let li = 0; li < 5; li++) {
+    const louverGeo = new THREE.ConeGeometry(0.045, 0.012, 16, 1, true);
+    const louver = new THREE.Mesh(louverGeo, louverMat);
+    louver.position.y = 0.10 + li * 0.022;
+    metSuiteGroup.add(louver);
+  }
+
+  // Static Barometric Pressure Port (Perforated Disc Baffle)
+  const baroBaffle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.025, 0.025, 0.008, 16),
+    new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.85, roughness: 0.3 })
+  );
+  baroBaffle.position.y = 0.04;
+  metSuiteGroup.add(baroBaffle);
+
+  metSuiteGroup.userData = { subsystemId: 'antenna', name: 'Ultrasonic Anemometer & Met Sensor Suite (Wind, Temp, Baro)' };
+  mastGroup.add(metSuiteGroup);
+
+  // 4C. IALA-Spec Maritime Navigation LED Strobe Beacon with Fresnel Cylindrical Lens
+  const strobeGroup = new THREE.Group();
+  strobeGroup.position.set(0, CONFIG.BUOY_RADIUS_3D + 1.48, 0);
+
+  // Aluminum mounting base
+  const strobeBase = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.065, 0.075, 0.04, 16),
+    new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.2 })
+  );
+  strobeGroup.add(strobeBase);
+
+  // Clear polycarbonate cylindrical Fresnel lens
+  const fresnelGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.11, 24);
+  const fresnelMat = new THREE.MeshPhysicalMaterial({
+    color: 0xffedd5,
+    transmission: 0.92,
+    opacity: 0.35,
+    transparent: true,
+    roughness: 0.08,
+    ior: 1.58,
+    clearcoat: 1.0
+  });
+  const fresnelLens = new THREE.Mesh(fresnelGeo, fresnelMat);
+  fresnelLens.position.y = 0.075;
+  strobeGroup.add(fresnelLens);
+
+  // Internal High-Intensity Amber Xenon / LED Emitter
   const strobeMat = new THREE.MeshStandardMaterial({
     color: 0xffedd5,
-    emissive: 0xf97316,
-    emissiveIntensity: 2.5,
+    emissive: 0xf59e0b,
+    emissiveIntensity: 3.5,
     roughness: 0.1
   });
-  const strobeMesh = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 16), strobeMat);
-  strobeMesh.position.set(0, CONFIG.BUOY_RADIUS_3D + 1.45, 0);
-  mastGroup.add(strobeMesh);
+  const strobeMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.06, 12), strobeMat);
+  strobeMesh.position.y = 0.075;
+  strobeGroup.add(strobeMesh);
+
+  // Dynamic PointLight burst for IALA flash
+  const strobeLight = new THREE.PointLight(0xf59e0b, 0.0, 16.0);
+  strobeLight.position.y = 0.075;
+  strobeGroup.add(strobeLight);
+
+  // Stainless Protective Lens Guard Cage (3 vertical bars)
+  const cageBarMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.92, roughness: 0.2 });
+  const cageBarGeo = new THREE.CylinderGeometry(0.003, 0.003, 0.13, 8);
+  for (let cbi = 0; cbi < 3; cbi++) {
+    const cAng = (cbi / 3) * Math.PI * 2;
+    const cBar = new THREE.Mesh(cageBarGeo, cageBarMat);
+    cBar.position.set(Math.cos(cAng) * 0.062, 0.075, Math.sin(cAng) * 0.062);
+    strobeGroup.add(cBar);
+  }
+
+  strobeGroup.userData = { subsystemId: 'antenna', name: 'IALA Spec High-Intensity Polar Navigation Strobe' };
+  mastGroup.add(strobeGroup);
 
   // ════════════════════════════════════════════════════════════════════════
   // 5. SUBSEA WINCH & SLIP RING ASSEMBLY
@@ -1048,9 +1182,24 @@ export function createAutonomousBuoy() {
       const heatPulse = 0.4 + 0.6 * (Math.sin(time * 2.5) * 0.5 + 0.5);
       ledHeaterMat.color.setRGB(0.96 * heatPulse, 0.58 * heatPulse, 0.08 * heatPulse);
 
-      // Mast safety strobe flash
-      const flash = Math.sin(time * 6.28) > 0.65 ? 3.5 : 0.2;
-      strobeMat.emissiveIntensity = flash;
+      // 6. IALA-Standard Polar Maritime Strobe (Fl (2) Y 4s Rhythmic Double-Burst)
+      const strobeCycle = time % 4.0;
+      const isFlash1 = strobeCycle >= 0.0 && strobeCycle < 0.14;
+      const isFlash2 = strobeCycle >= 0.38 && strobeCycle < 0.52;
+      const isFlashing = isFlash1 || isFlash2;
+
+      if (isFlashing) {
+        strobeMat.emissiveIntensity = 12.5;
+        strobeLight.intensity = 4.2;
+      } else {
+        strobeMat.emissiveIntensity = 0.18;
+        strobeLight.intensity = 0.0;
+      }
+
+      // 7. Waterline Contact Foam Lapping & Swell Oscillation
+      const foamPulse = Math.sin(time * 2.6) * 0.08;
+      foamRingMesh.scale.set(1.0 + foamPulse, 1.0 + foamPulse, 1.0);
+      foamRingMat.opacity = 0.45 + Math.sin(time * 2.1) * 0.15;
     }
   };
 }

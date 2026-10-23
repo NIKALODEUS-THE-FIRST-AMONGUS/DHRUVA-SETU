@@ -227,7 +227,7 @@ export function generateWeddellSealPelt() {
   return texture;
 }
 
-// 5. Monocrystalline Solar Photovoltaic Grid Map
+// 5. Monocrystalline Solar Photovoltaic Grid Map with Triple Busbars & Wafer Chamfers
 export function generateSolarCellTexture() {
   const size = 512;
   const canvas = document.createElement('canvas');
@@ -235,24 +235,50 @@ export function generateSolarCellTexture() {
   canvas.height = size;
   const ctx = canvas.getContext('2d');
 
-  // Deep anti-reflective marine silicon blue
-  ctx.fillStyle = '#061329';
+  // Deep anti-reflective textured marine silicon blue-violet
+  const bgGrad = ctx.createLinearGradient(0, 0, size, size);
+  bgGrad.addColorStop(0.0, '#040d1a');
+  bgGrad.addColorStop(0.5, '#071830');
+  bgGrad.addColorStop(1.0, '#0a2347');
+  ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, size, size);
 
-  // Silver busbars
-  ctx.strokeStyle = '#94a3b8';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(size * 0.33, 0);
-  ctx.lineTo(size * 0.33, size);
-  ctx.moveTo(size * 0.66, 0);
-  ctx.lineTo(size * 0.66, size);
-  ctx.stroke();
+  // Monocrystalline wafer cut chamfers at cell borders
+  ctx.strokeStyle = '#020813';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(4, 4, size - 8, size - 8);
 
-  // Fine conductive grid fingers
-  ctx.strokeStyle = '#38bdf8';
-  ctx.lineWidth = 0.8;
-  const fingerCount = 48;
+  // Subtle wafer crystalline grain
+  const imgData = ctx.getImageData(0, 0, size, size);
+  const data = imgData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const grain = (Math.random() - 0.5) * 14;
+    data[i] = Math.min(255, Math.max(0, data[i] + grain));
+    data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + grain * 1.2));
+    data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + grain * 1.5));
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  // Triple high-conductivity silver busbars (standard 3BB solar cell architecture)
+  ctx.strokeStyle = '#cbd5e1';
+  ctx.lineWidth = 3.5;
+  const busbars = [size * 0.22, size * 0.50, size * 0.78];
+  busbars.forEach(bx => {
+    ctx.beginPath();
+    ctx.moveTo(bx, 0);
+    ctx.lineTo(bx, size);
+    ctx.stroke();
+
+    // Busbar ribbon solder pads at ends
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(bx - 4, 0, 8, 14);
+    ctx.fillRect(bx - 4, size - 14, 8, 14);
+  });
+
+  // Fine screen-printed silver contact fingers (64 micro-lines per cell)
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+  ctx.lineWidth = 0.9;
+  const fingerCount = 64;
   for (let i = 0; i < fingerCount; i++) {
     const y = (i / fingerCount) * size;
     ctx.beginPath();
@@ -265,6 +291,60 @@ export function generateSolarCellTexture() {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(2, 2);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+// 5B. Waterline Rime Ice & Frozen Salt Crust Map
+export function generateRimeIceTexture() {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  // Transparent background for natural blending over the hull
+  ctx.clearRect(0, 0, size, size);
+
+  // White and glacial-cyan hoarfrost crystal spires
+  for (let i = 0; i < 220; i++) {
+    const cx = Math.random() * size;
+    const cy = Math.random() * size;
+    const r = 4 + Math.random() * 20;
+
+    const radGrad = ctx.createRadialGradient(cx, cy, 1, cx, cy, r);
+    radGrad.addColorStop(0, 'rgba(255, 255, 255, 0.92)');
+    radGrad.addColorStop(0.5, 'rgba(224, 242, 254, 0.65)');
+    radGrad.addColorStop(0.85, 'rgba(186, 230, 253, 0.25)');
+    radGrad.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+
+    ctx.fillStyle = radGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Dendritic ice needle streaks (crystallized freezing spray)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+  ctx.lineWidth = 1.2;
+  for (let s = 0; s < 180; s++) {
+    let px = Math.random() * size;
+    let py = Math.random() * size;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    const steps = 4 + Math.floor(Math.random() * 4);
+    for (let st = 0; st < steps; st++) {
+      px += (Math.random() - 0.5) * 16;
+      py += Math.random() * 12; // Freezing gravity drip direction
+      ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.repeat.set(4, 1);
   texture.needsUpdate = true;
   return texture;
 }

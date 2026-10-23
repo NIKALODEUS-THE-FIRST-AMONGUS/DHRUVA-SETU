@@ -135,6 +135,35 @@ export function createCTDSonde() {
   pingMesh.position.y = -1.02;
   sondeGroup.add(pingMesh);
 
+  // 1C. Conductivity Cell Active Centrifugal Pump Exhaust Micro-Cavitation Bubbles
+  const pumpBubbleGroup = new THREE.Group();
+  pumpBubbleGroup.position.set(0.07, -0.42, 0); // Directly above conductivity cell flow discharge
+  const pBubbleGeo = new THREE.SphereGeometry(0.016, 6, 6);
+  const pBubbleMat = new THREE.MeshBasicMaterial({
+    color: 0xbae6fd,
+    transparent: true,
+    opacity: 0.75,
+    depthWrite: false
+  });
+  const pumpBubbles = [];
+  for (let pbi = 0; pbi < 16; pbi++) {
+    const pbMesh = new THREE.Mesh(pBubbleGeo, pBubbleMat);
+    pbMesh.position.set(
+      (Math.random() - 0.5) * 0.04,
+      Math.random() * 0.45,
+      (Math.random() - 0.5) * 0.04
+    );
+    const pbScale = 0.5 + Math.random() * 0.9;
+    pbMesh.scale.setScalar(pbScale);
+    pumpBubbleGroup.add(pbMesh);
+    pumpBubbles.push({
+      mesh: pbMesh,
+      baseSpeed: 0.35 + Math.random() * 0.45,
+      offset: Math.random() * Math.PI * 2
+    });
+  }
+  sondeGroup.add(pumpBubbleGroup);
+
   // 2. High-Visibility 3D Billboard HUD Label for CTD Sonde
   const labelCanvas = document.createElement('canvas');
   labelCanvas.width = 512;
@@ -260,7 +289,66 @@ export function createCTDSonde() {
     abyssGroup.add(badgeMesh);
   });
 
-  // abyssGroup is stationary in ocean coordinates (returned directly for scene addition)
+  // 4B. Authentic Antarctic Benthic Abyssal Seafloor (-48.2m Abyss)
+  const seabedGeo = new THREE.CircleGeometry(32, 32);
+  seabedGeo.rotateX(-Math.PI / 2);
+  const seabedMat = new THREE.MeshStandardMaterial({
+    color: 0x040c16, // Dark polar marine basaltic silt & diatomaceous ooze
+    roughness: 0.96,
+    metalness: 0.08
+  });
+  const seabedMesh = new THREE.Mesh(seabedGeo, seabedMat);
+  seabedMesh.position.set(0, -48.2, 0);
+  seabedMesh.receiveShadow = true;
+  abyssGroup.add(seabedMesh);
+
+  // Glacial Erratic Dropstones (Boulders ice-rafted by ancient calved glaciers)
+  const stoneMat = new THREE.MeshStandardMaterial({
+    color: 0x1e293b,
+    roughness: 0.92,
+    metalness: 0.12,
+    flatShading: true
+  });
+  const stoneGeo = new THREE.DodecahedronGeometry(1.0, 1);
+  for (let si = 0; si < 14; si++) {
+    const sAng = (si / 14) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+    const sDist = 3.5 + Math.random() * 22.0;
+    const stone = new THREE.Mesh(stoneGeo, stoneMat);
+    const sScaleX = 0.6 + Math.random() * 1.4;
+    const sScaleY = 0.4 + Math.random() * 0.8;
+    const sScaleZ = 0.6 + Math.random() * 1.4;
+    stone.scale.set(sScaleX, sScaleY, sScaleZ);
+    stone.position.set(Math.cos(sAng) * sDist, -48.2 + sScaleY * 0.45, Math.sin(sAng) * sDist);
+    stone.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+    abyssGroup.add(stone);
+  }
+
+  // Mooring Clump Anchor & Benthos Acoustic Release Transponder
+  const anchorMat = new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.85, metalness: 0.75 });
+  const anchorWeight = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.95, 0.42, 20), anchorMat);
+  anchorWeight.position.set(0, -48.0, 0);
+  abyssGroup.add(anchorWeight);
+
+  // Cast iron anchor chain bridle
+  const chainMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.9, roughness: 0.3 });
+  const chainGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.8, 8);
+  const chainBridle = new THREE.Mesh(chainGeo, chainMat);
+  chainBridle.position.set(0, -47.4, 0);
+  abyssGroup.add(chainBridle);
+
+  // Acoustic Release Transponder Canister (Safety Yellow with Hydrophone Transducers)
+  const transponderMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3, metalness: 0.2 });
+  const transponderCan = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.75, 16), transponderMat);
+  transponderCan.position.set(0.35, -47.2, 0);
+  abyssGroup.add(transponderCan);
+
+  // Acoustic transducer transducer head (black ceramic)
+  const xducerMesh = new THREE.Mesh(
+    new THREE.ConeGeometry(0.10, 0.14, 16),
+    new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.4 })
+  );
+  xducerMesh.position.set(0.35, -46.75, 0);
+  abyssGroup.add(xducerMesh);
 
   // 5. CTD Depth Trail (Spheres representing historical CTD profile points)
   const trailGroup = new THREE.Group();
@@ -351,6 +439,24 @@ export function createCTDSonde() {
 
         trailIdx = (trailIdx + 1) % maxTrailPoints;
       }
+
+      // Animate Conductivity Cell Centrifugal Pump Micro-Cavitation Effluent
+      const isProfiling = targetDepthMeters > 0.4;
+      pumpBubbles.forEach((pb, idx) => {
+        if (!isProfiling) {
+          pb.mesh.visible = false;
+          return;
+        }
+        pb.mesh.visible = true;
+        // Rising upwards from exhaust port
+        const cycle = (time * pb.baseSpeed + pb.offset) % 1.0;
+        pb.mesh.position.y = cycle * 0.85; // Rise up to 0.85m above exhaust port
+        pb.mesh.position.x = Math.sin(time * 4.0 + idx) * 0.025;
+        pb.mesh.position.z = Math.cos(time * 3.5 + idx) * 0.025;
+        // Fade out and expand as bubble rises
+        const bScale = (0.5 + cycle * 0.9);
+        pb.mesh.scale.setScalar(bScale);
+      });
     }
   };
 }

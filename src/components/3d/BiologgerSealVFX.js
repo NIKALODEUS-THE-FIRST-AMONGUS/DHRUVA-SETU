@@ -181,7 +181,7 @@ export function createBiologgerSeal(splashSystem) {
     noseMesh.position.set(0, -0.03, 0.52);
     headGroup.add(noseMesh);
 
-    // Dark Glassy Eyes with Corneal Depth
+    // Dark Glassy Eyes with Corneal Depth & Specular Sun Glint
     const eyeGeo = new THREE.SphereGeometry(0.045, 16, 16);
     const eyeMat = new THREE.MeshPhysicalMaterial({
       color: 0x050505,
@@ -190,10 +190,21 @@ export function createBiologgerSeal(splashSystem) {
       clearcoat: 1.0,
       clearcoatRoughness: 0.02
     });
+    const glintGeo = new THREE.SphereGeometry(0.012, 8, 8);
+    const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
     const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
     leftEye.position.set(0.18, 0.08, 0.22);
+    const leftGlint = new THREE.Mesh(glintGeo, glintMat);
+    leftGlint.position.set(0.02, 0.022, 0.038);
+    leftEye.add(leftGlint);
+
     const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
     rightEye.position.set(-0.18, 0.08, 0.22);
+    const rightGlint = new THREE.Mesh(glintGeo, glintMat);
+    rightGlint.position.set(-0.02, 0.022, 0.038);
+    rightEye.add(rightGlint);
+
     headGroup.add(leftEye);
     headGroup.add(rightEye);
 
@@ -369,8 +380,42 @@ export function createBiologgerSeal(splashSystem) {
     blending: THREE.AdditiveBlending,
     side: THREE.DoubleSide
   });
-  const signalBeam = new THREE.Mesh(beamGeo, beamMat);
-  podGroup.add(signalBeam);
+  // Nostril Exhalation Micro-Bubble Particle System (Biological Realism)
+  const bubbleGroup = new THREE.Group();
+  bubbleGroup.name = "sealExhalationBubbles";
+  podGroup.add(bubbleGroup);
+
+  const bubbleGeo = new THREE.SphereGeometry(0.038, 8, 8);
+  const bubbleMat = new THREE.MeshPhysicalMaterial({
+    color: 0xe0f2fe,
+    transmission: 0.92,
+    opacity: 0.70,
+    transparent: true,
+    roughness: 0.05,
+    ior: 1.12,
+    clearcoat: 1.0,
+    depthWrite: false
+  });
+
+  const BUBBLE_COUNT = 36;
+  const bubblePool = [];
+  for (let bi = 0; bi < BUBBLE_COUNT; bi++) {
+    const bMesh = new THREE.Mesh(bubbleGeo, bubbleMat);
+    bMesh.visible = false;
+    bubbleGroup.add(bMesh);
+    bubblePool.push({
+      mesh: bMesh,
+      active: false,
+      age: 0,
+      maxAge: 3.5,
+      pos: new THREE.Vector3(),
+      vel: new THREE.Vector3(),
+      scaleBase: 0.5 + Math.random() * 0.7
+    });
+  }
+
+  let nextBubbleIndex = 0;
+  let lastExhaleTime = 0;
 
   const primarySeal = seals[0];
 
@@ -378,6 +423,7 @@ export function createBiologgerSeal(splashSystem) {
     sealRoot: primarySeal.sealRoot,
     podGroup,
     seals,
+    bubbleGroup,
     tagMesh: primarySeal.tagMesh,
     signalBeam,
     update: (time, buoyWorldPos) => {
@@ -520,6 +566,59 @@ export function createBiologgerSeal(splashSystem) {
       } else {
         beamMat.opacity = 0.0;
       }
+
+      // ── NOSTRIL EXHALATION BUBBLE STREAM UPDATE ──
+      // Periodically exhale bubbles when swimming underwater
+      if (primarySeal && primarySeal.sealRoot.position.y < -1.5 && (time - lastExhaleTime > 4.2)) {
+        lastExhaleTime = time;
+        const snoutWorldPos = new THREE.Vector3(0, -0.05, 1.6);
+        snoutWorldPos.applyMatrix4(primarySeal.sealRoot.matrixWorld);
+
+        // Vent 3-5 bubbles in quick succession
+        for (let b = 0; b < 4; b++) {
+          const pb = bubblePool[nextBubbleIndex];
+          nextBubbleIndex = (nextBubbleIndex + 1) % BUBBLE_COUNT;
+          pb.active = true;
+          pb.age = -b * 0.12; // staggered release
+          pb.maxAge = 3.2 + Math.random() * 1.5;
+          pb.pos.copy(snoutWorldPos).add(new THREE.Vector3(
+            (Math.random() - 0.5) * 0.15,
+            (Math.random() - 0.5) * 0.08,
+            (Math.random() - 0.5) * 0.15
+          ));
+          pb.vel.set(
+            (Math.random() - 0.5) * 0.18,
+            0.65 + Math.random() * 0.45, // Buoyant upward ascent
+            (Math.random() - 0.5) * 0.18
+          );
+          pb.mesh.position.copy(pb.pos);
+          pb.mesh.visible = false;
+        }
+      }
+
+      // Animate active rising bubbles
+      const dt = 0.016;
+      bubblePool.forEach(pb => {
+        if (!pb.active) return;
+        pb.age += dt;
+        if (pb.age < 0) return; // Staggered delay
+
+        pb.mesh.visible = true;
+        pb.pos.y += pb.vel.y * dt;
+        pb.pos.x += Math.sin(time * 5.0 + pb.age * 3.0) * 0.015;
+        pb.pos.z += Math.cos(time * 4.5 + pb.age * 3.0) * 0.015;
+
+        // Expanding bubble volume as hydrostatic pressure drops
+        const scale = pb.scaleBase * (1.0 + (pb.age / pb.maxAge) * 1.4);
+        pb.mesh.scale.setScalar(scale);
+        pb.mesh.position.copy(pb.pos);
+
+        // Pop bubble when reaching ocean surface
+        if (pb.pos.y >= -0.12 || pb.age >= pb.maxAge) {
+          pb.active = false;
+          pb.mesh.visible = false;
+        }
+      });
 
       return {
         closestDistance: closestDist,

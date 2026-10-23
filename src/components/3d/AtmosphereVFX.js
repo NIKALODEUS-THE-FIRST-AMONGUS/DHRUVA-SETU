@@ -191,6 +191,79 @@ export function createAtmosphere() {
   rainLines.name = "polarSleetRain";
   group.add(rainLines);
 
+  // 5. Antarctic Sun Dog / 22° Parhelion Atmospheric Ice Crystal Halo
+  const haloGroup = new THREE.Group();
+  haloGroup.name = "sunDogHaloGroup";
+  haloGroup.position.set(45, 28, 40);
+  haloGroup.lookAt(0, 5, 0);
+
+  // 22° Circular Ice Crystal Halo
+  const haloRingGeo = new THREE.RingGeometry(22, 23.8, 64);
+  const haloMat = new THREE.MeshBasicMaterial({
+    color: 0xfef08a,
+    transparent: true,
+    opacity: 0.22,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  const haloMesh = new THREE.Mesh(haloRingGeo, haloMat);
+  haloGroup.add(haloMesh);
+
+  // Left & Right Parhelia (Flanking Sun Dogs with prismatic flare)
+  const sunDogGeo = new THREE.CircleGeometry(2.2, 24);
+  const sunDogMat = new THREE.MeshBasicMaterial({
+    color: 0xffedd5,
+    transparent: true,
+    opacity: 0.38,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  const leftSunDog = new THREE.Mesh(sunDogGeo, sunDogMat);
+  leftSunDog.position.set(-23.0, 0, 0);
+  haloGroup.add(leftSunDog);
+
+  const rightSunDog = new THREE.Mesh(sunDogGeo, sunDogMat);
+  rightSunDog.position.set(23.0, 0, 0);
+  haloGroup.add(rightSunDog);
+
+  group.add(haloGroup);
+
+  // 6. Arctic Sea Smoke (Evaporative Frost Smoke / Steam Fog hovering in ocean troughs)
+  const smokeCount = 420;
+  const smokeGeo = new THREE.BufferGeometry();
+  const smokePos = new Float32Array(smokeCount * 3);
+  const smokeVel = [];
+
+  for (let i = 0; i < smokeCount; i++) {
+    const sx = (Math.random() - 0.5) * 110;
+    const sy = 0.12 + Math.random() * 0.78;
+    const sz = (Math.random() - 0.5) * 110;
+
+    smokePos[i * 3] = sx;
+    smokePos[i * 3 + 1] = sy;
+    smokePos[i * 3 + 2] = sz;
+
+    smokeVel.push({
+      vx: 0.25 + Math.random() * 0.35,
+      vz: 0.12 + Math.random() * 0.20,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+
+  smokeGeo.setAttribute('position', new THREE.BufferAttribute(smokePos, 3));
+  const smokeMat = new THREE.PointsMaterial({
+    color: 0xe2e8f0,
+    size: 2.8,
+    transparent: true,
+    opacity: 0.24,
+    blending: THREE.NormalBlending,
+    depthWrite: false
+  });
+  const seaSmokeMesh = new THREE.Points(smokeGeo, smokeMat);
+  seaSmokeMesh.name = "arcticSeaSmoke";
+  group.add(seaSmokeMesh);
+
   // Current Season State
   let currentSeason = 'summer';
 
@@ -203,24 +276,36 @@ export function createAtmosphere() {
           starMat.opacity = 0.25;
           snowMat.opacity = 0.0;
           rainMat.opacity = 0.0;
+          haloMat.opacity = 0.24;
+          sunDogMat.opacity = 0.40;
+          smokeMat.opacity = 0.14;
           auroraRibbons.forEach(m => { m.uniforms.u_globalOpacity.value = 0.05; });
           break;
         case 'winter': // Polar Night / No Sun
           starMat.opacity = 0.95;
           snowMat.opacity = 0.25;
           rainMat.opacity = 0.0;
+          haloMat.opacity = 0.0;
+          sunDogMat.opacity = 0.0;
+          smokeMat.opacity = 0.34; // Deep frost smoke over freezing sea
           auroraRibbons.forEach(m => { m.uniforms.u_globalOpacity.value = 1.0; });
           break;
         case 'autumn': // Gale-force Blizzard & Snow Flurries
           starMat.opacity = 0.15;
           snowMat.opacity = 0.85;
           rainMat.opacity = 0.0;
+          haloMat.opacity = 0.12;
+          sunDogMat.opacity = 0.22;
+          smokeMat.opacity = 0.38; // Dense freeze-up steam fog
           auroraRibbons.forEach(m => { m.uniforms.u_globalOpacity.value = 0.1; });
           break;
         case 'spring': // Austral Spring Thaw & Sleet
           starMat.opacity = 0.45;
           snowMat.opacity = 0.15;
           rainMat.opacity = 0.65;
+          haloMat.opacity = 0.20;
+          sunDogMat.opacity = 0.35;
+          smokeMat.opacity = 0.25;
           auroraRibbons.forEach(m => { m.uniforms.u_globalOpacity.value = 0.35; });
           break;
         default:
@@ -270,6 +355,21 @@ export function createAtmosphere() {
           }
         }
         rainGeo.attributes.position.needsUpdate = true;
+      }
+
+      // Animate Arctic Sea Smoke (Frost Smoke) Drifting in Ocean Troughs
+      if (smokeMat.opacity > 0.02) {
+        const smPos = smokeGeo.attributes.position.array;
+        for (let i = 0; i < smokeCount; i++) {
+          smPos[i * 3] += smokeVel[i].vx * 0.45;
+          smPos[i * 3 + 2] += smokeVel[i].vz * 0.45;
+          // Curling vertical heave in troughs
+          smPos[i * 3 + 1] = 0.22 + Math.sin(time * 1.8 + smokeVel[i].phase) * 0.22;
+
+          if (smPos[i * 3] > 60) smPos[i * 3] = -60;
+          if (smPos[i * 3 + 2] > 60) smPos[i * 3 + 2] = -60;
+        }
+        smokeGeo.attributes.position.needsUpdate = true;
       }
     }
   };

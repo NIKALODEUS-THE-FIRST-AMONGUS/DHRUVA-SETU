@@ -48,6 +48,22 @@ export function createSeaIceFloes(ocean) {
     opacity: 0.75
   });
 
+  // 4. Upturned Slushy Ice Rims (formed by pancake floe edge-to-edge wave collisions)
+  const slushRimMat = new THREE.MeshStandardMaterial({
+    color: 0xf8fafc,
+    roughness: 0.95,
+    metalness: 0.02
+  });
+
+  // 5. Surrounding Frazil Ice Crystal Slush Halo
+  const frazilHaloMat = new THREE.MeshBasicMaterial({
+    color: 0xdbeafe,
+    transparent: true,
+    opacity: 0.36,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+
   // Helper: create irregular rounded pancake ice disc geometry
   function createPancakeGeometry(radius, segments = 16) {
     const shape = new THREE.Shape();
@@ -127,6 +143,21 @@ export function createSeaIceFloes(ocean) {
     const keelMesh = new THREE.Mesh(keelGeo, keelMat);
     keelMesh.position.y = -0.65;
     floeGroup.add(keelMesh);
+
+    // 4. Raised Upturned Slush Rim (Pancake ice morphology)
+    const rimGeo = new THREE.TorusGeometry(cfg.radius * 0.96, 0.22, 6, 20);
+    rimGeo.rotateX(Math.PI / 2);
+    const rimMesh = new THREE.Mesh(rimGeo, slushRimMat);
+    rimMesh.position.y = 0.32;
+    rimMesh.receiveShadow = true;
+    floeGroup.add(rimMesh);
+
+    // 5. Translucent Frazil Ice Slush Halo on Water Surface
+    const haloGeo = new THREE.RingGeometry(cfg.radius * 0.90, cfg.radius * 1.32, 24);
+    haloGeo.rotateX(-Math.PI / 2);
+    const haloMesh = new THREE.Mesh(haloGeo, frazilHaloMat);
+    haloMesh.position.y = 0.03;
+    floeGroup.add(haloMesh);
 
     floeGroup.scale.setScalar(cfg.scale);
 
