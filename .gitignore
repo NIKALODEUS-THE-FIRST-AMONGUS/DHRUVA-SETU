@@ -1,9 +1,32 @@
-node_modules/
-dist/
-.agent/
-custom-skills-folder/
-.vscode/
-.idea/
-*.bak
-scratch/
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Production build
+dist
+dist-ssr
+*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor & OS
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+Thumbs.db
+
+# Agent scratch & cache
+.agents
+graphify-out/

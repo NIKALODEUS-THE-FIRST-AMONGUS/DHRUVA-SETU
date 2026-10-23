@@ -1,0 +1,356 @@
+import * as THREE from 'three';
+import { CONFIG } from '../../constants/config';
+import { generateBrushedMetalMap } from './ProceduralTextures';
+
+/**
+ * Subsea CTD Profiler Sonde (SBE-49 FastCAT & TI MSP430 Ultra-Low-Power Architecture)
+ * Complete visual overhaul:
+ * 1. High-fidelity titanium CTD rosette cage with platinized conductivity flow tube & Pt1000 RTD
+ * 2. Real-time floating 3D billboard HUD label showing instrument identity & live depth readout
+ * 3. Continuous vertical sounding line down to the benthic floor (-48m abyss) with depth gauge marker rings
+ */
+export function createCTDSonde() {
+  const sondeGroup = new THREE.Group();
+  sondeGroup.name = "ctdSondeGroup";
+
+  const brushedMetal = generateBrushedMetalMap();
+
+  // 1. Titanium Cylindrical Pressure Housing
+  const bodyGeo = new THREE.CylinderGeometry(0.22, 0.22, 1.15, 32);
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: 0x94a3b8, // Brushed titanium
+    roughness: 0.22,
+    metalness: 0.92,
+    bumpMap: brushedMetal,
+    bumpScale: 0.008
+  });
+  const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+  bodyMesh.castShadow = true;
+  sondeGroup.add(bodyMesh);
+
+  // 1B. Upper Conical Docking Collar (Nests seamlessly inside Keel Moonpool Receiver)
+  const dockingCollarGeo = new THREE.CylinderGeometry(0.08, 0.22, 0.32, 32);
+  const dockingCollarMat = new THREE.MeshStandardMaterial({
+    color: 0x475569, // Hard-anodized marine titanium
+    metalness: 0.92,
+    roughness: 0.2
+  });
+  const dockingCollar = new THREE.Mesh(dockingCollarGeo, dockingCollarMat);
+  dockingCollar.position.y = 0.72;
+  sondeGroup.add(dockingCollar);
+
+  // Inductive Contact & Latching Ring (Gold band that seals into guide tube)
+  const latchRingGeo = new THREE.TorusGeometry(0.18, 0.016, 12, 32);
+  const latchRingMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.95, roughness: 0.1 });
+  const latchRing = new THREE.Mesh(latchRingGeo, latchRingMat);
+  latchRing.rotation.x = Math.PI / 2;
+  latchRing.position.y = 0.62;
+  sondeGroup.add(latchRing);
+
+  // Flexible Neoprene Strain-Relief Cable Boot
+  const bootGeo = new THREE.CylinderGeometry(0.035, 0.075, 0.22, 16);
+  const bootMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8, metalness: 0.1 });
+  const bootMesh = new THREE.Mesh(bootGeo, bootMat);
+  bootMesh.position.y = 0.98;
+  sondeGroup.add(bootMesh);
+
+  // SBE-49 Yellow/Orange High-Visibility Band
+  const stripeGeo = new THREE.CylinderGeometry(0.225, 0.225, 0.22, 32);
+  const stripeMat = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b,
+    roughness: 0.35,
+    metalness: 0.2
+  });
+  const stripeMesh = new THREE.Mesh(stripeGeo, stripeMat);
+  stripeMesh.position.y = 0.25;
+  sondeGroup.add(stripeMesh);
+
+  // Protective Titanium Rosette Cage Bars around lower sensor array
+  const cageGroup = new THREE.Group();
+  const barGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.55, 8);
+  const barMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.9, roughness: 0.15 });
+
+  for (let bi = 0; bi < 6; bi++) {
+    const barAngle = (bi / 6) * Math.PI * 2;
+    const bar = new THREE.Mesh(barGeo, barMat);
+    bar.position.set(Math.cos(barAngle) * 0.26, -0.72, Math.sin(barAngle) * 0.26);
+    cageGroup.add(bar);
+  }
+
+  // Cage guard bumper rings (top and bottom)
+  const cageRingGeo = new THREE.TorusGeometry(0.26, 0.016, 8, 24);
+  const ring1 = new THREE.Mesh(cageRingGeo, barMat);
+  ring1.rotation.x = Math.PI / 2;
+  ring1.position.y = -0.48;
+  cageGroup.add(ring1);
+
+  const ring2 = new THREE.Mesh(cageRingGeo, barMat);
+  ring2.rotation.x = Math.PI / 2;
+  ring2.position.y = -0.98;
+  cageGroup.add(ring2);
+
+  sondeGroup.add(cageGroup);
+
+  // Platinized Conductivity Flow Cell (Illuminated quartz tube)
+  const cellGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.38, 16);
+  const cellMat = new THREE.MeshStandardMaterial({
+    color: 0x06b6d4, // Glowing electric cyan
+    emissive: 0x0891b2,
+    emissiveIntensity: 0.75,
+    roughness: 0.12,
+    metalness: 0.85
+  });
+  const cellMesh = new THREE.Mesh(cellGeo, cellMat);
+  cellMesh.position.set(0.07, -0.72, 0);
+  sondeGroup.add(cellMesh);
+
+  // Pt1000 RTD Temperature Needle Probe (Gold-plated micro-needle)
+  const rtdGeo = new THREE.CylinderGeometry(0.014, 0.005, 0.38, 8);
+  const rtdMat = new THREE.MeshStandardMaterial({
+    color: 0xfbbf24,
+    metalness: 0.95,
+    roughness: 0.1
+  });
+  const rtdMesh = new THREE.Mesh(rtdGeo, rtdMat);
+  rtdMesh.position.set(-0.07, -0.72, 0);
+  sondeGroup.add(rtdMesh);
+
+  // Pulsing Telemetry LED Beacon (Pulsing emerald green)
+  const ledGeo = new THREE.SphereGeometry(0.045, 12, 12);
+  const ledMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+  const ledMesh = new THREE.Mesh(ledGeo, ledMat);
+  ledMesh.position.set(0, 0.62, 0);
+  sondeGroup.add(ledMesh);
+
+  // Sonar / Acoustic Doppler Profiler Ripple Ring
+  const pingGeo = new THREE.RingGeometry(0.12, 0.85, 32);
+  pingGeo.rotateX(Math.PI / 2);
+  const pingMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8,
+    transparent: true,
+    opacity: 0.85,
+    side: THREE.DoubleSide
+  });
+  const pingMesh = new THREE.Mesh(pingGeo, pingMat);
+  pingMesh.position.y = -1.02;
+  sondeGroup.add(pingMesh);
+
+  // 2. High-Visibility 3D Billboard HUD Label for CTD Sonde
+  const labelCanvas = document.createElement('canvas');
+  labelCanvas.width = 512;
+  labelCanvas.height = 160;
+  const labelCtx = labelCanvas.getContext('2d');
+
+  function renderLabel(depthMeters) {
+    labelCtx.clearRect(0, 0, 512, 160);
+
+    // Glowing dark translucent background card
+    labelCtx.fillStyle = 'rgba(7, 16, 32, 0.88)';
+    labelCtx.strokeStyle = '#38bdf8';
+    labelCtx.lineWidth = 4;
+    labelCtx.beginPath();
+    labelCtx.roundRect(8, 8, 496, 144, 16);
+    labelCtx.fill();
+    labelCtx.stroke();
+
+    // Indicator dot
+    labelCtx.fillStyle = '#10b981';
+    labelCtx.beginPath();
+    labelCtx.arc(36, 46, 12, 0, Math.PI * 2);
+    labelCtx.fill();
+
+    // Instrument Title
+    labelCtx.fillStyle = '#ffffff';
+    labelCtx.font = 'bold 30px "Oswald", sans-serif';
+    labelCtx.fillText('CTD PROFILER SONDE (SBE-49)', 62, 54);
+
+    // Live Depth Metric
+    labelCtx.fillStyle = '#38bdf8';
+    labelCtx.font = 'bold 36px "Bebas Neue", sans-serif';
+    labelCtx.fillText(`DEPTH: -${depthMeters.toFixed(1)} M  |  TI MSP430`, 32, 118);
+  }
+
+  renderLabel(0.0);
+  const labelTexture = new THREE.CanvasTexture(labelCanvas);
+  labelTexture.minFilter = THREE.LinearFilter;
+
+  const labelGeo = new THREE.PlaneGeometry(2.4, 0.75);
+  const labelMat = new THREE.MeshBasicMaterial({
+    map: labelTexture,
+    transparent: true,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+  const labelMesh = new THREE.Mesh(labelGeo, labelMat);
+  labelMesh.position.set(1.5, 0.2, 0);
+  sondeGroup.add(labelMesh);
+
+  // 3. Winch Cable (Line between Buoy and Sonde)
+  const cablePoints = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -10, 0)];
+  const cableGeo = new THREE.BufferGeometry().setFromPoints(cablePoints);
+  const cableMat = new THREE.LineBasicMaterial({
+    color: 0x38bdf8,
+    linewidth: 3
+  });
+  const cableMesh = new THREE.Line(cableGeo, cableMat);
+
+  // 4. Abyss Follow-Up Sounding Line & Depth Milestones (down to -48m benthic seabed)
+  const abyssGroup = new THREE.Group();
+  abyssGroup.name = "abyssSoundingGroup";
+
+  // Vertical illuminated sounding guide cable into the abyss
+  const abyssPoints = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -48, 0)];
+  const abyssLineGeo = new THREE.BufferGeometry().setFromPoints(abyssPoints);
+  const abyssLineMat = new THREE.LineDashedMaterial({
+    color: 0x0284c7,
+    dashSize: 0.8,
+    gapSize: 0.4,
+    transparent: true,
+    opacity: 0.55
+  });
+  const abyssLine = new THREE.Line(abyssLineGeo, abyssLineMat);
+  abyssLine.computeLineDistances();
+  abyssGroup.add(abyssLine);
+
+  // Depth marker rings every 10 meters into the abyss
+  const milestoneDepths = [
+    { depth: -10, label: "10m - MIXED LAYER" },
+    { depth: -20, label: "20m - PYCNOCLINE" },
+    { depth: -30, label: "30m - THERMOCLINE" },
+    { depth: -40, label: "40m - HALOCLINE" },
+    { depth: -48, label: "48m - BENTHIC FLOOR (ABYSS)" }
+  ];
+
+  milestoneDepths.forEach(m => {
+    // Glowing ring
+    const ringGeo = new THREE.RingGeometry(1.2, 1.28, 32);
+    ringGeo.rotateX(Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: m.depth === -48 ? 0xf59e0b : 0x0ea5e9,
+      transparent: true,
+      opacity: 0.65,
+      side: THREE.DoubleSide
+    });
+    const rMesh = new THREE.Mesh(ringGeo, ringMat);
+    rMesh.position.set(0, m.depth, 0);
+    abyssGroup.add(rMesh);
+
+    // Milestone text badge
+    const badgeCanvas = document.createElement('canvas');
+    badgeCanvas.width = 256;
+    badgeCanvas.height = 64;
+    const bCtx = badgeCanvas.getContext('2d');
+    bCtx.fillStyle = 'rgba(4, 9, 20, 0.85)';
+    bCtx.strokeStyle = m.depth === -48 ? '#f59e0b' : '#38bdf8';
+    bCtx.lineWidth = 3;
+    bCtx.beginPath();
+    bCtx.roundRect(4, 4, 248, 56, 8);
+    bCtx.fill();
+    bCtx.stroke();
+
+    bCtx.fillStyle = m.depth === -48 ? '#fbbf24' : '#e0f2fe';
+    bCtx.font = 'bold 22px "Bebas Neue", sans-serif';
+    bCtx.fillText(m.label, 14, 40);
+
+    const badgeTex = new THREE.CanvasTexture(badgeCanvas);
+    const badgeGeo = new THREE.PlaneGeometry(1.8, 0.45);
+    const badgeMat = new THREE.MeshBasicMaterial({ map: badgeTex, transparent: true, side: THREE.DoubleSide, depthWrite: false });
+    const badgeMesh = new THREE.Mesh(badgeGeo, badgeMat);
+    badgeMesh.position.set(1.8, m.depth, 0);
+    abyssGroup.add(badgeMesh);
+  });
+
+  // abyssGroup is stationary in ocean coordinates (returned directly for scene addition)
+
+  // 5. CTD Depth Trail (Spheres representing historical CTD profile points)
+  const trailGroup = new THREE.Group();
+  const maxTrailPoints = 40;
+  const trailItems = [];
+  const sphereGeo = new THREE.SphereGeometry(0.12, 14, 14);
+
+  for (let i = 0; i < maxTrailPoints; i++) {
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.75
+    });
+    const s = new THREE.Mesh(sphereGeo, mat);
+    s.visible = false;
+    trailGroup.add(s);
+    trailItems.push({ mesh: s, mat, y: 0 });
+  }
+
+  let trailIdx = 0;
+  let lastTrailY = 0;
+  let lastRenderedDepth = -999;
+
+  return {
+    sondeGroup,
+    cableMesh,
+    trailGroup,
+    abyssGroup,
+    update: (time, targetDepthMeters, buoyWorldPos) => {
+      const bX = (typeof buoyWorldPos === 'object' && buoyWorldPos.x !== undefined) ? buoyWorldPos.x : 0;
+      const bY = (typeof buoyWorldPos === 'object' && buoyWorldPos.y !== undefined) ? buoyWorldPos.y : (typeof buoyWorldPos === 'number' ? buoyWorldPos : 0);
+      const bZ = (typeof buoyWorldPos === 'object' && buoyWorldPos.z !== undefined) ? buoyWorldPos.z : 0;
+
+      // When parked at depth 0: CTD Sonde docks directly into the Keel Moonpool Receiver Collar
+      // Docking throat is at (bY - CONFIG.BUOY_RADIUS_3D - 1.95 = bY - 3.20m).
+      // Sonde upper collar (y=+0.72) seats cleanly inside the funnel at y = bY - 2.70m.
+      const dockedWorldY = bY - CONFIG.BUOY_RADIUS_3D - 2.70;
+      const profilingDrop = (targetDepthMeters / CONFIG.MAX_DEPTH_METERS) * 38.0;
+      const targetWorldY = dockedWorldY - profilingDrop;
+
+      sondeGroup.position.y += (targetWorldY - sondeGroup.position.y) * 0.12;
+
+      // Horizontal compliance: When docked (targetDepthMeters == 0), firmly locks to buoy keel axis!
+      // When deployed, smoothly pendulum swings with current
+      const swayFactor = Math.min(1.0, targetDepthMeters / 10.0);
+      const swayX = Math.sin(time * 0.8) * 0.22 * swayFactor;
+      const swayZ = Math.cos(time * 0.6) * 0.22 * swayFactor;
+      sondeGroup.position.x += (bX + swayX - sondeGroup.position.x) * (0.15 - 0.08 * swayFactor);
+      sondeGroup.position.z += (bZ + swayZ - sondeGroup.position.z) * (0.15 - 0.08 * swayFactor);
+
+      // Update Cable endpoints (from winch drum down to CTD strain relief boot)
+      const cablePositions = cableGeo.attributes.position.array;
+      cablePositions[0] = bX;
+      cablePositions[1] = bY - CONFIG.BUOY_RADIUS_3D - 0.55;
+      cablePositions[2] = bZ;
+      cablePositions[3] = sondeGroup.position.x;
+      cablePositions[4] = sondeGroup.position.y + 0.98;
+      cablePositions[5] = sondeGroup.position.z;
+      cableGeo.attributes.position.needsUpdate = true;
+
+      // Real-time Depth HUD Billboard texture refresh
+      if (Math.abs(targetDepthMeters - lastRenderedDepth) > 0.4) {
+        lastRenderedDepth = targetDepthMeters;
+        renderLabel(targetDepthMeters);
+        labelTexture.needsUpdate = true;
+      }
+
+      // Keep label facing viewer's general direction
+      labelMesh.rotation.y = Math.sin(time * 0.3) * 0.15;
+
+      // Sonar active acoustic ping
+      const pingScale = ((time * 2.2) % 2.0) * 2.4 + 0.5;
+      pingMesh.scale.set(pingScale, pingScale, pingScale);
+      pingMat.opacity = Math.max(0, 0.9 - (pingScale / 5.0));
+
+      // Telemetry beacon LED blinking pulse
+      ledMat.color.setHex((Math.sin(time * 6.0) > 0.3) ? 0x10b981 : 0x047857);
+
+      // Record trail points
+      if (Math.abs(sondeGroup.position.y - lastTrailY) > 0.65) {
+        lastTrailY = sondeGroup.position.y;
+        const item = trailItems[trailIdx];
+        item.mesh.position.set(sondeGroup.position.x, sondeGroup.position.y, sondeGroup.position.z);
+        item.mesh.visible = true;
+
+        const depthRatio = Math.min(1.0, Math.max(0, -sondeGroup.position.y / 40.0));
+        item.mat.color.setHSL(0.55 - depthRatio * 0.45, 0.95, 0.55);
+
+        trailIdx = (trailIdx + 1) % maxTrailPoints;
+      }
+    }
+  };
+}
