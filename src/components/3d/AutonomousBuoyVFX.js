@@ -1433,10 +1433,16 @@ export function createAutonomousBuoy() {
         rollAngle += rollVel * dt;
 
         if (isInspecting) {
-          pitchVel *= 0.10;
-          rollVel *= 0.10;
-          pitchAngle *= 0.75;
-          rollAngle *= 0.75;
+          pitchVel *= 0.05;
+          rollVel *= 0.05;
+          pitchAngle *= 0.40;
+          rollAngle *= 0.40;
+          surgeVel *= 0.05;
+          swayVel *= 0.05;
+          heaveVel *= 0.05;
+          surgePos *= 0.70;
+          swayPos *= 0.70;
+          heavePos *= 0.70;
         }
 
         // Hydrodynamic weathercocking
@@ -1458,29 +1464,31 @@ export function createAutonomousBuoy() {
       buoyRoot.rotation.y = yawAngle;
 
       // ════════════════════════════════════════════════════════════════════════
-      // 4. KEVLAR TETHER CATENARY UPDATE
+      // 4. KEVLAR TETHER CATENARY UPDATE (Only active when tether is in view)
       // ════════════════════════════════════════════════════════════════════════
-      const tetherPosAttr = tetherGeo.attributes.position;
-      const tetherArr = tetherPosAttr.array;
-      const buoyKeelX = buoyRoot.position.x;
-      const buoyKeelY = buoyRoot.position.y - CONFIG.BUOY_RADIUS_3D - 1.95;
-      const buoyKeelZ = buoyRoot.position.z;
+      if (!isInspecting) {
+        const tetherPosAttr = tetherGeo.attributes.position;
+        const tetherArr = tetherPosAttr.array;
+        const buoyKeelX = buoyRoot.position.x;
+        const buoyKeelY = buoyRoot.position.y - CONFIG.BUOY_RADIUS_3D - 1.95;
+        const buoyKeelZ = buoyRoot.position.z;
 
-      // Compute catenary sag bowed by current drag
-      const currentSagX = currentFlow.x * 1.4;
-      const currentSagZ = currentFlow.z * 1.4;
+        // Compute catenary sag bowed by current drag
+        const currentSagX = currentFlow.x * 1.4;
+        const currentSagZ = currentFlow.z * 1.4;
 
-      for (let i = 0; i <= tetherSegments; i++) {
-        const t = i / tetherSegments;
-        const idx = i * 3;
-        // Parabolic catenary sag function (zero at anchor and buoy, maximum in midwater column)
-        const sag = Math.sin(t * Math.PI) * 1.2;
+        for (let i = 0; i <= tetherSegments; i++) {
+          const t = i / tetherSegments;
+          const idx = i * 3;
+          // Parabolic catenary sag function (zero at anchor and buoy, maximum in midwater column)
+          const sag = Math.sin(t * Math.PI) * 1.2;
 
-        tetherArr[idx] = t * buoyKeelX + sag * currentSagX;
-        tetherArr[idx + 1] = anchorY + t * (buoyKeelY - anchorY);
-        tetherArr[idx + 2] = t * buoyKeelZ + sag * currentSagZ;
+          tetherArr[idx] = t * buoyKeelX + sag * currentSagX;
+          tetherArr[idx + 1] = anchorY + t * (buoyKeelY - anchorY);
+          tetherArr[idx + 2] = t * buoyKeelZ + sag * currentSagZ;
+        }
+        tetherPosAttr.needsUpdate = true;
       }
-      tetherPosAttr.needsUpdate = true;
 
       // ════════════════════════════════════════════════════════════════════════
       // 5. TELEMETRY STATUS LEDS
@@ -1595,6 +1603,7 @@ export function createAutonomousBuoy() {
 
           // Heat shimmer zero at normal low temperature
           heatShimmerMat.uniforms.uIntensity.value = 0.0;
+          heatShimmerMesh.visible = false;
 
           // Normal amber telemetry LED
           const heatPulse = 0.4 + 0.6 * (Math.sin(time * 2.5) * 0.5 + 0.5);
@@ -1608,11 +1617,13 @@ export function createAutonomousBuoy() {
           heatingPadMat.emissive.setRGB(0.0, 0.0, 0.0);
           heatingPadMat.emissiveIntensity = 0.0;
           heatShimmerMat.uniforms.uIntensity.value = 0.0;
+          heatShimmerMesh.visible = false;
           ledHeaterMat.color.setRGB(0.12, 0.08, 0.02); // Dim standby amber
           if (batteryTrayMat.emissive) batteryTrayMat.emissive.setRGB(0, 0, 0);
           if (cellMat.emissive) cellMat.emissive.setRGB(0, 0, 0);
         }
       } else {
+        heatShimmerMesh.visible = false;
         // Fallback when heaterState is not supplied
         const heatPulse = 0.4 + 0.6 * (Math.sin(time * 2.5) * 0.5 + 0.5);
         ledHeaterMat.color.setRGB(0.96 * heatPulse, 0.58 * heatPulse, 0.08 * heatPulse);

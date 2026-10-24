@@ -76,6 +76,8 @@ export default function VFXScene({
   heaterStateRef.current = heaterState;
   const lastBuoyPosRef = useRef(new THREE.Vector3());
   const telemetrySubscriberRef = useRef(null);
+  const lastSealDataRef = useRef(null);
+  const lastHoveredPartIdRef = useRef(null);
 
   const handleRerollSeed = () => {
     const newSeed = Math.floor(Math.random() * 899999) + 100000;
@@ -567,16 +569,19 @@ export default function VFXScene({
           if (part) {
             renderer.domElement.style.cursor = 'pointer';
             applyHoverBoost(hitPartId);
-            const screenPos = hitInter.point.clone().project(camera);
-            const sx = (screenPos.x * 0.5 + 0.5) * rect.width;
-            const sy = (-screenPos.y * 0.5 + 0.5) * rect.height;
-            setHoveredPart({
-              id: hitPartId,
-              name: part.name,
-              group: part.group,
-              screenX: sx,
-              screenY: sy
-            });
+            if (lastHoveredPartIdRef.current !== hitPartId) {
+              lastHoveredPartIdRef.current = hitPartId;
+              const screenPos = hitInter.point.clone().project(camera);
+              const sx = (screenPos.x * 0.5 + 0.5) * rect.width;
+              const sy = (-screenPos.y * 0.5 + 0.5) * rect.height;
+              setHoveredPart({
+                id: hitPartId,
+                name: part.name,
+                group: part.group,
+                screenX: sx,
+                screenY: sy
+              });
+            }
             return;
           }
         }
@@ -584,7 +589,10 @@ export default function VFXScene({
 
       renderer.domElement.style.cursor = 'default';
       restoreHoverMaterials();
-      setHoveredPart(null);
+      if (lastHoveredPartIdRef.current !== null) {
+        lastHoveredPartIdRef.current = null;
+        setHoveredPart(null);
+      }
     };
 
     const onPointerUp = (e) => {
@@ -876,9 +884,33 @@ export default function VFXScene({
         const targetDepth = sceneElementsRef.current.targetDepth || 0;
         ctd.update(t, targetDepth, buoy, currentFlow, dt);
 
+        // Cull internal avionics bay & its 3 point lights when not viewing Part B
+        const isPartB = sceneElementsRef.current.cameraPreset === 'electronics' ||
+                        sceneElementsRef.current.cameraPreset === 'electronics_b' ||
+                        sceneElementsRef.current.cameraPreset === 'exploded' ||
+                        (sceneElementsRef.current.explodedFactor && sceneElementsRef.current.explodedFactor > 0.01) ||
+                        (selectedPartIdRef.current && getPartById(selectedPartIdRef.current)?.group === 'Part B');
+        if (buoy.electronicsBayGroup) {
+          buoy.electronicsBayGroup.visible = isPartB;
+        }
+
         const sealData = seal.update(t, buoy.buoyRoot.position);
         if (onSealBreachUpdate) {
-          onSealBreachUpdate(sealData);
+          const last = lastSealDataRef.current;
+          const now = performance.now();
+          if (
+            !last ||
+            last.isBreaching !== sealData.isBreaching ||
+            Math.abs(last.sealDepth - sealData.sealDepth) >= 2.0 ||
+            now - last.time >= 500
+          ) {
+            lastSealDataRef.current = {
+              isBreaching: sealData.isBreaching,
+              sealDepth: sealData.sealDepth,
+              time: now
+            };
+            onSealBreachUpdate(sealData);
+          }
         }
       };
 
@@ -942,30 +974,27 @@ export default function VFXScene({
           camera.position.y += (desiredCamY - camera.position.y) * 0.14;
           camera.position.z += (desiredCamZ - camera.position.z) * 0.14;
         } else if (sceneElementsRef.current.cameraPreset?.startsWith('electronics')) {
-          // Macro inspection angle (Parts A, B, C) - Rigid Zero-Shake Frame of Reference Lock
-          buoy.buoyRoot.updateMatrixWorld(true);
-          let localCam, localTarget;
+          // Macro inspection angle (Parts A, B, C) - Smooth Gimbal Tracking (Zero OrbitControls Lockout)
+          let targetOffsetY = 0.02;
+          let targetOffsetZ = 0.22;
 
           if (sceneElementsRef.current.cameraPreset === 'electronics_a') {
-            // Part A: Mast, Whip Antenna, GPS Patch, Anemometer & Flexible Solar Wrap Framing
-            localCam = new THREE.Vector3(2.10, CONFIG.BUOY_RADIUS_3D + 1.25, 3.60);
-            localTarget = new THREE.Vector3(0, CONFIG.BUOY_RADIUS_3D + 0.85, 0.05);
+            targetOffsetY = CONFIG.BUOY_RADIUS_3D + 0.85;
+            targetOffsetZ = 0.05;
           } else if (sceneElementsRef.current.cameraPreset === 'electronics_c') {
-            // Part C: Subsea Winch Mechanism, BLDC Motor, Slip Rings, HDPE Keel Tubes & Docking Cradle
-            localCam = new THREE.Vector3(2.20, -CONFIG.BUOY_RADIUS_3D - 0.50, 3.40);
-            localTarget = new THREE.Vector3(0.0, -CONFIG.BUOY_RADIUS_3D - 0.90, 0.10);
-          } else {
-            // Part B: Watertight Avionics Bay, PCB & LiFePO4 Battery Compartment
-            localCam = new THREE.Vector3(0.70, 0.40, 1.45);
-            localTarget = new THREE.Vector3(0.0, 0.02, 0.22);
+            targetOffsetY = -CONFIG.BUOY_RADIUS_3D - 0.90;
+            targetOffsetZ = 0.10;
           }
 
-          const idealCamPos = localCam.clone().applyMatrix4(buoy.buoyRoot.matrixWorld);
-          const idealTarget = localTarget.clone().applyMatrix4(buoy.buoyRoot.matrixWorld);
+          const bp = buoy.buoyRoot.position;
+          const idealTargetX = bp.x;
+          const idealTargetY = bp.y + targetOffsetY;
+          const idealTargetZ = bp.z + targetOffsetZ;
 
-          // Rigid zero-shake lock: zero relative wobble or vibration relative to the buoy
-          controls.target.copy(idealTarget);
-          camera.position.copy(idealCamPos);
+          // Damped target tracking follows buoy buoyancy while letting user orbit freely
+          controls.target.x += (idealTargetX - controls.target.x) * 0.12;
+          controls.target.y += (idealTargetY - controls.target.y) * 0.12;
+          controls.target.z += (idealTargetZ - controls.target.z) * 0.12;
         } else if (sceneElementsRef.current.cameraPreset === 'buoy') {
           // Elevated hero tracking on floating spar buoy high above waves, with full hull and polar vista
           const bp = buoy.buoyRoot.position;

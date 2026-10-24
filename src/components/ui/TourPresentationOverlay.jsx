@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Square, X, Compass, Anchor, Cpu, Waves, Radio, ShieldCheck, ChevronLeft, ChevronRight, Move } from 'lucide-react';
+import { Play, Square, X, Compass, Anchor, Cpu, Waves, Radio, ShieldCheck, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Move } from 'lucide-react';
 
 export default function TourPresentationOverlay({
   tourSeconds,
@@ -135,6 +135,32 @@ export default function TourPresentationOverlay({
 
   // Problem 3: Dynamic 4-corner positions with slight coordinates randomization to never block 3D center
   const [cornerIndex, setCornerIndex] = useState(0);
+  const [isMobileMinimized, setIsMobileMinimized] = useState(false);
+  const [touchStartX, setTouchStartX] = useState(null);
+  const [touchStartY, setTouchStartY] = useState(null);
+
+  const handleTouchStart = (e) => {
+    if (e.touches && e.touches[0]) {
+      setTouchStartX(e.touches[0].clientX);
+      setTouchStartY(e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartX === null || touchStartY === null || !e.changedTouches || !e.changedTouches[0]) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    // Dominant horizontal swipe > 40px
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      if (dx < 0) {
+        handleNextSlide();
+      } else {
+        handlePrevSlide();
+      }
+    }
+    setTouchStartX(null);
+    setTouchStartY(null);
+  };
 
   // Auto-cycle corner when slide changes to keep 3D simulation visible
   useEffect(() => {
@@ -224,86 +250,149 @@ export default function TourPresentationOverlay({
         />
       </div>
 
-      {/* Main Presentation Slide Card (Dynamically Positioned in 4 Corners to Keep 3D Focal Center Clear) */}
+      {/* Main Presentation Slide Card (Dynamically Positioned in 4 Corners or Minimized on Mobile) */}
       <div
-        className="tour-slide-card glass-panel dynamic-corner-card"
-        style={activeCornerStyle}
+        className={`tour-slide-card glass-panel dynamic-corner-card ${isMobileMinimized ? 'is-mobile-minimized' : ''}`}
+        style={isMobileMinimized ? undefined : activeCornerStyle}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
-        <div className="tour-card-header">
-          <div className="tour-slide-badge-row">
-            <span className="slide-phase-badge oswald-badge">{currentSlide.phaseTag}</span>
-            <span className="slide-counter-badge number-bebas">SLIDE 0{currentSlideIndex + 1} / 06</span>
-            <span className="slide-time-badge number-bebas">{currentSlide.timeWindow}</span>
-            <button
-              type="button"
-              className="slide-reposition-btn oswald-bold"
-              onClick={handleCycleCorner}
-              title="Relocate Slide to Another Corner (Keep 3D View Clear)"
-            >
-              <Move size={12} />
-              <span>REPOSITION [⤢]</span>
-            </button>
+        {isMobileMinimized ? (
+          /* Sleek Minimized Bottom Bar for Mobile: 100% 3D Viewability */
+          <div className="tour-minimized-bar" onClick={() => setIsMobileMinimized(false)}>
+            <div className="tour-min-info">
+              <span className="slide-counter-badge number-bebas">0{currentSlideIndex + 1}/06</span>
+              <span className="tour-min-title oswald-bold">{currentSlide.title}</span>
+              <span className="tour-min-time number-bebas">{currentSlide.timeWindow}</span>
+            </div>
+            <div className="tour-min-actions" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                className="tour-min-nav-btn"
+                onClick={handlePrevSlide}
+                title="Previous Slide"
+                aria-label="Previous Slide"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                type="button"
+                className="tour-min-nav-btn"
+                onClick={handleNextSlide}
+                title="Next Slide"
+                aria-label="Next Slide"
+              >
+                <ChevronRight size={16} />
+              </button>
+              <button
+                type="button"
+                className="tour-min-expand-btn oswald-bold"
+                onClick={() => setIsMobileMinimized(false)}
+                title="Expand Full Slide Card"
+                aria-label="Expand Full Slide Card"
+              >
+                <ChevronUp size={15} />
+                <span>EXPAND</span>
+              </button>
+            </div>
           </div>
+        ) : (
+          <>
+            <div className="tour-card-header">
+              <div className="tour-slide-badge-row">
+                <span className="slide-phase-badge oswald-badge">{currentSlide.phaseTag}</span>
+                <span className="slide-counter-badge number-bebas">SLIDE 0{currentSlideIndex + 1} / 06</span>
+                <span className="slide-time-badge number-bebas">{currentSlide.timeWindow}</span>
 
-          <div className="tour-slide-title-group">
-            <div className="slide-icon-box">
-              <Icon size={24} className="accent-cyan" />
+                {/* Mobile Peek/Minimize Toggle Button */}
+                <button
+                  type="button"
+                  className="slide-peek-btn oswald-bold"
+                  onClick={() => setIsMobileMinimized(true)}
+                  title="Minimize card to peek at 3D simulation"
+                  aria-label="Minimize card to peek at 3D simulation"
+                >
+                  <ChevronDown size={14} />
+                  <span>PEEK 3D</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="slide-reposition-btn oswald-bold"
+                  onClick={handleCycleCorner}
+                  title="Relocate Slide to Another Corner (Keep 3D View Clear)"
+                >
+                  <Move size={12} />
+                  <span>REPOSITION [⤢]</span>
+                </button>
+              </div>
+
+              <div className="tour-slide-title-group">
+                <div className="slide-icon-box">
+                  <Icon size={24} className="accent-cyan" />
+                </div>
+                <div>
+                  <h2 className="slide-title-text oswald-bold">{currentSlide.title}</h2>
+                  <div className="slide-subtitle-text oswald-sub">{currentSlide.subTitle}</div>
+                </div>
+              </div>
             </div>
-            <div>
-              <h2 className="slide-title-text oswald-bold">{currentSlide.title}</h2>
-              <div className="slide-subtitle-text oswald-sub">{currentSlide.subTitle}</div>
+
+            <p className="tour-slide-desc oswald-body">{currentSlide.desc}</p>
+
+            {/* Engineering Highlights */}
+            <div className="tour-slide-points">
+              {currentSlide.points.map((pt, pIdx) => (
+                <div key={pIdx} className="slide-point-item">
+                  <span className="point-bullet-dot">◆</span>
+                  <span className="point-text oswald-body">{pt}</span>
+                </div>
+              ))}
             </div>
-          </div>
-        </div>
 
-        <p className="tour-slide-desc oswald-body">{currentSlide.desc}</p>
-
-        {/* Engineering Highlights */}
-        <div className="tour-slide-points">
-          {currentSlide.points.map((pt, pIdx) => (
-            <div key={pIdx} className="slide-point-item">
-              <span className="point-bullet-dot">◆</span>
-              <span className="point-text oswald-body">{pt}</span>
+            {/* Real-time Telemetry Metrics Strip with Bebas Neue for Numbers */}
+            <div className="tour-slide-metrics-strip">
+              {currentSlide.metrics.map((m, mIdx) => (
+                <div key={mIdx} className="slide-metric-item">
+                  <span className="metric-label oswald-bold">{m.label}:</span>
+                  <span className="metric-val number-bebas">{m.val}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Real-time Telemetry Metrics Strip with Bebas Neue for Numbers */}
-        <div className="tour-slide-metrics-strip">
-          {currentSlide.metrics.map((m, mIdx) => (
-            <div key={mIdx} className="slide-metric-item">
-              <span className="metric-label oswald-bold">{m.label}:</span>
-              <span className="metric-val number-bebas">{m.val}</span>
+            {/* Swipe gesture hint on mobile */}
+            <div className="tour-mobile-swipe-hint oswald-sub">
+              <span>⇄ SWIPE LEFT / RIGHT TO CHANGE SLIDE</span>
             </div>
-          ))}
-        </div>
 
-        {/* Next & Previous Slide Buttons with Full Functionality */}
-        <div className="slide-nav-controls-row">
-          <button
-            type="button"
-            className="slide-nav-btn prev oswald-bold"
-            onClick={handlePrevSlide}
-            title="Previous Slide"
-          >
-            <ChevronLeft size={16} />
-            <span>PREV SLIDE</span>
-          </button>
+            {/* Next & Previous Slide Buttons with Full Functionality */}
+            <div className="slide-nav-controls-row">
+              <button
+                type="button"
+                className="slide-nav-btn prev oswald-bold"
+                onClick={handlePrevSlide}
+                title="Previous Slide"
+              >
+                <ChevronLeft size={16} />
+                <span>PREV SLIDE</span>
+              </button>
 
-          <span className="slide-nav-indicator number-bebas">
-            0{currentSlideIndex + 1} / 06
-          </span>
+              <span className="slide-nav-indicator number-bebas">
+                0{currentSlideIndex + 1} / 06
+              </span>
 
-          <button
-            type="button"
-            className="slide-nav-btn next oswald-bold"
-            onClick={handleNextSlide}
-            title="Next Slide"
-          >
-            <span>NEXT SLIDE</span>
-            <ChevronRight size={16} />
-          </button>
-        </div>
+              <button
+                type="button"
+                className="slide-nav-btn next oswald-bold"
+                onClick={handleNextSlide}
+                title="Next Slide"
+              >
+                <span>NEXT SLIDE</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Cinematic Bottom HUD Ribbon */}
