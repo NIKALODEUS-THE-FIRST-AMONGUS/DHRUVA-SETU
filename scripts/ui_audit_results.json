@@ -1,0 +1,866 @@
+[
+  {
+    "viewport": {
+      "id": "VP-360x640",
+      "name": "Galaxy S8 / Small Android",
+      "width": 360,
+      "height": 640,
+      "isMobile": true,
+      "dpr": 2
+    },
+    "docWidth": 360,
+    "winWidth": 360,
+    "hasHorizontalOverflow": false,
+    "overflowDelta": 0,
+    "smallTouchTargetsCount": 12,
+    "sampleSmallTargets": [
+      {
+        "tag": "BUTTON",
+        "id": "reroll-seed-btn",
+        "width": 63,
+        "height": 24,
+        "text": "Re-roll"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-region-btn",
+        "width": 76,
+        "height": 26,
+        "text": "PRYDZ BAY MIZPRYDZ68"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-btn",
+        "width": 41,
+        "height": 26,
+        "text": "☀️Summer"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-cycle-btn ",
+        "width": 23,
+        "height": 28,
+        "text": "↺Auto"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-tour-btn",
+        "width": 28,
+        "height": 28,
+        "text": "Slide ShowSlides"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-settings-btn ",
+        "width": 28,
+        "height": 28,
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-info-circle-btn",
+        "width": 28,
+        "height": 28,
+        "text": "ⓘ"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "deck-nav-btn",
+        "width": 30,
+        "height": 32,
+        "text": ""
+      }
+    ],
+    "tinyTextsCount": 14,
+    "sampleTinyTexts": [
+      {
+        "text": "N",
+        "fontSize": 9.5,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "S",
+        "fontSize": 8,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "W",
+        "fontSize": 8,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "E",
+        "fontSize": 8,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "Prydz Bay Current",
+        "fontSize": 10,
+        "parent": "current-readout-col"
+      },
+      {
+        "text": "Seed #348180",
+        "fontSize": 11,
+        "parent": "current-seed-row"
+      }
+    ],
+    "panelOverlaps": [],
+    "controlDeckCoveragePercent": 7
+  },
+  {
+    "viewport": {
+      "id": "VP-390x844",
+      "name": "iPhone 12/13/14 Portrait",
+      "width": 390,
+      "height": 844,
+      "isMobile": true,
+      "dpr": 3
+    },
+    "docWidth": 390,
+    "winWidth": 390,
+    "hasHorizontalOverflow": false,
+    "overflowDelta": 0,
+    "smallTouchTargetsCount": 14,
+    "sampleSmallTargets": [
+      {
+        "tag": "BUTTON",
+        "id": "reroll-seed-btn",
+        "width": 63,
+        "height": 24,
+        "text": "Re-roll"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-region-btn",
+        "width": 76,
+        "height": 26,
+        "text": "PRYDZ BAY MIZPRYDZ68"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-btn",
+        "width": 41,
+        "height": 26,
+        "text": "☀️Summer"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-cycle-btn ",
+        "width": 23,
+        "height": 28,
+        "text": "↺Auto"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-tour-btn",
+        "width": 28,
+        "height": 28,
+        "text": "Slide ShowSlides"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-settings-btn ",
+        "width": 28,
+        "height": 28,
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-info-circle-btn",
+        "width": 28,
+        "height": 28,
+        "text": "ⓘ"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "invite-start-btn",
+        "width": 68,
+        "height": 21,
+        "text": "30s Tour"
+      }
+    ],
+    "tinyTextsCount": 16,
+    "sampleTinyTexts": [
+      {
+        "text": "N",
+        "fontSize": 9.5,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "S",
+        "fontSize": 8,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "W",
+        "fontSize": 8,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "E",
+        "fontSize": 8,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "Prydz Bay Current",
+        "fontSize": 10,
+        "parent": "current-readout-col"
+      },
+      {
+        "text": "Seed #386532",
+        "fontSize": 11,
+        "parent": "current-seed-row"
+      }
+    ],
+    "panelOverlaps": [],
+    "controlDeckCoveragePercent": 5
+  },
+  {
+    "viewport": {
+      "id": "VP-412x915",
+      "name": "Pixel 7 / Android Large",
+      "width": 412,
+      "height": 915,
+      "isMobile": true,
+      "dpr": 2.625
+    },
+    "docWidth": 412,
+    "winWidth": 412,
+    "hasHorizontalOverflow": false,
+    "overflowDelta": 0,
+    "smallTouchTargetsCount": 15,
+    "sampleSmallTargets": [
+      {
+        "tag": "BUTTON",
+        "id": "reroll-seed-btn",
+        "width": 63,
+        "height": 24,
+        "text": "Re-roll"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-region-btn",
+        "width": 76,
+        "height": 26,
+        "text": "PRYDZ BAY MIZPRYDZ68"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-btn",
+        "width": 41,
+        "height": 26,
+        "text": "☀️Summer"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-cycle-btn ",
+        "width": 23,
+        "height": 28,
+        "text": "↺Auto"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-tour-btn",
+        "width": 28,
+        "height": 28,
+        "text": "Slide ShowSlides"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "hud-mini-pill thermal-chip hea",
+        "width": 71,
+        "height": 28,
+        "text": "+4.3°C(8.5W)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-settings-btn ",
+        "width": 28,
+        "height": 28,
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-info-circle-btn",
+        "width": 28,
+        "height": 28,
+        "text": "ⓘ"
+      }
+    ],
+    "tinyTextsCount": 16,
+    "sampleTinyTexts": [
+      {
+        "text": "N",
+        "fontSize": 9.5,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "S",
+        "fontSize": 8,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "W",
+        "fontSize": 8,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "E",
+        "fontSize": 8,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "Prydz Bay Current",
+        "fontSize": 10,
+        "parent": "current-readout-col"
+      },
+      {
+        "text": "Seed #398657",
+        "fontSize": 11,
+        "parent": "current-seed-row"
+      }
+    ],
+    "panelOverlaps": [],
+    "controlDeckCoveragePercent": 5
+  },
+  {
+    "viewport": {
+      "id": "VP-768x1024",
+      "name": "iPad Portrait",
+      "width": 768,
+      "height": 1024,
+      "isMobile": true,
+      "dpr": 2
+    },
+    "docWidth": 768,
+    "winWidth": 768,
+    "hasHorizontalOverflow": false,
+    "overflowDelta": 0,
+    "smallTouchTargetsCount": 12,
+    "sampleSmallTargets": [
+      {
+        "tag": "BUTTON",
+        "id": "reroll-seed-btn",
+        "width": 58,
+        "height": 15,
+        "text": "Re-roll"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-region-btn",
+        "width": 162,
+        "height": 27,
+        "text": "PRYDZ BAY MIZPRYDZ68"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-btn",
+        "width": 115,
+        "height": 27,
+        "text": "☀️Summer"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-cycle-btn ",
+        "width": 52,
+        "height": 22,
+        "text": "↺Auto"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-tour-btn",
+        "width": 103,
+        "height": 24,
+        "text": "Slide ShowSlides"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "invite-start-btn",
+        "width": 79,
+        "height": 23,
+        "text": "30s Tour"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "invite-close-btn",
+        "width": 21,
+        "height": 21,
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "id": "deck-nav-btn",
+        "width": 30,
+        "height": 32,
+        "text": ""
+      }
+    ],
+    "tinyTextsCount": 22,
+    "sampleTinyTexts": [
+      {
+        "text": "N",
+        "fontSize": 8,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "S",
+        "fontSize": 7,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "W",
+        "fontSize": 7,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "E",
+        "fontSize": 7,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "Prydz Bay Current",
+        "fontSize": 9,
+        "parent": "current-readout-col"
+      },
+      {
+        "text": "Seed #242232",
+        "fontSize": 10,
+        "parent": "current-seed-row"
+      }
+    ],
+    "panelOverlaps": [],
+    "controlDeckCoveragePercent": 4
+  },
+  {
+    "viewport": {
+      "id": "VP-1024x768",
+      "name": "iPad Landscape",
+      "width": 1024,
+      "height": 768,
+      "isMobile": false,
+      "dpr": 2
+    },
+    "docWidth": 1024,
+    "winWidth": 1024,
+    "hasHorizontalOverflow": false,
+    "overflowDelta": 0,
+    "smallTouchTargetsCount": 12,
+    "sampleSmallTargets": [
+      {
+        "tag": "BUTTON",
+        "id": "reroll-seed-btn",
+        "width": 58,
+        "height": 15,
+        "text": "Re-roll"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-region-btn",
+        "width": 269,
+        "height": 27,
+        "text": "PRYDZ BAY MIZPRYDZ68"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-btn",
+        "width": 115,
+        "height": 27,
+        "text": "☀️Summer"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-cycle-btn ",
+        "width": 52,
+        "height": 22,
+        "text": "↺Auto"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-tour-btn",
+        "width": 103,
+        "height": 24,
+        "text": "Slide ShowSlides"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "invite-start-btn",
+        "width": 79,
+        "height": 23,
+        "text": "30s Tour"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "invite-close-btn",
+        "width": 21,
+        "height": 21,
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "id": "deck-nav-btn",
+        "width": 32,
+        "height": 32,
+        "text": ""
+      }
+    ],
+    "tinyTextsCount": 29,
+    "sampleTinyTexts": [
+      {
+        "text": "N",
+        "fontSize": 8,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "S",
+        "fontSize": 7,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "W",
+        "fontSize": 7,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "E",
+        "fontSize": 7,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "Prydz Bay Current",
+        "fontSize": 9,
+        "parent": "current-readout-col"
+      },
+      {
+        "text": "Seed #895011",
+        "fontSize": 10,
+        "parent": "current-seed-row"
+      }
+    ],
+    "panelOverlaps": [],
+    "controlDeckCoveragePercent": 6
+  },
+  {
+    "viewport": {
+      "id": "VP-1366x768",
+      "name": "Standard Laptop",
+      "width": 1366,
+      "height": 768,
+      "isMobile": false,
+      "dpr": 1
+    },
+    "docWidth": 1366,
+    "winWidth": 1366,
+    "hasHorizontalOverflow": false,
+    "overflowDelta": 0,
+    "smallTouchTargetsCount": 12,
+    "sampleSmallTargets": [
+      {
+        "tag": "BUTTON",
+        "id": "reroll-seed-btn",
+        "width": 58,
+        "height": 15,
+        "text": "Re-roll"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-region-btn",
+        "width": 269,
+        "height": 27,
+        "text": "PRYDZ BAY MIZPRYDZ68"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-btn",
+        "width": 115,
+        "height": 27,
+        "text": "☀️Summer"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-cycle-btn ",
+        "width": 52,
+        "height": 22,
+        "text": "↺Auto"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-tour-btn",
+        "width": 103,
+        "height": 24,
+        "text": "Slide ShowSlides"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "hud-mini-pill thermal-chip hea",
+        "width": 120,
+        "height": 26,
+        "text": "+4.1°C(8.5W)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "hud-mini-pill quality-tier-chi",
+        "width": 64,
+        "height": 26,
+        "text": "high"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "deck-nav-btn",
+        "width": 32,
+        "height": 32,
+        "text": ""
+      }
+    ],
+    "tinyTextsCount": 28,
+    "sampleTinyTexts": [
+      {
+        "text": "N",
+        "fontSize": 8,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "S",
+        "fontSize": 7,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "W",
+        "fontSize": 7,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "E",
+        "fontSize": 7,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "Prydz Bay Current",
+        "fontSize": 9,
+        "parent": "current-readout-col"
+      },
+      {
+        "text": "Seed #173166",
+        "fontSize": 10,
+        "parent": "current-seed-row"
+      }
+    ],
+    "panelOverlaps": [],
+    "controlDeckCoveragePercent": 6
+  },
+  {
+    "viewport": {
+      "id": "VP-1920x1080",
+      "name": "Full HD Desktop",
+      "width": 1920,
+      "height": 1080,
+      "isMobile": false,
+      "dpr": 1
+    },
+    "docWidth": 1920,
+    "winWidth": 1920,
+    "hasHorizontalOverflow": false,
+    "overflowDelta": 0,
+    "smallTouchTargetsCount": 14,
+    "sampleSmallTargets": [
+      {
+        "tag": "BUTTON",
+        "id": "reroll-seed-btn",
+        "width": 58,
+        "height": 15,
+        "text": "Re-roll"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-region-btn",
+        "width": 269,
+        "height": 27,
+        "text": "PRYDZ BAY MIZPRYDZ68"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-btn",
+        "width": 115,
+        "height": 27,
+        "text": "☀️Summer"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-cycle-btn ",
+        "width": 52,
+        "height": 22,
+        "text": "↺Auto"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-tour-btn",
+        "width": 103,
+        "height": 24,
+        "text": "Slide ShowSlides"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "hud-mini-pill thermal-chip hea",
+        "width": 120,
+        "height": 26,
+        "text": "+4.2°C(8.5W)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "hud-mini-pill quality-tier-chi",
+        "width": 64,
+        "height": 26,
+        "text": "high"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-settings-btn ",
+        "width": 34,
+        "height": 34,
+        "text": ""
+      }
+    ],
+    "tinyTextsCount": 28,
+    "sampleTinyTexts": [
+      {
+        "text": "N",
+        "fontSize": 8,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "S",
+        "fontSize": 7,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "W",
+        "fontSize": 7,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "E",
+        "fontSize": 7,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "Prydz Bay Current",
+        "fontSize": 9,
+        "parent": "current-readout-col"
+      },
+      {
+        "text": "Seed #388436",
+        "fontSize": 10,
+        "parent": "current-seed-row"
+      }
+    ],
+    "panelOverlaps": [],
+    "controlDeckCoveragePercent": 4
+  },
+  {
+    "viewport": {
+      "id": "VP-844x390",
+      "name": "iPhone Landscape",
+      "width": 844,
+      "height": 390,
+      "isMobile": true,
+      "dpr": 3
+    },
+    "docWidth": 844,
+    "winWidth": 844,
+    "hasHorizontalOverflow": false,
+    "overflowDelta": 0,
+    "smallTouchTargetsCount": 11,
+    "sampleSmallTargets": [
+      {
+        "tag": "BUTTON",
+        "id": "reroll-seed-btn",
+        "width": 52,
+        "height": 14,
+        "text": "Re-roll"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-region-btn",
+        "width": 162,
+        "height": 27,
+        "text": "PRYDZ BAY MIZPRYDZ68"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-btn",
+        "width": 115,
+        "height": 27,
+        "text": "☀️Summer"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-season-cycle-btn ",
+        "width": 52,
+        "height": 22,
+        "text": "↺Auto"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "topbar-tour-btn",
+        "width": 103,
+        "height": 24,
+        "text": "Slide ShowSlides"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "hud-mini-pill thermal-chip hea",
+        "width": 120,
+        "height": 26,
+        "text": "+4.1°C(8.5W)"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "deck-nav-btn",
+        "width": 32,
+        "height": 32,
+        "text": ""
+      },
+      {
+        "tag": "BUTTON",
+        "id": "deck-current-cam-btn",
+        "width": 185,
+        "height": 32,
+        "text": "CAM 01: Panoramic Vi"
+      }
+    ],
+    "tinyTextsCount": 25,
+    "sampleTinyTexts": [
+      {
+        "text": "N",
+        "fontSize": 8,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "S",
+        "fontSize": 7,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "W",
+        "fontSize": 7,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "E",
+        "fontSize": 7,
+        "parent": "current-compass-dial"
+      },
+      {
+        "text": "Prydz Bay Current",
+        "fontSize": 9,
+        "parent": "current-readout-col"
+      },
+      {
+        "text": "Seed #671541",
+        "fontSize": 10,
+        "parent": "current-seed-row"
+      }
+    ],
+    "panelOverlaps": [],
+    "controlDeckCoveragePercent": 12
+  }
+]
