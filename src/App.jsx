@@ -617,6 +617,7 @@ export default function App() {
         onSetHeaterState={handleSetHeaterState}
         onResetTrip={handleResetHeaterTrip}
         onInjectFault={handleInjectHeaterFault}
+        isTourRunning={isTourRunning}
       />
 
       {/* Clean HUD Overlay Layer */}

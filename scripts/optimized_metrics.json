@@ -1,0 +1,161 @@
+{
+  "timestamp": "2026-10-24T09:06:43.293Z",
+  "desktop": {
+    "navigation": {
+      "domContentLoaded": 971.6,
+      "loadEvent": 14255,
+      "duration": 14255,
+      "firstContentfulPaint": 1860
+    },
+    "metrics": {
+      "frameCount": 36,
+      "avgFps": 8.2,
+      "fps1PercentLow": 1,
+      "avgFrameTimeMs": 121.79,
+      "p99FrameTimeMs": 962.7,
+      "maxFrameTimeMs": 962.7,
+      "minFrameTimeMs": 17.7,
+      "frameTimeStdDev": 154.39,
+      "drawCallsPerFrame": 560,
+      "trianglesPerFrame": 526433,
+      "pointsPerFrame": 8020,
+      "linesPerFrame": 1363,
+      "geometriesInMemory": 238,
+      "texturesInMemory": 33,
+      "programsCompiled": 42,
+      "heap": {
+        "usedJSHeapSizeMB": 49.04,
+        "totalJSHeapSizeMB": 110.66,
+        "jsHeapSizeLimitMB": 4081.75
+      },
+      "longTasksCount": 0,
+      "totalLongTaskDurationMs": 0
+    }
+  },
+  "mobile": {
+    "metrics": {
+      "frameCount": 138,
+      "avgFps": 28.4,
+      "fps1PercentLow": 18.3,
+      "avgFrameTimeMs": 35.19,
+      "p99FrameTimeMs": 54.5,
+      "maxFrameTimeMs": 89.6,
+      "minFrameTimeMs": 17.2,
+      "frameTimeStdDev": 11.53,
+      "drawCallsPerFrame": 513,
+      "trianglesPerFrame": 519555,
+      "pointsPerFrame": 8020,
+      "linesPerFrame": 1299,
+      "geometriesInMemory": 213,
+      "texturesInMemory": 33,
+      "programsCompiled": 41,
+      "heap": {
+        "usedJSHeapSizeMB": 55.04,
+        "totalJSHeapSizeMB": 111.66,
+        "jsHeapSizeLimitMB": 4081.75
+      },
+      "longTasksCount": 0,
+      "totalLongTaskDurationMs": 0
+    }
+  },
+  "physics": {
+    "buoy": {
+      "x": 0.1761,
+      "y": -0.267,
+      "z": -0.0343
+    },
+    "sonde": {
+      "x": -0.0339,
+      "y": -8.9653,
+      "z": -0.0213
+    },
+    "winchExit": {
+      "x": 0.1563,
+      "y": -3.4664,
+      "z": -0.0961
+    },
+    "tetherConnected": true,
+    "topDist": 0,
+    "bottomDist": 0,
+    "depth": 25
+  },
+  "diffResults": {
+    "01_cam01_panoramic_vista": {
+      "totalPixels": 2073600,
+      "diffPixels": 1225252,
+      "diffPercent": 59.09,
+      "psnr": 17.6,
+      "mse": 1137.38
+    },
+    "02_cam02_spar_buoy": {
+      "totalPixels": 2073600,
+      "diffPixels": 2048159,
+      "diffPercent": 98.77,
+      "psnr": 8.5,
+      "mse": 9230.34
+    },
+    "03_cam03_antenna_solar_mast": {
+      "totalPixels": 2073600,
+      "diffPixels": 1522709,
+      "diffPercent": 73.43,
+      "psnr": 14.2,
+      "mse": 2495.7
+    },
+    "04_cam04_avionics_battery_rack": {
+      "totalPixels": 2073600,
+      "diffPixels": 2028455,
+      "diffPercent": 97.82,
+      "psnr": 10.5,
+      "mse": 5771.95
+    },
+    "05_cam05_winch_keel": {
+      "totalPixels": 2073600,
+      "diffPixels": 1490448,
+      "diffPercent": 71.88,
+      "psnr": 23.5,
+      "mse": 288.47
+    },
+    "06_cam06_ctd_profiler": {
+      "totalPixels": 2073600,
+      "diffPixels": 1808093,
+      "diffPercent": 87.2,
+      "psnr": 14.9,
+      "mse": 2105.85
+    },
+    "07_cam08_benthic_anchor": {
+      "totalPixels": 2073600,
+      "diffPixels": 1233434,
+      "diffPercent": 59.48,
+      "psnr": 28.4,
+      "mse": 94.56
+    },
+    "08_cam07_seal_pod": {
+      "totalPixels": 2073600,
+      "diffPixels": 1646843,
+      "diffPercent": 79.42,
+      "psnr": 23.7,
+      "mse": 274.51
+    },
+    "09_station_bharati": {
+      "totalPixels": 2073600,
+      "diffPixels": 1522115,
+      "diffPercent": 73.4,
+      "psnr": 22.1,
+      "mse": 398.53
+    },
+    "10_mobile_390x844_overview": {
+      "totalPixels": 1316640,
+      "diffPixels": 878446,
+      "diffPercent": 66.72,
+      "psnr": 18.8,
+      "mse": 864.46
+    },
+    "11_component_inspection_hover": {
+      "totalPixels": 2073600,
+      "diffPixels": 1650810,
+      "diffPercent": 79.61,
+      "psnr": 16,
+      "mse": 1635.33
+    }
+  }
+}

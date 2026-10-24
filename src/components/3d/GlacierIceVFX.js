@@ -15,31 +15,28 @@ export function createPolarGlaciers() {
 
   const iceFractureMap = generateIceFractureMap();
 
-  // Translucent deep compaction glacial ice material with volume absorption
+  // Translucent deep compaction glacial ice material with volume absorption (no fake emissive glow)
   const iceMat = new THREE.MeshPhysicalMaterial({
-    color: 0xe0f2fe,
-    emissive: 0x0284c7,
-    emissiveIntensity: 0.22,
-    roughness: 0.16,
-    metalness: 0.02,
-    transmission: 0.65,
+    color: 0xecfeff,
+    roughness: 0.24,
+    metalness: 0.01,
+    transmission: 0.35,
     ior: 1.31, // Polar ice refractive index
-    thickness: 4.2,
+    thickness: 4.8,
     attenuationColor: new THREE.Color(0x0284c7), // Cyan glacial absorption
-    attenuationDistance: 2.8,
+    attenuationDistance: 3.2,
     normalMap: iceFractureMap,
-    normalScale: new THREE.Vector2(1.2, 1.2),
-    specularIntensity: 1.0,
-    specularColor: 0xffffff,
-    clearcoat: 0.65,
-    clearcoatRoughness: 0.12,
+    normalScale: new THREE.Vector2(0.8, 0.8),
+    specularIntensity: 0.9,
+    clearcoat: 0.45,
+    clearcoatRoughness: 0.16,
     flatShading: false
   });
 
   // Wind-packed Antarctic firn snow plateau material
   const snowMat = new THREE.MeshStandardMaterial({
     color: 0xf8fafc,
-    roughness: 0.94,
+    roughness: 0.92,
     metalness: 0.01,
     flatShading: false
   });
@@ -47,25 +44,28 @@ export function createPolarGlaciers() {
   // Deep underwater glacial ice keel (cyan volume absorption)
   const keelMat = new THREE.MeshPhysicalMaterial({
     color: 0x0284c7,
-    roughness: 0.28,
-    metalness: 0.02,
-    transmission: 0.52,
-    thickness: 5.5,
+    roughness: 0.32,
+    metalness: 0.01,
+    transmission: 0.42,
+    thickness: 6.0,
     attenuationColor: new THREE.Color(0x0369a1),
-    attenuationDistance: 2.2,
+    attenuationDistance: 2.6,
     transparent: true,
-    opacity: 0.88,
+    opacity: 0.82,
     flatShading: false
   });
 
   // Helper: Create authentic tabular berg with irregular cliff perimeter
   function createTabularBergGeometry(width, length, height) {
     const shape = new THREE.Shape();
-    const segments = 12;
+    const segments = 36;
     for (let i = 0; i < segments; i++) {
       const theta = (i / segments) * Math.PI * 2;
-      // Irregular natural cleaved ice cliff perimeter
-      const noise = 1.0 + Math.sin(theta * 2.0) * 0.15 + Math.cos(theta * 4.0) * 0.08;
+      // Multi-harmonic cleaved ice shelf perimeter
+      const noise = 1.0 +
+        Math.sin(theta * 2.0) * 0.12 +
+        Math.cos(theta * 5.0) * 0.06 +
+        Math.sin(theta * 11.0) * 0.025;
       const x = Math.cos(theta) * (width * 0.5) * noise;
       const y = Math.sin(theta) * (length * 0.5) * noise;
       if (i === 0) shape.moveTo(x, y);
@@ -76,10 +76,10 @@ export function createPolarGlaciers() {
     const extrudeSettings = {
       depth: height,
       bevelEnabled: true,
-      bevelSegments: 2,
-      steps: 1,
-      bevelSize: 1.2,
-      bevelThickness: 0.8
+      bevelSegments: 4,
+      steps: 2,
+      bevelSize: 1.4,
+      bevelThickness: 1.0
     };
 
     const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
@@ -88,18 +88,20 @@ export function createPolarGlaciers() {
     return geo;
   }
 
-  // Helper: Create weathered pinnacle berg
+  // Helper: Create weathered pinnacle berg with natural wind/wave-cut striations
   function createPinnacleGeometry(radius, height) {
-    const geo = new THREE.CylinderGeometry(radius * 0.25, radius, height, 9, 4);
+    const geo = new THREE.CylinderGeometry(radius * 0.28, radius, height, 28, 8);
     // Perturb vertices for organic weathered cleavage
     const pos = geo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
       const y = pos.getY(i);
       const factor = 1.0 - (y / height);
       const angle = Math.atan2(pos.getZ(i), pos.getX(i));
-      const perturbation = Math.sin(angle * 3.0 + y * 0.2) * 1.8 * factor;
+      const perturbation =
+        (Math.sin(angle * 3.0 + y * 0.25) * 1.5 +
+         Math.sin(angle * 7.0 - y * 0.15) * 0.6) * factor;
       pos.setX(i, pos.getX(i) + perturbation);
-      pos.setZ(i, pos.getZ(i) + perturbation * 0.6);
+      pos.setZ(i, pos.getZ(i) + perturbation * 0.7);
     }
     geo.computeVertexNormals();
     return geo;

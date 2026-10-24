@@ -19,6 +19,28 @@ import PartInspector from '../ui/PartInspector';
 import { currentModel } from '../../constants/currentModel';
 import { CONFIG } from '../../constants/config';
 import { Navigation, RefreshCw } from 'lucide-react';
+import CurrentDriftHUD from '../ui/CurrentDriftHUD';
+
+// Hoisted static camera offsets & scratchpads to eliminate hot-loop allocations
+const _localCamA = new THREE.Vector3(2.10, CONFIG.BUOY_RADIUS_3D + 1.25, 3.60);
+const _localTargetA = new THREE.Vector3(0, CONFIG.BUOY_RADIUS_3D + 0.85, 0.05);
+const _localCamC = new THREE.Vector3(2.20, -CONFIG.BUOY_RADIUS_3D - 0.50, 3.40);
+const _localTargetC = new THREE.Vector3(0.0, -CONFIG.BUOY_RADIUS_3D - 0.90, 0.10);
+const _localCamB = new THREE.Vector3(0.70, 0.40, 1.45);
+const _localTargetB = new THREE.Vector3(0.0, 0.02, 0.22);
+
+const _idealCamPos = new THREE.Vector3();
+const _idealTarget = new THREE.Vector3();
+const _sondePos = new THREE.Vector3();
+const _selWorld = new THREE.Vector3();
+const _selProj = new THREE.Vector3();
+const _cWorld = new THREE.Vector3();
+const _cProj = new THREE.Vector3();
+const _targetColor = new THREE.Color();
+const _shallowSubsea = new THREE.Color(0x025687);
+const _deepAbyss = new THREE.Color(0x011326);
+const _targetSubseaColor = new THREE.Color();
+const _currentFlow = { x: 0, z: 0 };
 
 export default function VFXScene({
   currentDepth,
@@ -35,7 +57,8 @@ export default function VFXScene({
   heaterState = null,
   onSetHeaterState,
   onResetTrip,
-  onInjectFault
+  onInjectFault,
+  isTourRunning = false
 }) {
   const containerRef = useRef(null);
   const sceneElementsRef = useRef(null);
@@ -51,18 +74,8 @@ export default function VFXScene({
   const deselectPartRef = useRef(null);
   const heaterStateRef = useRef(heaterState);
   heaterStateRef.current = heaterState;
-
-  // Regional Prydz Bay MIZ current & drift telemetry state
-  const [currentTelemetry, setCurrentTelemetry] = useState(() => {
-    const initData = currentModel.get(0);
-    return {
-      headingDeg: initData.headingDeg,
-      speedMps: initData.speedMps,
-      speedCmpSec: initData.speedCmpSec,
-      seed: currentModel.getSeed(),
-      seasonName: initData.seasonName
-    };
-  });
+  const lastBuoyPosRef = useRef(new THREE.Vector3());
+  const telemetrySubscriberRef = useRef(null);
 
   const handleRerollSeed = () => {
     const newSeed = Math.floor(Math.random() * 899999) + 100000;
@@ -72,13 +85,16 @@ export default function VFXScene({
       currentModel.setSeed(newSeed);
       const t = sceneElementsRef.current ? sceneElementsRef.current.clock.getElapsedTime() : 0;
       const data = currentModel.get(t);
-      setCurrentTelemetry({
-        headingDeg: data.headingDeg,
-        speedMps: data.speedMps,
-        speedCmpSec: data.speedCmpSec,
-        seed: newSeed,
-        seasonName: data.seasonName
-      });
+      if (telemetrySubscriberRef.current) {
+        const _telData = typeof data !== 'undefined' ? data : currentData;
+        telemetrySubscriberRef.current({
+          headingDeg: _telData.headingDeg,
+          speedMps: _telData.speedMps,
+          speedCmpSec: _telData.speedCmpSec,
+          seed: typeof newSeed !== 'undefined' ? newSeed : (typeof n !== 'undefined' ? Number(n) : _telData.seed),
+          seasonName: _telData.seasonName
+        });
+      }
     }
     if (typeof window !== 'undefined' && window.history) {
       try {
@@ -119,6 +135,9 @@ export default function VFXScene({
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
+    window.__renderer = renderer;
+    window.__debug = window.__debug || {};
+    window.__debug.renderer = renderer;
 
     // 4. OrbitControls
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -675,13 +694,16 @@ export default function VFXScene({
       currentModel.setSeed(n);
       const curTime = (isTimeFrozen ? frozenTimestamp : sceneElementsRef.current.clock.getElapsedTime()) + simTimeOffset;
       const data = currentModel.get(curTime);
-      setCurrentTelemetry({
-        headingDeg: data.headingDeg,
-        speedMps: data.speedMps,
-        speedCmpSec: data.speedCmpSec,
-        seed: Number(n),
-        seasonName: data.seasonName
-      });
+      if (telemetrySubscriberRef.current) {
+        const _telData = typeof data !== 'undefined' ? data : currentData;
+        telemetrySubscriberRef.current({
+          headingDeg: _telData.headingDeg,
+          speedMps: _telData.speedMps,
+          speedCmpSec: _telData.speedCmpSec,
+          seed: typeof newSeed !== 'undefined' ? newSeed : (typeof n !== 'undefined' ? Number(n) : _telData.seed),
+          seasonName: _telData.seasonName
+        });
+      }
       return data;
     };
 
@@ -721,6 +743,10 @@ export default function VFXScene({
         depth: sceneElementsRef.current.targetDepth || 0
       };
     };
+
+    window.__debug.renderer = renderer;
+    window.__debug.scene = scene;
+    window.__debug.postProcessing = postProcessing;
 
     window.__debugVFX = {
       freezeTime: (freeze = true, fixedT = 10.0) => {
@@ -824,13 +850,16 @@ export default function VFXScene({
 
         // Update telemetry readout HUD state every 10 frames
         if (frameCount % 10 === 0) {
-          setCurrentTelemetry({
-            headingDeg: currentData.headingDeg,
-            speedMps: currentData.speedMps,
-            speedCmpSec: currentData.speedCmpSec,
-            seed: currentData.seed,
-            seasonName: currentData.seasonName
-          });
+          if (telemetrySubscriberRef.current) {
+        const _telData = typeof data !== 'undefined' ? data : currentData;
+        telemetrySubscriberRef.current({
+          headingDeg: _telData.headingDeg,
+          speedMps: _telData.speedMps,
+          speedCmpSec: _telData.speedCmpSec,
+          seed: typeof newSeed !== 'undefined' ? newSeed : (typeof n !== 'undefined' ? Number(n) : _telData.seed),
+          seasonName: _telData.seasonName
+        });
+      }
         }
 
         // Orbiting ISRO Oceansat-3 satellite trajectory
@@ -1403,127 +1432,12 @@ export default function VFXScene({
       />
 
       {/* ── Regional Ocean Current & Drift Readout (Prydz Bay MIZ) ── */}
-      <div
-        id="current-drift-hud"
-        style={{
-          position: 'absolute',
-          top: 76,
-          right: 20,
-          background: 'rgba(7, 15, 29, 0.88)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(56, 189, 248, 0.35)',
-          borderRadius: '12px',
-          padding: '9px 13px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          color: '#f8fafc',
-          fontFamily: "'Inter', system-ui, sans-serif",
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-          zIndex: 20,
-          pointerEvents: 'auto',
-          userSelect: 'none'
-        }}
-      >
-        {/* Rotating Compass Dial */}
-        <div
-          style={{
-            position: 'relative',
-            width: 38,
-            height: 38,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(14, 165, 233, 0.18) 0%, rgba(2, 6, 23, 0.9) 100%)',
-            border: '1.5px solid rgba(56, 189, 248, 0.45)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-          title={`Heading: ${currentTelemetry.headingDeg}° (Westward Antarctic Slope Current)`}
-        >
-          <span style={{ position: 'absolute', top: 1, fontSize: '8px', fontWeight: 800, color: '#ef4444', lineHeight: 1 }}>N</span>
-          <span style={{ position: 'absolute', bottom: 1, fontSize: '7px', fontWeight: 700, color: '#64748b', lineHeight: 1 }}>S</span>
-          <span style={{ position: 'absolute', left: 2, fontSize: '7px', fontWeight: 700, color: '#38bdf8', lineHeight: 1 }}>W</span>
-          <span style={{ position: 'absolute', right: 2, fontSize: '7px', fontWeight: 700, color: '#64748b', lineHeight: 1 }}>E</span>
-          <div
-            style={{
-              transform: `rotate(${currentTelemetry.headingDeg}deg)`,
-              transformOrigin: 'center center',
-              transition: 'transform 0.15s ease-out',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <Navigation size={17} style={{ color: '#38bdf8', filter: 'drop-shadow(0 0 3px rgba(56, 189, 248, 0.8))' }} />
-          </div>
-        </div>
-
-        {/* Readout Numbers & Seed Controls */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-          <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', color: '#94a3b8', textTransform: 'uppercase' }}>
-            Prydz Bay Current
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span
-              id="current-heading-val"
-              style={{
-                fontSize: '15px',
-                fontWeight: 700,
-                color: '#38bdf8',
-                fontVariantNumeric: 'tabular-nums',
-                letterSpacing: '-0.02em'
-              }}
-            >
-              {currentTelemetry.headingDeg.toFixed(1)}°
-            </span>
-            <span
-              id="current-speed-val"
-              style={{
-                fontSize: '13px',
-                fontWeight: 600,
-                color: '#e2e8f0',
-                fontVariantNumeric: 'tabular-nums'
-              }}
-            >
-              {currentTelemetry.speedCmpSec.toFixed(1)} cm/s
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-            <span
-              id="current-seed-val"
-              style={{
-                fontSize: '10px',
-                color: '#64748b',
-                fontVariantNumeric: 'tabular-nums'
-              }}
-            >
-              Seed #{currentTelemetry.seed}
-            </span>
-            <button
-              id="reroll-seed-btn"
-              type="button"
-              onClick={handleRerollSeed}
-              style={{
-                background: 'rgba(56, 189, 248, 0.14)',
-                border: '1px solid rgba(56, 189, 248, 0.35)',
-                borderRadius: '4px',
-                color: '#38bdf8',
-                fontSize: '10px',
-                fontWeight: 600,
-                padding: '1px 6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px'
-              }}
-              title="Re-roll current drift seed"
-            >
-              <RefreshCw size={9} />
-              Re-roll
-            </button>
-          </div>
-        </div>
-      </div>
+      <CurrentDriftHUD
+        selectedPartId={selectedPartId}
+        isTourRunning={isTourRunning}
+        onRerollSeed={handleRerollSeed}
+        telemetrySubscriberRef={telemetrySubscriberRef}
+      />
     </div>
   );
 }

@@ -1,4 +1,18 @@
 import * as THREE from 'three';
+const _textureCache = new Map();
+
+/**
+ * Dispose and clear all cached procedural textures on teardown
+ */
+export function clearProceduralTextureCache() {
+  _textureCache.forEach(val => {
+    if (val && typeof val.dispose === 'function') val.dispose();
+    if (val && val.envMap && typeof val.envMap.dispose === 'function') val.envMap.dispose();
+    if (val && val.skyTexture && typeof val.skyTexture.dispose === 'function') val.skyTexture.dispose();
+  });
+  _textureCache.clear();
+}
+
 
 /**
  * VFX Procedural PBR Texture Generator
@@ -8,6 +22,7 @@ import * as THREE from 'three';
 
 // 1. HDPE Orange-Peel Bump Map (Micro-textured Polyethylene)
 export function generateHDPEBumpMap() {
+  if (_textureCache.has('hdpeBump')) return _textureCache.get('hdpeBump');
   const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -45,11 +60,13 @@ export function generateHDPEBumpMap() {
   texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(4, 4);
   texture.needsUpdate = true;
+  _textureCache.set('hdpeBump', texture);
   return texture;
 }
 
 // 2. Anisotropic Brushed Titanium & Aluminum Map
 export function generateBrushedMetalMap() {
+  if (_textureCache.has('brushedMetal')) return _textureCache.get('brushedMetal');
   const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -75,11 +92,13 @@ export function generateBrushedMetalMap() {
   texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(1, 6);
   texture.needsUpdate = true;
+  _textureCache.set('brushedMetal', texture);
   return texture;
 }
 
 // 3. Glacier Ice Fracture & Vein Normal Map
 export function generateIceFractureMap() {
+  if (_textureCache.has('iceFracture')) return _textureCache.get('iceFracture');
   const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -112,11 +131,13 @@ export function generateIceFractureMap() {
   texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(2, 2);
   texture.needsUpdate = true;
+  _textureCache.set('iceFracture', texture);
   return texture;
 }
 
 // 4. Organic Wet Seal Epidermal Bump Map
 export function generateSealSkinBumpMap() {
+  if (_textureCache.has('sealSkinBump')) return _textureCache.get('sealSkinBump');
   const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -152,11 +173,13 @@ export function generateSealSkinBumpMap() {
   texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(4, 4);
   texture.needsUpdate = true;
+  _textureCache.set('sealSkinBump', texture);
   return texture;
 }
 
 // 4B. Photorealistic Antarctic Weddell Seal Mottled Pelt Albedo Map
 export function generateWeddellSealPelt() {
+  if (_textureCache.has('weddellSealPelt')) return _textureCache.get('weddellSealPelt');
   const size = 1024;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -224,11 +247,13 @@ export function generateWeddellSealPelt() {
   texture.wrapS = THREE.ClampToEdgeWrapping;
   texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.needsUpdate = true;
+  _textureCache.set('weddellSealPelt', texture);
   return texture;
 }
 
 // 5. Monocrystalline Solar Photovoltaic Grid Map with Triple Busbars & Wafer Chamfers
 export function generateSolarCellTexture() {
+  if (_textureCache.has('solarCell')) return _textureCache.get('solarCell');
   const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -292,11 +317,13 @@ export function generateSolarCellTexture() {
   texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(2, 2);
   texture.needsUpdate = true;
+  _textureCache.set('solarCell', texture);
   return texture;
 }
 
 // 5B. Waterline Rime Ice & Frozen Salt Crust Map
 export function generateRimeIceTexture() {
+  if (_textureCache.has('rimeIce')) return _textureCache.get('rimeIce');
   const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -346,11 +373,13 @@ export function generateRimeIceTexture() {
   texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.repeat.set(4, 1);
   texture.needsUpdate = true;
+  _textureCache.set('rimeIce', texture);
   return texture;
 }
 
 // 6. Smooth Seamless Polar Ocean Normal Map (Multi-scale capillary ripples, silky fluid sheen)
 export function generateWaterNormalMap() {
+  if (_textureCache.has('waterNormal')) return _textureCache.get('waterNormal');
   const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -424,11 +453,13 @@ export function generateWaterNormalMap() {
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.magFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
+  _textureCache.set('waterNormal', texture);
   return texture;
 }
 
 // 6B. High-Detail Custom PCB Motherboard Texture (Nodal Centre Hardware Booth)
 export function generatePCBTexture() {
+  if (_textureCache.has('pcb')) return _textureCache.get('pcb');
   const size = 1024;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -623,11 +654,13 @@ export function generatePCBTexture() {
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.magFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
+  _textureCache.set('pcb', texture);
   return texture;
 }
 
 // 6C. Official Bharati Station Concrete Helipad Texture
 export function generateHelipadTexture() {
+  if (_textureCache.has('helipad')) return _textureCache.get('helipad');
   const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -671,11 +704,13 @@ export function generateHelipadTexture() {
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.magFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
+  _textureCache.set('helipad', texture);
   return texture;
 }
 
 // 7. Organic Polar Ocean Foam / Wake Texture (High-Res Cellular Lace & Froth)
 export function generateOceanFoamMap() {
+  if (_textureCache.has('oceanFoam')) return _textureCache.get('oceanFoam');
   const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -731,11 +766,13 @@ export function generateOceanFoamMap() {
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.magFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
+  _textureCache.set('oceanFoam', texture);
   return texture;
 }
 
 // 8. Authentic Indian Tricolor Flag (Tiranga) with 24-spoke Ashoka Chakra
 export function generateIndianFlagTexture() {
+  if (_textureCache.has('indianFlag')) return _textureCache.get('indianFlag');
   const width = 600;
   const height = 400; // Standard 3:2 flag ratio
   const canvas = document.createElement('canvas');
@@ -794,11 +831,13 @@ export function generateIndianFlagTexture() {
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.magFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
+  _textureCache.set('indianFlag', texture);
   return texture;
 }
 
 // 12. Antarctic Benthic Cold-Water Moss, Biofouling & Algae Map
 export function generateBenthicBiofoulingMap() {
+  if (_textureCache.has('benthicBio')) return _textureCache.get('benthicBio');
   const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -861,6 +900,7 @@ export function generateBenthicBiofoulingMap() {
   texture.repeat.set(2, 2);
   texture.generateMipmaps = true;
   texture.needsUpdate = true;
+  _textureCache.set('benthicBio', texture);
   return texture;
 }
 
@@ -872,6 +912,7 @@ export function generateBenthicBiofoulingMap() {
  * - Solder terminal tabs and polar thermal management silk legend (-40°C spec)
  */
 export function generateHeatingPadTexture() {
+  if (_textureCache.has('heatingPad')) return _textureCache.get('heatingPad');
   const canvas = document.createElement('canvas');
   const size = 512;
   canvas.width = size;
@@ -963,11 +1004,14 @@ export function generateHeatingPadTexture() {
   const texture = new THREE.CanvasTexture(canvas);
   texture.generateMipmaps = true;
   texture.needsUpdate = true;
+  _textureCache.set('heatingPad', texture);
   return texture;
 }
 
 // 12. Studio-Grade Procedural Antarctic Polar IBL Environment Map (PMREM Filtered)
 export function generatePolarEnvironmentMap(renderer, season = 'summer') {
+  const cacheKey = 'polar_env_' + season;
+  if (_textureCache.has(cacheKey)) return _textureCache.get(cacheKey);
   const width = 1024;
   const height = 512;
   const canvas = document.createElement('canvas');
@@ -1060,32 +1104,32 @@ export function generatePolarEnvironmentMap(renderer, season = 'summer') {
     ctx.fillStyle = groundGrad;
     ctx.fillRect(0, height * 0.5, width, height * 0.5);
   } else {
-    // ── Austral Summer: 24-Hour Midnight Sun (Golden low-angle 16° sun, parhelia, 4800K) ──
+    // ── Austral Summer: 24-Hour Midnight Sun (Golden low-angle 16° sun, parhelia, 5200K) ──
     const skyGrad = ctx.createLinearGradient(0, 0, 0, height * 0.5);
-    skyGrad.addColorStop(0.0, '#0c2a4d'); // Deep zenith polar navy
+    skyGrad.addColorStop(0.0, '#0a213d'); // Deep zenith polar navy
     skyGrad.addColorStop(0.35, '#0284c7'); // Mid-sky electric blue
     skyGrad.addColorStop(0.70, '#38bdf8'); // Low sky icy cyan
-    skyGrad.addColorStop(0.92, '#bae6fd'); // Polar horizon pale haze
-    skyGrad.addColorStop(1.0, '#fef08a'); // Horizon golden midnight sun glow
+    skyGrad.addColorStop(0.90, '#bae6fd'); // Polar horizon pale haze
+    skyGrad.addColorStop(1.0, '#fed7aa'); // Horizon soft warm polar twilight glow
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, width, height * 0.5);
 
-    // Intense low-angle polar sun disc (16° elevation)
+    // Natural low-angle polar sun disc with solar limb darkening (16° elevation)
     const sunX = width * 0.35;
     const sunY = height * 0.41;
-    const sunGrad = ctx.createRadialGradient(sunX, sunY, 2, sunX, sunY, 80);
+    const sunGrad = ctx.createRadialGradient(sunX, sunY, 1, sunX, sunY, 48);
     sunGrad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
-    sunGrad.addColorStop(0.18, 'rgba(254, 240, 138, 0.95)');
-    sunGrad.addColorStop(0.50, 'rgba(253, 186, 116, 0.45)');
-    sunGrad.addColorStop(1.0, 'rgba(254, 240, 138, 0.0)');
+    sunGrad.addColorStop(0.15, 'rgba(255, 247, 237, 0.88)');
+    sunGrad.addColorStop(0.45, 'rgba(254, 215, 170, 0.32)');
+    sunGrad.addColorStop(1.0, 'rgba(254, 215, 170, 0.0)');
     ctx.fillStyle = sunGrad;
     ctx.beginPath();
-    ctx.arc(sunX, sunY, 80, 0, Math.PI * 2);
+    ctx.arc(sunX, sunY, 48, 0, Math.PI * 2);
     ctx.fill();
 
     // Lower Hemisphere (Southern Ocean & Sea Ice Shelf Reflections)
     const groundGrad = ctx.createLinearGradient(0, height * 0.5, 0, height);
-    groundGrad.addColorStop(0.0, '#e0f2fe'); // Ice shelf reflection
+    groundGrad.addColorStop(0.0, '#cce7f6'); // Ice shelf reflection
     groundGrad.addColorStop(0.15, '#0369a1'); // Surface meltwater reflection
     groundGrad.addColorStop(0.50, '#0c4a6e'); // Deep Southern Ocean body
     groundGrad.addColorStop(1.0, '#021329'); // Abyssal nadir navy
@@ -1093,16 +1137,16 @@ export function generatePolarEnvironmentMap(renderer, season = 'summer') {
     ctx.fillRect(0, height * 0.5, width, height * 0.5);
 
     // Specular golden sun glint track across water plane
-    const waterSunGrad = ctx.createLinearGradient(sunX - 40, height * 0.5, sunX + 40, height);
-    waterSunGrad.addColorStop(0.0, 'rgba(254, 240, 138, 0.85)');
-    waterSunGrad.addColorStop(0.3, 'rgba(253, 186, 116, 0.45)');
+    const waterSunGrad = ctx.createLinearGradient(sunX - 35, height * 0.5, sunX + 35, height);
+    waterSunGrad.addColorStop(0.0, 'rgba(254, 215, 170, 0.65)');
+    waterSunGrad.addColorStop(0.3, 'rgba(251, 146, 60, 0.28)');
     waterSunGrad.addColorStop(1.0, 'rgba(14, 165, 233, 0.0)');
     ctx.fillStyle = waterSunGrad;
     ctx.beginPath();
-    ctx.moveTo(sunX - 12, height * 0.5);
-    ctx.lineTo(sunX + 12, height * 0.5);
-    ctx.lineTo(sunX + 65, height);
-    ctx.lineTo(sunX - 65, height);
+    ctx.moveTo(sunX - 10, height * 0.5);
+    ctx.lineTo(sunX + 10, height * 0.5);
+    ctx.lineTo(sunX + 50, height);
+    ctx.lineTo(sunX - 50, height);
     ctx.closePath();
     ctx.fill();
   }
@@ -1115,11 +1159,14 @@ export function generatePolarEnvironmentMap(renderer, season = 'summer') {
   const envMap = pmremGenerator.fromEquirectangular(canvasTexture).texture;
   pmremGenerator.dispose();
 
-  return { envMap, skyTexture: canvasTexture };
+  const res = { envMap, skyTexture: canvasTexture };
+  _textureCache.set(cacheKey, res);
+  return res;
 }
 
 // 13. Procedural Polar Stratus Horizon Cloud Alpha & Density Map
 export function generatePolarCloudMap() {
+  if (_textureCache.has('polarCloud')) return _textureCache.get('polarCloud');
   const width = 512;
   const height = 256;
   const canvas = document.createElement('canvas');
@@ -1170,5 +1217,6 @@ export function generatePolarCloudMap() {
   texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.repeat.set(3, 1);
   texture.needsUpdate = true;
+  _textureCache.set('polarCloud', texture);
   return texture;
 }

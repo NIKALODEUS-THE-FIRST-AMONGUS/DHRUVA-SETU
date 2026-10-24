@@ -35,13 +35,15 @@ export function createAutonomousBuoy() {
   // 1. SPHERICAL HDPE HULL WITH IP68 ACRYLIC INSPECTION CUTAWAY
   // ════════════════════════════════════════════════════════════════════════
   const hullMat = new THREE.MeshPhysicalMaterial({
-    color: 0xea580c, // Safety marine orange
-    roughness: 0.32,
-    metalness: 0.04,
+    color: 0xea580c, // UV-stabilized Safety Marine Orange HDPE
+    roughness: 0.28,
+    metalness: 0.02,
     bumpMap: hdpeBump,
-    bumpScale: 0.015,
-    clearcoat: 0.55,
-    clearcoatRoughness: 0.20
+    bumpScale: 0.007,
+    clearcoat: 0.70, // Wet marine rotomolded polymer gloss
+    clearcoatRoughness: 0.15,
+    sheen: 0.35, // Subsurface light scattering through 15mm polymer shell
+    sheenColor: 0xf97316
   });
 
   // Main hull hemisphere (Rear & sides, leaving front +Z open for inspection window)
@@ -52,6 +54,28 @@ export function createAutonomousBuoy() {
   hullBackMesh.castShadow = true;
   hullBackMesh.receiveShadow = true;
   hullGroup.add(hullBackMesh);
+
+  // Inner hull liner / avionics rear compartment (dark aerospace graphite interior, cleanly contoured inside hull)
+  const innerHullGeo = new THREE.SphereGeometry(
+    CONFIG.BUOY_RADIUS_3D * 0.985,
+    48,
+    32,
+    0.80 * Math.PI,
+    1.40 * Math.PI,
+    Math.PI * 0.32,
+    Math.PI * 0.26
+  );
+  const innerHullMat = new THREE.MeshStandardMaterial({
+    color: 0x0b1120, // Matte aerospace deep graphite
+    roughness: 0.92,
+    metalness: 0.20,
+    bumpMap: brushedMetal,
+    bumpScale: 0.005,
+    side: THREE.BackSide
+  });
+  const innerHullMesh = new THREE.Mesh(innerHullGeo, innerHullMat);
+  innerHullMesh.name = "inner_hull_liner";
+  hullGroup.add(innerHullMesh);
 
   // Bottom hull cap
   const hullBottomGeo = new THREE.SphereGeometry(CONFIG.BUOY_RADIUS_3D, 48, 16, 0, Math.PI * 2, Math.PI * 0.58, Math.PI * 0.42);
@@ -68,35 +92,69 @@ export function createAutonomousBuoy() {
   hullGroup.add(hullTopMesh);
 
   // IP68 Clear Optical Acrylic Inspection Window (Centered symmetrically on front +Z face)
+  // Physical transmission with physical IOR and thickness, opaque rendering for transmission sampling
   const acrylicMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     transmission: 0.96,
-    opacity: 0.22,
-    transparent: true,
-    roughness: 0.04,
+    thickness: 0.14,
+    roughness: 0.05,
     metalness: 0.0,
     ior: 1.49, // Acrylic optical index
-    thickness: 0.12,
     specularIntensity: 0.95,
     clearcoat: 0.95,
     clearcoatRoughness: 0.04,
-    side: THREE.DoubleSide
+    transparent: false, // Rule: never combine transmission with transparent/opacity
+    opacity: 1.0,
+    polygonOffset: true,
+    polygonOffsetFactor: -1.0,
+    polygonOffsetUnits: -4.0,
+    side: THREE.FrontSide
   });
 
   // Centered exactly on +Z (from 0.20*PI to 0.80*PI, width 0.60*PI = 108 degrees)
-  const acrylicWindowGeo = new THREE.SphereGeometry(CONFIG.BUOY_RADIUS_3D * 1.002, 32, 24, 0.20 * Math.PI, 0.60 * Math.PI, Math.PI * 0.32, Math.PI * 0.26);
+  // Geometric clearance at 1.006 * R so it cleanly floats above hull without z-fighting
+  const acrylicWindowGeo = new THREE.SphereGeometry(
+    CONFIG.BUOY_RADIUS_3D * 1.006,
+    48,
+    32,
+    0.20 * Math.PI,
+    0.60 * Math.PI,
+    Math.PI * 0.32,
+    Math.PI * 0.26
+  );
   const acrylicWindow = new THREE.Mesh(acrylicWindowGeo, acrylicMat);
   acrylicWindow.name = "acrylicInspectionWindow";
   acrylicWindow.userData.partId = "hull";
+  acrylicWindow.renderOrder = 5;
   hullGroup.add(acrylicWindow);
 
-  // SOLAS Waterline Reflective Equator Band (with opening for front cutaway window)
-  const bandGeo = new THREE.CylinderGeometry(CONFIG.BUOY_RADIUS_3D * 1.008, CONFIG.BUOY_RADIUS_3D * 1.008, 0.16, 48, 1, true, 0.30 * Math.PI, 1.40 * Math.PI);
-  const bandMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.15, metalness: 0.35 });
+  // SOLAS Waterline Reflective Equator Band (Spherical band segment following hull curvature exactly)
+  const bandGeo = new THREE.SphereGeometry(
+    CONFIG.BUOY_RADIUS_3D * 1.004,
+    48,
+    16,
+    0.80 * Math.PI,
+    1.40 * Math.PI,
+    Math.PI * 0.46,
+    Math.PI * 0.08
+  );
+  // 1B-1. SOLAS Waterline Retroreflective Equator Band (3M Diamond Grade maritime prismatic film)
+  const bandMat = new THREE.MeshPhysicalMaterial({
+    color: 0xf1f5f9,
+    roughness: 0.14,
+    metalness: 0.12,
+    clearcoat: 0.85,
+    clearcoatRoughness: 0.06,
+    sheen: 0.40,
+    sheenColor: 0xffffff,
+    polygonOffset: true,
+    polygonOffsetFactor: -1.0,
+    polygonOffsetUnits: -2.0
+  });
   const bandMesh = new THREE.Mesh(bandGeo, bandMat);
   hullGroup.add(bandMesh);
 
-  // 1B-2. Polar Waterline Rime Ice & Frozen Salt Crust Encrustation (Micro-Hardware Detail)
+  // 1B-2. Polar Waterline Rime Ice & Frozen Salt Crust Encrustation (Spherical band)
   const rimeIceTex = generateRimeIceTexture();
   const rimeIceMat = new THREE.MeshStandardMaterial({
     map: rimeIceTex,
@@ -104,12 +162,22 @@ export function createAutonomousBuoy() {
     roughness: 0.88,
     metalness: 0.05,
     transparent: true,
-    opacity: 0.90,
-    depthWrite: false
+    opacity: 0.85,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -1.0,
+    polygonOffsetUnits: -3.0
   });
-  const rimeRingGeo = new THREE.CylinderGeometry(CONFIG.BUOY_RADIUS_3D * 1.014, CONFIG.BUOY_RADIUS_3D * 1.014, 0.28, 48, 1, true, 0.28 * Math.PI, 1.44 * Math.PI);
+  const rimeRingGeo = new THREE.SphereGeometry(
+    CONFIG.BUOY_RADIUS_3D * 1.005,
+    48,
+    16,
+    0.80 * Math.PI,
+    1.40 * Math.PI,
+    Math.PI * 0.44,
+    Math.PI * 0.12
+  );
   const rimeRing = new THREE.Mesh(rimeRingGeo, rimeIceMat);
-  rimeRing.position.y = -0.02;
   hullGroup.add(rimeRing);
 
   // Micro-nodules of crystalline hoarfrost on the upper hull rim
@@ -124,19 +192,7 @@ export function createAutonomousBuoy() {
     hullGroup.add(nodule);
   }
 
-  // 1B-3. Waterline Contact Wake Foam Ring (Lapping polar sea froth clinging to spar hull)
-  const foamRingGeo = new THREE.RingGeometry(CONFIG.BUOY_RADIUS_3D * 0.98, CONFIG.BUOY_RADIUS_3D * 1.32, 36);
-  foamRingGeo.rotateX(-Math.PI / 2);
-  const foamRingMat = new THREE.MeshBasicMaterial({
-    color: 0xf1f5f9,
-    transparent: true,
-    opacity: 0.55,
-    depthWrite: false,
-    side: THREE.DoubleSide
-  });
-  const foamRingMesh = new THREE.Mesh(foamRingGeo, foamRingMat);
-  foamRingMesh.position.y = -0.01;
-  hullGroup.add(foamRingMesh);
+  // 1B-3. Waterline Contact Wake is handled dynamically by OceanVFX shader
 
   // 1C. CNC-Machined Anodized Bezel Frame with Stainless Hex Bolts around Acrylic Window
   const boltMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.95, roughness: 0.15 });
@@ -178,7 +234,13 @@ export function createAutonomousBuoy() {
   }
 
   // 1D. Heavy-Duty Forged 316L Stainless Steel Deck Lifting Pad-Eyes (4x Cardinal Perimeter)
-  const padEyeMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.92, roughness: 0.2 });
+  const padEyeMat = new THREE.MeshPhysicalMaterial({
+    color: 0xe2e8f0,
+    metalness: 0.96,
+    roughness: 0.14,
+    clearcoat: 0.35,
+    clearcoatRoughness: 0.10
+  });
   const eyeTorusGeo = new THREE.TorusGeometry(0.055, 0.016, 8, 24);
   const eyeBaseGeo = new THREE.BoxGeometry(0.08, 0.025, 0.06);
 
@@ -218,11 +280,13 @@ export function createAutonomousBuoy() {
   // ════════════════════════════════════════════════════════════════════════
   const solarMat = new THREE.MeshPhysicalMaterial({
     map: solarTex,
-    color: 0x0f172a,
-    roughness: 0.12,
-    metalness: 0.85,
-    clearcoat: 0.95,
-    clearcoatRoughness: 0.08
+    color: 0x06111f, // Anti-reflective textured marine silicon blue-violet
+    roughness: 0.06,
+    metalness: 0.88,
+    clearcoat: 0.98, // Low-iron tempered solar glass encapsulation
+    clearcoatRoughness: 0.03,
+    ior: 1.52,
+    specularIntensity: 0.95
   });
 
   // 3 Solar Sectors (Right, Back, Left) - Front (+Z) is clear for the acrylic cutaway
@@ -283,34 +347,16 @@ export function createAutonomousBuoy() {
   // ════════════════════════════════════════════════════════════════════════
   electronicsBayGroup.position.set(0, 0.08, 0.25);
 
-  // Dedicated Anodized Instrument Bay Enclosure Bulkhead (Matte graphite rear chamber)
-  // Generously envelopes the avionics deck to prevent any background void or external objects showing
-  const chamberGeo = new THREE.CylinderGeometry(1.15, 1.15, 1.50, 48, 1, true, 0.65 * Math.PI, 1.70 * Math.PI);
-  const chamberMat = new THREE.MeshStandardMaterial({
-    color: 0x0b1120, // Matte aerospace deep graphite
-    roughness: 0.92,
-    metalness: 0.20,
-    side: THREE.BackSide,
-    bumpMap: brushedMetal,
-    bumpScale: 0.005
+  // Compact anodized mounting collar under chassis deck (fits strictly within bay, never breaches hull)
+  const collarGeo = new THREE.CylinderGeometry(0.66, 0.66, 0.10, 32, 1, true);
+  const collarMat = new THREE.MeshStandardMaterial({
+    color: 0x1e293b,
+    roughness: 0.60,
+    metalness: 0.80
   });
-  const chamberBacking = new THREE.Mesh(chamberGeo, chamberMat);
-  chamberBacking.position.set(0, 0.04, 0.05);
-  electronicsBayGroup.add(chamberBacking);
-
-  // Top and bottom sealed bulkhead pressure caps (Matte non-reflective finish)
-  const bulkheadMat = new THREE.MeshStandardMaterial({
-    color: 0x111827,
-    roughness: 0.95,
-    metalness: 0.15
-  });
-  const topBulkhead = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.04, 48), bulkheadMat);
-  topBulkhead.position.set(0, 0.72, 0.05);
-  electronicsBayGroup.add(topBulkhead);
-
-  const bottomBulkhead = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.04, 48), bulkheadMat);
-  bottomBulkhead.position.set(0, -0.68, 0.05);
-  electronicsBayGroup.add(bottomBulkhead);
+  const collarMesh = new THREE.Mesh(collarGeo, collarMat);
+  collarMesh.position.set(0, -0.40, 0);
+  electronicsBayGroup.add(collarMesh);
 
   // Internal Payload Bay Illumination (Studio diffuse fill positioned to evenly illuminate PCB and components without ceiling burn)
   const bayOverheadLight = new THREE.PointLight(0xf8fafc, 0.26, 1.6, 2.0);
@@ -588,25 +634,35 @@ export function createAutonomousBuoy() {
   const heaterGroup = new THREE.Group();
   heaterGroup.name = "subZeroPTCHeater";
 
-  // Flexible Kapton Heating Pad Material with etched copper serpentine traces
+  // Flexible Kapton Heating Pad Material (OPAQUE so Three.js physical transmission samples it cleanly)
   const heatingPadMat = new THREE.MeshStandardMaterial({
     map: heatingPadTex,
     roughness: 0.32,
     metalness: 0.35,
-    transparent: true,
-    opacity: 0.95
+    transparent: false,
+    opacity: 1.0,
+    depthWrite: true,
+    polygonOffset: true,
+    polygonOffsetFactor: -1.0,
+    polygonOffsetUnits: -2.0
   });
 
-  // 1. Battery Pack Flexible Heating Pad Jacket (Surrounds the 4S2P LiFePO4 cells to prevent cold charging lockout)
-  const batteryHeaterPad = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.22, 0.26), heatingPadMat);
-  batteryHeaterPad.position.set(0.05, -0.20, -0.10);
+  // 1. Battery Pack Flexible Heating Pad Jacket (Thermal bed and rear cradle, leaving cells visible)
+  const batteryHeaterPad = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.008, 0.22), heatingPadMat);
+  batteryHeaterPad.position.set(0.00, -0.314, -0.10);
   batteryHeaterPad.name = "battery_heater_pad";
   batteryHeaterPad.userData = { subsystemId: 'heater', partId: 'kapton_pads', name: 'Flexible Polyimide Kapton Battery Heating Pad (-40°C)' };
   heaterGroup.add(batteryHeaterPad);
 
-  // 2. Chassis Under-Deck Heating Pad (Thermal bed for avionics chamber)
-  const chassisHeaterPad = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.012, 0.55), heatingPadMat);
-  chassisHeaterPad.position.set(0, -0.345, 0.05);
+  const batteryHeaterBack = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.20, 0.008), heatingPadMat);
+  batteryHeaterBack.position.set(0.00, -0.21, -0.204);
+  batteryHeaterBack.name = "battery_heater_back";
+  batteryHeaterBack.userData = { subsystemId: 'heater', partId: 'kapton_pads', name: 'Flexible Polyimide Kapton Battery Heating Pad (-40°C)' };
+  heaterGroup.add(batteryHeaterBack);
+
+  // 2. Chassis Under-Deck Heating Pad (Offset 2mm above deck surface to eliminate coplanar z-fighting)
+  const chassisHeaterPad = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.004, 0.55), heatingPadMat);
+  chassisHeaterPad.position.set(0, -0.328, 0.05); // Deck top is at y = -0.33, pad rests cleanly above it
   chassisHeaterPad.name = "chassis_heater_pad";
   chassisHeaterPad.userData = { subsystemId: 'heater', partId: 'kapton_pads', name: 'Avionics Deck Thermal Anti-Freeze Heating Pad' };
   heaterGroup.add(chassisHeaterPad);
@@ -1276,6 +1332,9 @@ export function createAutonomousBuoy() {
   let rollAngle = 0.0;
   let rollVel = 0.0;
   let yawAngle = 0.0;
+  let hydroAccumulator = 0.0;
+  const FIXED_STEP = 1.0 / 60.0;
+  const MAX_SUBSTEPS = 3;
 
   // Collect all interactive subsea meshes for raycasting
   const interactiveMeshes = [
@@ -1318,70 +1377,84 @@ export function createAutonomousBuoy() {
     },
     update: (time, waveElevation, waveSurgeX = 0, waveSurgeZ = 0, explodedFactor = 0, targetPitch = 0, targetRoll = 0, isBursting = false, delta = 0.016, currentFlow = { x: 0.45, z: 0.25 }, isInspecting = false, heaterState = null) => {
       // ════════════════════════════════════════════════════════════════════════
-      // 1. HORIZONTAL WATCH CIRCLE & CURRENT FLOW HYDRODYNAMICS
+      // 1. 6-DOF HYDRODYNAMICS (Naval Architecture Spar Buoy Model)
+      // Fixed-timestep accumulator (60Hz) with max substep cap to guarantee determinism
       // ════════════════════════════════════════════════════════════════════════
-      // Mean drag pulls buoy down-current + wave orbital surge oscillates buoy back & forth
-      const targetSurge = currentFlow.x * 2.2 + waveSurgeX * 1.6;
-      const targetSway = currentFlow.z * 2.2 + waveSurgeZ * 1.6;
+      const clampedDelta = Math.min(Math.max(delta, 0.001), 0.05);
+      hydroAccumulator += clampedDelta;
 
-      // 2nd-order compliant Kevlar tether restoring spring & fluid damping
-      const tetherSpringK = 2.4;
-      const fluidDampingC = 1.65;
+      let subSteps = 0;
+      while (hydroAccumulator >= FIXED_STEP && subSteps < MAX_SUBSTEPS) {
+        const dt = FIXED_STEP;
 
-      const surgeForce = (targetSurge - surgePos) * tetherSpringK;
-      surgeVel += (surgeForce - surgeVel * fluidDampingC) * delta;
-      surgePos += surgeVel * delta;
-      buoyRoot.position.x = surgePos;
+        // Horizontal watch circle: current hydrodynamic form drag + wave orbital surge
+        const currentSpeed = Math.hypot(currentFlow.x, currentFlow.z);
+        const targetSurge = currentFlow.x * 2.4 + waveSurgeX * 1.4;
+        const targetSway = currentFlow.z * 2.4 + waveSurgeZ * 1.4;
 
-      const swayForce = (targetSway - swayPos) * tetherSpringK;
-      swayVel += (swayForce - swayVel * fluidDampingC) * delta;
-      swayPos += swayVel * delta;
-      buoyRoot.position.z = swayPos;
+        // Compliant mooring bridle stiffness & Morison fluid cross-flow damping
+        const tetherSpringK = 3.2;
+        const fluidDampingC = 1.95;
 
-      // ════════════════════════════════════════════════════════════════════════
-      // 2. VERTICAL HEAVE DYNAMICS (Wave buoyant restoration)
-      // ════════════════════════════════════════════════════════════════════════
-      const heaveSpringK = 2.4;
-      const heaveDampingC = 2.2;
+        const surgeForce = (targetSurge - surgePos) * tetherSpringK;
+        surgeVel += (surgeForce - surgeVel * fluidDampingC) * dt;
+        surgePos += surgeVel * dt;
 
-      const heaveForce = (waveElevation - heavePos) * heaveSpringK;
-      heaveVel += (heaveForce - heaveVel * heaveDampingC) * delta;
-      heavePos += heaveVel * delta;
-      buoyRoot.position.y = heavePos;
+        const swayForce = (targetSway - swayPos) * tetherSpringK;
+        swayVel += (swayForce - swayVel * fluidDampingC) * dt;
+        swayPos += swayVel * dt;
 
-      // ════════════════════════════════════════════════════════════════════════
-      // 3. PITCH, ROLL & YAW (Wave slopes + tether tension moment)
-      // ════════════════════════════════════════════════════════════════════════
-      const rightingK = 3.2;
-      const rightingC = 2.2;
+        // 2. ARCHIMEDES VERTICAL HEAVE DYNAMICS (Draft immersion & waterplane area)
+        const relativeImmersion = waveElevation - heavePos;
+        const heaveStiffness = 3.8;
+        const heaveRadiationDamping = 2.6;
+        const quadraticDrag = Math.sign(heaveVel) * (heaveVel * heaveVel) * 0.35;
 
-      // Current drag tilts the spar slightly down-current against tether tension
-      const tetherPitchMoment = currentFlow.z * 0.12;
-      const tetherRollMoment = -currentFlow.x * 0.12;
+        const heaveAcc = (relativeImmersion * heaveStiffness) - (heaveVel * heaveRadiationDamping) - quadraticDrag;
+        heaveVel += heaveAcc * dt;
+        heavePos += heaveVel * dt;
 
-      const pForce = (targetPitch + tetherPitchMoment - pitchAngle) * rightingK;
-      pitchVel += (pForce - pitchVel * rightingC) * delta;
-      pitchAngle += pitchVel * delta;
-      buoyRoot.rotation.x = pitchAngle;
+        // 3. 6-DOF ROTATIONAL DYNAMICS (Metacentric Restoration & Keel Ballast)
+        const metacentricRightingK = 4.2;
+        const rollRadiationDamping = 2.8;
 
-      const rForce = (targetRoll + tetherRollMoment - rollAngle) * rightingK;
-      rollVel += (rForce - rollVel * rightingC) * delta;
-      rollAngle += rollVel * delta;
-      buoyRoot.rotation.z = rollAngle;
+        const flowHeading = Math.atan2(currentFlow.x, currentFlow.z);
+        const tetherPitchMoment = currentFlow.z * 0.10;
+        const tetherRollMoment = -currentFlow.x * 0.10;
 
-      if (isInspecting) {
-        // Zero-shake rock-solid inspection: smoothly damp buoy pitching and rolling
-        pitchVel *= 0.15;
-        rollVel *= 0.15;
-        pitchAngle *= 0.80;
-        rollAngle *= 0.80;
-        buoyRoot.rotation.x = pitchAngle;
-        buoyRoot.rotation.z = rollAngle;
+        // Pitch dynamics (rotation about X-axis)
+        const pitchTorque = (targetPitch + tetherPitchMoment - pitchAngle) * metacentricRightingK;
+        pitchVel += (pitchTorque - pitchVel * rollRadiationDamping) * dt;
+        pitchAngle += pitchVel * dt;
+
+        // Roll dynamics (rotation about Z-axis)
+        const rollTorque = (targetRoll + tetherRollMoment - rollAngle) * metacentricRightingK;
+        rollVel += (rollTorque - rollVel * rollRadiationDamping) * dt;
+        rollAngle += rollVel * dt;
+
+        if (isInspecting) {
+          pitchVel *= 0.10;
+          rollVel *= 0.10;
+          pitchAngle *= 0.75;
+          rollAngle *= 0.75;
+        }
+
+        // Hydrodynamic weathercocking
+        yawAngle += (flowHeading - yawAngle) * Math.min(1.0, dt * 1.4);
+
+        hydroAccumulator -= FIXED_STEP;
+        subSteps++;
       }
 
-      // Hydrodynamic weathercocking: buoy yaw gently aligns with downstream ocean current
-      const flowHeading = Math.atan2(currentFlow.x, currentFlow.z);
-      yawAngle += (flowHeading - yawAngle) * Math.min(1.0, delta * 1.5);
+      if (subSteps >= MAX_SUBSTEPS) {
+        hydroAccumulator = 0; // Prevent accumulator overflow spiral
+      }
+
+      buoyRoot.position.x = surgePos;
+      buoyRoot.position.z = swayPos;
+      buoyRoot.position.y = heavePos;
+      buoyRoot.rotation.x = pitchAngle;
+      buoyRoot.rotation.z = rollAngle;
       buoyRoot.rotation.y = yawAngle;
 
       // ════════════════════════════════════════════════════════════════════════
@@ -1558,11 +1631,6 @@ export function createAutonomousBuoy() {
         strobeMat.emissiveIntensity = 0.18;
         strobeLight.intensity = 0.0;
       }
-
-      // 7. Waterline Contact Foam Lapping & Swell Oscillation
-      const foamPulse = Math.sin(time * 2.6) * 0.08;
-      foamRingMesh.scale.set(1.0 + foamPulse, 1.0 + foamPulse, 1.0);
-      foamRingMat.opacity = 0.45 + Math.sin(time * 2.1) * 0.15;
     }
   };
 }

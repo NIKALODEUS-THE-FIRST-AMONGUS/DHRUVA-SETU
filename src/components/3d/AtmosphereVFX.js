@@ -222,12 +222,12 @@ export function createAtmosphere() {
   haloGroup.position.set(45, 28, 40);
   haloGroup.lookAt(0, 5, 0);
 
-  // 22° Circular Ice Crystal Halo
+  // 22° Circular Ice Crystal Halo (subtle atmospheric refraction)
   const haloRingGeo = new THREE.RingGeometry(22, 23.8, 64);
   const haloMat = new THREE.MeshBasicMaterial({
-    color: 0xfef08a,
+    color: 0xfed7aa,
     transparent: true,
-    opacity: 0.22,
+    opacity: 0.06,
     side: THREE.DoubleSide,
     blending: THREE.AdditiveBlending,
     depthWrite: false
@@ -240,7 +240,7 @@ export function createAtmosphere() {
   const sunDogMat = new THREE.MeshBasicMaterial({
     color: 0xffedd5,
     transparent: true,
-    opacity: 0.38,
+    opacity: 0.10,
     blending: THREE.AdditiveBlending,
     depthWrite: false
   });
@@ -294,9 +294,9 @@ export function createAtmosphere() {
   const cloudGeo = new THREE.CylinderGeometry(210, 210, 36, 48, 1, true);
   const cloudMat = new THREE.MeshBasicMaterial({
     map: cloudMap,
-    color: 0xfef08a,
+    color: 0xfed7aa,
     transparent: true,
-    opacity: 0.42,
+    opacity: 0.24,
     side: THREE.BackSide,
     depthWrite: false
   });
@@ -308,9 +308,9 @@ export function createAtmosphere() {
   const godRaysGroup = new THREE.Group();
   godRaysGroup.name = "godRaysGroup";
   const rayMat = new THREE.MeshBasicMaterial({
-    color: 0xfef08a,
+    color: 0xfed7aa,
     transparent: true,
-    opacity: 0.22,
+    opacity: 0.05,
     side: THREE.DoubleSide,
     blending: THREE.AdditiveBlending,
     depthWrite: false
@@ -376,13 +376,13 @@ export function createAtmosphere() {
           starMat.opacity = 0.25;
           snowMat.opacity = 0.0;
           rainMat.opacity = 0.0;
-          haloMat.opacity = 0.24;
-          sunDogMat.opacity = 0.40;
+          haloMat.opacity = 0.06;
+          sunDogMat.opacity = 0.10;
           smokeMat.opacity = 0.14;
-          cloudMat.color.setHex(0xfef08a);
-          cloudMat.opacity = 0.42;
-          rayMat.color.setHex(0xfef08a);
-          rayMat.opacity = 0.22;
+          cloudMat.color.setHex(0xfed7aa);
+          cloudMat.opacity = 0.24;
+          rayMat.color.setHex(0xfed7aa);
+          rayMat.opacity = 0.05;
           spindriftMat.opacity = 0.25;
           auroraRibbons.forEach(m => { m.uniforms.u_globalOpacity.value = 0.05; });
           break;

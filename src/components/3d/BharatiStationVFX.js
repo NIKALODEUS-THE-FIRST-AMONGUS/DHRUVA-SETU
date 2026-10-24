@@ -512,6 +512,14 @@ export function createBharatiStation(ocean) {
 
   group.add(zodiacGroup);
 
+  // Freeze static world matrices for non-animated architectural structures
+  group.updateMatrixWorld(true);
+  group.traverse(obj => {
+    if (obj.isMesh && obj.parent !== shipGroup && obj.parent !== zodiacGroup && !obj.material?.isShaderMaterial) {
+      obj.matrixAutoUpdate = false;
+    }
+  });
+
   // Overall smooth target visibility
   let targetOpacity = 0.0;
   let currentOpacity = 0.0;

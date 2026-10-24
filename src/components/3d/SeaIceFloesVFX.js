@@ -13,24 +13,21 @@ export function createSeaIceFloes(ocean) {
 
   const iceFractureMap = generateIceFractureMap();
 
-  // 1. Translucent Pancake Ice Material with Volume Absorption & Glacial Sheen
+  // 1. Translucent Pancake Ice Material with Volume Absorption & Glacial Sheen (natural ice optics)
   const floeIceMat = new THREE.MeshPhysicalMaterial({
-    color: 0xe0f2fe,
-    emissive: 0x0284c7,
-    emissiveIntensity: 0.18,
-    roughness: 0.14,
-    metalness: 0.02,
-    transmission: 0.62,
+    color: 0xecfeff,
+    roughness: 0.22,
+    metalness: 0.01,
+    transmission: 0.40,
     ior: 1.31,
-    thickness: 2.2,
+    thickness: 2.4,
     attenuationColor: new THREE.Color(0x38bdf8),
-    attenuationDistance: 1.8,
+    attenuationDistance: 2.0,
     normalMap: iceFractureMap,
-    normalScale: new THREE.Vector2(1.0, 1.0),
-    specularIntensity: 1.0,
-    specularColor: 0xffffff,
-    clearcoat: 0.85,
-    clearcoatRoughness: 0.08
+    normalScale: new THREE.Vector2(0.8, 0.8),
+    specularIntensity: 0.9,
+    clearcoat: 0.50,
+    clearcoatRoughness: 0.12
   });
 
   // 2. High-Albedo Antarctic Fresh Snow Cap
@@ -44,28 +41,28 @@ export function createSeaIceFloes(ocean) {
   // 3. Submerged Ice Keel Material (deep cyan glacial ice absorption)
   const keelMat = new THREE.MeshPhysicalMaterial({
     color: 0x0284c7,
-    roughness: 0.28,
-    metalness: 0.02,
-    transmission: 0.55,
+    roughness: 0.32,
+    metalness: 0.01,
+    transmission: 0.45,
     thickness: 3.5,
     attenuationColor: new THREE.Color(0x0369a1),
-    attenuationDistance: 1.5,
+    attenuationDistance: 1.8,
     transparent: true,
-    opacity: 0.85
+    opacity: 0.82
   });
 
   // 4. Upturned Slushy Ice Rims (formed by pancake floe edge-to-edge wave collisions)
   const slushRimMat = new THREE.MeshStandardMaterial({
     color: 0xf8fafc,
-    roughness: 0.95,
+    roughness: 0.92,
     metalness: 0.02
   });
 
-  // 5. Surrounding Frazil Ice Crystal Slush Halo
+  // 5. Surrounding Frazil Ice Crystal Slush Halo (soft natural ice boundary)
   const frazilHaloMat = new THREE.MeshBasicMaterial({
     color: 0xdbeafe,
     transparent: true,
-    opacity: 0.36,
+    opacity: 0.14,
     side: THREE.DoubleSide,
     depthWrite: false
   });

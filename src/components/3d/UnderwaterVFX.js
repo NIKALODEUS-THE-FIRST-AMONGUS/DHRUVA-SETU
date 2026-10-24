@@ -168,9 +168,72 @@ export function createUnderwaterVFX() {
   haloclineMesh.position.y = -22.0;
   group.add(haloclineMesh);
 
+  // 5. Volumetric Underwater Caustic God Rays (Sunlight shafts refracting through Snell's window)
+  const godRayGroup = new THREE.Group();
+  const rayCount = 8;
+  const rayMeshes = [];
+  // Refracted polar sun vector in seawater: ~46° from vertical
+  const refrDir = new THREE.Vector3(0.48, -0.72, 0.50).normalize();
+
+  const rayGeo = new THREE.CylinderGeometry(0.35, 4.8, 32, 10, 1, true);
+  rayGeo.translate(0, -16, 0); // Origin at waterline (y = 0)
+
+  // Soft vertical gradient canvas texture for god rays
+  const rayCanvas = document.createElement('canvas');
+  rayCanvas.width = 64;
+  rayCanvas.height = 256;
+  const rCtx = rayCanvas.getContext('2d');
+  const rGrad = rCtx.createLinearGradient(0, 0, 0, 256);
+  rGrad.addColorStop(0.0, 'rgba(125, 211, 252, 0.55)');
+  rGrad.addColorStop(0.2, 'rgba(56, 189, 248, 0.40)');
+  rGrad.addColorStop(0.65, 'rgba(14, 165, 233, 0.18)');
+  rGrad.addColorStop(1.0, 'rgba(2, 132, 199, 0.0)');
+  rCtx.fillStyle = rGrad;
+  rCtx.fillRect(0, 0, 64, 256);
+  const rayTex = new THREE.CanvasTexture(rayCanvas);
+  rayTex.needsUpdate = true;
+
+  for (let ri = 0; ri < rayCount; ri++) {
+    const rayMat = new THREE.MeshBasicMaterial({
+      map: rayTex,
+      color: 0x7dd3fc,
+      transparent: true,
+      opacity: 0.12,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    const rayMesh = new THREE.Mesh(rayGeo, rayMat);
+    // Disperse shafts across the buoy and CTD operating envelope
+    const rDist = 2.0 + (ri / rayCount) * 14.0;
+    const rAngle = (ri / rayCount) * Math.PI * 2 + Math.random() * 0.4;
+    rayMesh.position.set(Math.cos(rAngle) * rDist, 0, Math.sin(rAngle) * rDist);
+
+    // Align shaft axis along the refracted sun direction
+    const rayAxis = refrDir.clone();
+    rayMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), rayAxis);
+
+    // Random scale variation
+    rayMesh.scale.set(0.7 + Math.random() * 0.6, 1.0, 0.7 + Math.random() * 0.6);
+
+    godRayGroup.add(rayMesh);
+    rayMeshes.push({
+      mesh: rayMesh,
+      mat: rayMat,
+      phase: Math.random() * Math.PI * 2,
+      baseOpacity: 0.08 + Math.random() * 0.08,
+      speed: 0.8 + Math.random() * 0.6
+    });
+  }
+  group.add(godRayGroup);
+
   return {
     group,
-    update: (time, delta = 0.016, buoyPos = null, current = null) => {
+    update: (time, delta = 0.016, buoyPos = null, current = null, camY = 1.0) => {
+      // God rays only visible when camera is submerged below waterline
+      godRayGroup.visible = (camY < -0.15);
+
       if (buoyPos && typeof buoyPos === 'object' && buoyPos.x !== undefined) {
         group.position.x = buoyPos.x;
         group.position.z = buoyPos.z;
@@ -232,6 +295,13 @@ export function createUnderwaterVFX() {
         sArr[idx + 2] = snowInitPositions[idx + 2] + (curZ * 10.0 * depthShear) + Math.cos(time * 0.28 + snowInitPositions[idx] * 0.08) * 1.2;
       }
       snowGeo.attributes.position.needsUpdate = true;
+
+      // 4. Volumetric underwater god rays caustic shimmering
+      rayMeshes.forEach(r => {
+        const causticFlicker = Math.sin(time * 2.2 * r.speed + r.phase) * 0.35 +
+                               Math.cos(time * 3.8 * r.speed + r.phase * 1.5) * 0.20;
+        r.mat.opacity = THREE.MathUtils.clamp(r.baseOpacity + causticFlicker * 0.05, 0.02, 0.24);
+      });
     }
   };
 }

@@ -301,7 +301,8 @@ export default function UnifiedControlDeck({
             title={`CAM 0${activeCam.num}: ${activeCam.fullName} (${activeCam.group}) • Click to expand`}
           >
             <CurrentCamIcon size={14} className="current-cam-icon accent-cyan" aria-hidden="true" />
-            <span className="current-cam-text">CAM 0{activeCam.num}: {activeCam.label}</span>
+            <span className="current-cam-text desktop-cam-name">CAM 0{activeCam.num}: {activeCam.label}</span>
+            <span className="current-cam-text mobile-cam-name">CAM 0{activeCam.num}</span>
           </button>
 
           <button
@@ -326,7 +327,7 @@ export default function UnifiedControlDeck({
             ) : (
               <Unlock size={12} className="lock-icon" aria-hidden="true" />
             )}
-            <span className="lock-label">{isFollowingCTD ? "LOCKED [L]" : "LOCK [L]"}</span>
+            <span className="lock-label desktop-only">{isFollowingCTD ? "LOCKED [L]" : "LOCK [L]"}</span>
           </button>
         </div>
 

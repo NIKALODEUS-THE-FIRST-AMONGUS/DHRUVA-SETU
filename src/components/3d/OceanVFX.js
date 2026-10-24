@@ -39,11 +39,13 @@ export function createOceanSurface(initialPhysics = {}) {
     varying vec3 vWorldPosition;
     varying vec3 vNormalVec;
     varying vec3 vGeomNormal;
+    varying vec3 vTangent;
+    varying vec3 vBinormal;
     varying float vElevation;
     varying float vCrestFoam;
     varying float vDistance;
 
-    // Gerstner Wave with analytical tangents and horizontal trochoidal displacement
+    // Gerstner Wave with analytical derivatives and horizontal trochoidal displacement
     vec3 gerstnerWave(
       vec3 pos,
       vec2 dir,
@@ -73,21 +75,21 @@ export function createOceanSurface(initialPhysics = {}) {
         q * a * dir.y * cosF
       );
 
-      // Tangent and binormal analytical derivatives
+      // Tangent and binormal exact analytical partial derivatives
       tangent += vec3(
-        -q * dir.x * dir.x * sinF,
+        -q * k * a * dir.x * dir.x * sinF,
         dir.x * cosF * k * a,
-        -q * dir.x * dir.y * sinF
+        -q * k * a * dir.x * dir.y * sinF
       );
 
       binormal += vec3(
-        -q * dir.x * dir.y * sinF,
+        -q * k * a * dir.x * dir.y * sinF,
         dir.y * cosF * k * a,
-        -q * dir.y * dir.y * sinF
+        -q * k * a * dir.y * dir.y * sinF
       );
 
-      // Wave crest steepness accumulation for whitecaps
-      crestAccum += sinF * (amplitude / wavelength) * 22.0;
+      // Wave crest steepness and curvature accumulation for organic whitecaps
+      crestAccum += (q * k * a) * cosF + sinF * (amplitude / wavelength) * 20.0;
 
       return disp;
     }
@@ -123,17 +125,19 @@ export function createOceanSurface(initialPhysics = {}) {
 
       // Concentric hydrodynamic buoy wake ripples around moving spar position
       float r = length(pos.xz - u_buoyPos);
-      float wakeRipple = sin(clamp(r - 1.0, 0.0, 20.0) * 2.5 - u_time * 3.5) * exp(-r * 0.35) * 0.12;
+      float wakeRipple = sin(clamp(r - 0.85, 0.0, 18.0) * 2.8 - u_time * 3.5) * exp(-r * 0.38) * 0.10;
       totalDisp.y += wakeRipple;
 
       vec3 displaced = pos + totalDisp;
       vElevation = displaced.y;
-      vCrestFoam = clamp(crestAccum, -1.0, 3.0);
+      vCrestFoam = clamp(crestAccum, -1.0, 3.5);
 
       // Surface normal from cross product of analytical tangent and binormal
       vec3 analyticalNormal = normalize(cross(binormal, tangent));
       vNormalVec = normalize(normalMatrix * analyticalNormal);
       vGeomNormal = analyticalNormal;
+      vTangent = normalize(normalMatrix * tangent);
+      vBinormal = normalize(normalMatrix * binormal);
 
       vec4 worldPos = modelMatrix * vec4(displaced, 1.0);
       vWorldPosition = worldPos.xyz;
@@ -166,9 +170,28 @@ export function createOceanSurface(initialPhysics = {}) {
     varying vec3 vWorldPosition;
     varying vec3 vNormalVec;
     varying vec3 vGeomNormal;
+    varying vec3 vTangent;
+    varying vec3 vBinormal;
     varying float vElevation;
     varying float vCrestFoam;
     varying float vDistance;
+
+    // GGX Microfacet Distribution Function
+    float D_GGX(float NdotH, float roughness) {
+      float a = roughness * roughness;
+      float a2 = a * a;
+      float denom = NdotH * NdotH * (a2 - 1.0) + 1.0;
+      return a2 / (3.14159265359 * denom * denom);
+    }
+
+    // Smith Joint Masking-Shadowing Function
+    float G_Smith(float NdotV, float NdotL, float roughness) {
+      float a = roughness * roughness;
+      float a2 = a * a;
+      float gv = NdotV * sqrt(a2 + (1.0 - a2) * NdotL * NdotL);
+      float gl = NdotL * sqrt(a2 + (1.0 - a2) * NdotV * NdotV);
+      return 0.5 / max(gv + gl, 0.0001);
+    }
 
     void main() {
       // ════════════════════════════════════════════════════════════════════════
@@ -176,32 +199,32 @@ export function createOceanSurface(initialPhysics = {}) {
       // ════════════════════════════════════════════════════════════════════════
       if (!gl_FrontFacing) {
         vec3 subViewDir = normalize(vWorldPosition - cameraPosition);
-        vec3 subNormal = -normalize(vNormalVec);
+        vec3 subNormal = -normalize(vGeomNormal);
         float subCosTheta = max(dot(-subViewDir, subNormal), 0.0);
 
-        // Snell's Window Total Internal Reflection (critical angle for water ~ 48.6°)
-        float criticalCos = 0.66; // cos(48.6°)
-        float tir = smoothstep(criticalCos - 0.08, criticalCos + 0.05, subCosTheta);
+        // Snell's Window Total Internal Reflection (critical angle for water ~ 48.6°, cos ~ 0.661)
+        float criticalCos = 0.661;
+        float tir = smoothstep(criticalCos - 0.07, criticalCos + 0.05, subCosTheta);
 
         // High-frequency animated sub-surface caustics dancing on surface underside
         vec2 subUv1 = vWorldPosition.xz * 0.085 + vec2(u_time * 0.025, -u_time * 0.018);
         vec2 subUv2 = vWorldPosition.xz * 0.160 + vec2(-u_time * 0.032, u_time * 0.024);
         vec3 r1 = texture2D(u_normalMap, subUv1).rgb * 2.0 - 1.0;
         vec3 r2 = texture2D(u_normalMap, subUv2).rgb * 2.0 - 1.0;
-        float caustic = pow(clamp((r1.z + r2.z * 0.5) * 0.5 + 0.5, 0.0, 1.0), 3.5) * 0.85;
+        float caustic = pow(clamp((r1.z + r2.z * 0.5) * 0.5 + 0.5, 0.0, 1.0), 3.5) * 0.88;
 
         // Ethereal Antarctic Snell's window: glowing icy turquoise looking upward
-        vec3 underWaterSky = mix(vec3(0.06, 0.45, 0.75), vec3(0.22, 0.85, 0.98), caustic);
+        vec3 underWaterSky = mix(vec3(0.08, 0.48, 0.78), vec3(0.24, 0.88, 0.98), caustic);
         // Rich deep polar sapphire water
-        vec3 underWaterDeep = vec3(0.015, 0.14, 0.32);
+        vec3 underWaterDeep = vec3(0.012, 0.11, 0.28);
 
         vec3 subColor = mix(underWaterDeep, underWaterSky, tir);
         // Add crisp caustic sun glitter
-        subColor += vec3(0.15, 0.65, 0.85) * caustic;
+        subColor += vec3(0.18, 0.70, 0.90) * caustic;
 
         // Volumetric subsea distance extinction into deep ocean blue
-        float subFog = 1.0 - exp(-vDistance * 0.022);
-        vec3 abyssalHaze = vec3(0.012, 0.09, 0.20);
+        float subFog = 1.0 - exp(-vDistance * 0.020);
+        vec3 abyssalHaze = vec3(0.010, 0.08, 0.18);
         subColor = mix(subColor, abyssalHaze, clamp(subFog, 0.0, 1.0));
 
         gl_FragColor = vec4(subColor, 0.95);
@@ -215,46 +238,66 @@ export function createOceanSurface(initialPhysics = {}) {
       vec3 sunDir = normalize(u_sunDirection);
       vec3 geomNormal = normalize(vNormalVec);
 
-      // 1. Dual-scale counter-propagating capillary ripples for fluid silkiness
-      vec2 uv1 = vWorldPosition.xz * 0.042 + vec2(u_time * 0.016, u_time * 0.010);
-      vec2 uv2 = vWorldPosition.xz * 0.095 + vec2(-u_time * 0.022, u_time * 0.018);
-      vec2 uv3 = vWorldPosition.xz * 0.210 + vec2(u_time * 0.038, -u_time * 0.028);
+      // 1. Triple-scale counter-propagating capillary ripples
+      vec2 uv1 = vWorldPosition.xz * 0.038 + vec2(u_time * 0.016, u_time * 0.010);
+      vec2 uv2 = vWorldPosition.xz * 0.092 + vec2(-u_time * 0.022, u_time * 0.018);
+      vec2 uv3 = vWorldPosition.xz * 0.220 + vec2(u_time * 0.038, -u_time * 0.028);
 
       vec3 n1 = texture2D(u_normalMap, uv1).rgb * 2.0 - 1.0;
       vec3 n2 = texture2D(u_normalMap, uv2).rgb * 2.0 - 1.0;
       vec3 n3 = texture2D(u_normalMap, uv3).rgb * 2.0 - 1.0;
 
-      // Reorient normal perturbation along tangent plane
+      // Orthonormal TBN transformation
       vec3 rippleTangent = normalize(n1 + n2 * 0.65 + n3 * 0.35);
-      vec3 perturb = vec3(rippleTangent.x * 0.30, rippleTangent.z * 0.16, rippleTangent.y * 0.30);
-      vec3 finalNormal = normalize(geomNormal + perturb);
+      vec3 T = normalize(vTangent);
+      vec3 B = normalize(vBinormal);
+      vec3 N = normalize(geomNormal);
+      mat3 tbn = mat3(T, B, N);
 
-      // 2. Physically-based Fresnel (polar seawater IOR ~ 1.338)
-      float r0 = 0.021; // ((1.338 - 1.0) / (1.338 + 1.0))^2
-      float NdotV = max(dot(viewDir, finalNormal), 0.0);
+      vec3 localRipple = normalize(vec3(rippleTangent.x * 0.28, rippleTangent.y * 0.28, 1.0));
+      vec3 finalNormal = normalize(tbn * localRipple);
+
+      // 2. Physically-based Fresnel (polar seawater IOR ~ 1.338 -> F0 = 0.021)
+      float r0 = 0.021;
+      float NdotV = max(dot(viewDir, finalNormal), 0.001);
       float fresnel = r0 + (1.0 - r0) * pow(clamp(1.0 - NdotV, 0.0, 1.0), 5.0);
 
       // 3. Beer-Lambert physical water absorption gradient
-      // Red light absorbs 15x faster than blue in Antarctic water
-      float depthGradient = clamp(-vElevation * 0.48 + 0.42, 0.0, 1.4);
-      vec3 absorptionCoeff = vec3(0.38, 0.09, 0.022);
-      vec3 waterTransmittance = exp(-absorptionCoeff * (depthGradient * 4.2));
+      // Red light absorbs 20x faster than blue in Antarctic water
+      float depthGradient = clamp(-vElevation * 0.45 + 0.38, 0.0, 1.5);
+      vec3 absorptionCoeff = vec3(0.38, 0.085, 0.018);
+      vec3 waterTransmittance = exp(-absorptionCoeff * (depthGradient * 4.4));
       vec3 waterBodyColor = mix(u_waterDeep, u_waterSurface, waterTransmittance);
 
-      // 4. Subsurface Light Scattering (SSS) inside wave crests (glowing emerald-cyan)
-      float sssSunFactor = pow(clamp(dot(viewDir, -sunDir), 0.0, 1.0), 3.2);
-      float crestTranslucency = smoothstep(0.12 * u_waveHeightMult, 0.85 * u_waveHeightMult, vElevation);
-      vec3 sssGlow = u_subsurfaceColor * sssSunFactor * crestTranslucency * 1.6;
+      // 4. Subsurface Light Scattering (SSS) inside wave crests (Henyey-Greenstein phase)
+      float cosTheta = dot(viewDir, -sunDir);
+      float g = 0.62;
+      float phaseHG = (1.0 - g * g) / (4.0 * 3.14159265 * pow(1.0 + g * g - 2.0 * g * cosTheta, 1.5));
+      float crestElevation = smoothstep(0.08 * u_waveHeightMult, 0.85 * u_waveHeightMult, vElevation);
+      float crestThinness = clamp(vCrestFoam * 0.45 + 0.55, 0.0, 1.5);
+      vec3 sssGlow = u_subsurfaceColor * phaseHG * crestElevation * crestThinness * 4.2;
 
-      // 5. Crisp Anisotropic Sun Specular Glints & Path (tight GGX microfacets)
-      vec3 halfVec = normalize(viewDir + sunDir);
-      float NdotH = max(dot(finalNormal, halfVec), 0.0);
-      float geomNdotH = max(dot(geomNormal, halfVec), 0.0);
+      // 5. Dual-Lobe Cook-Torrance GGX Specular (Diamond Glints + Wide Sun Road)
+      vec3 H = normalize(viewDir + sunDir);
+      float NdotH = max(dot(finalNormal, H), 0.0);
+      float NdotL = max(dot(finalNormal, sunDir), 0.0);
+      float VdotH = max(dot(viewDir, H), 0.0);
 
-      // Tight sparkling sun path (crisp diamond glints along wave ripples)
-      float sunGlintCore = pow(NdotH, 384.0) * 2.8;
-      float sunPathSheen = pow(geomNdotH, 72.0) * 0.22;
-      vec3 sunSpecular = vec3(1.0, 0.97, 0.90) * (sunGlintCore + sunPathSheen) * (1.0 - fresnel * 0.25);
+      float F_spec = r0 + (1.0 - r0) * pow(clamp(1.0 - VdotH, 0.0, 1.0), 5.0);
+
+      // Lobe 1: Tight microfacet specular (sharp diamond glints)
+      float D1 = D_GGX(NdotH, 0.038);
+      float G1 = G_Smith(NdotV, NdotL, 0.038);
+      float spec1 = (D1 * G1 * F_spec) * NdotL;
+
+      // Lobe 2: Broad grazing polar sun road across wave facets
+      float geomNdotH = max(dot(geomNormal, H), 0.0);
+      float geomNdotL = max(dot(geomNormal, sunDir), 0.0);
+      float D2 = D_GGX(geomNdotH, 0.18);
+      float G2 = G_Smith(NdotV, geomNdotL, 0.18);
+      float spec2 = (D2 * G2 * F_spec) * geomNdotL * 0.45;
+
+      vec3 sunSpecular = vec3(1.0, 0.96, 0.88) * (spec1 + spec2) * 2.8;
 
       // 6. Sky & Polar Horizon Reflection (Equirectangular Sky or Analytical fallback)
       vec3 refDir = reflect(-viewDir, finalNormal);
@@ -272,24 +315,24 @@ export function createOceanSurface(initialPhysics = {}) {
       }
 
       // Combine water body with sky reflection via Fresnel
-      vec3 finalColor = mix(waterBodyColor + sssGlow, skyReflection, fresnel * 0.82);
+      vec3 finalColor = mix(waterBodyColor + sssGlow, skyReflection, fresnel * 0.85);
 
-      // 7. Organic Whitecap Foam along breaking crests & Buoy contact collar
-      float crestSteepness = max(0.0, vCrestFoam - 0.25);
-      float peakElevation = smoothstep(0.40 * u_waveHeightMult, 0.90 * u_waveHeightMult, vElevation);
-      float whitecapTrigger = smoothstep(0.18, 0.65, crestSteepness * peakElevation);
+      // 7. Organic Whitecap Foam & Buoy Contact Meniscus Wake
+      float crestSteepness = max(0.0, vCrestFoam - 0.22);
+      float peakElevation = smoothstep(0.35 * u_waveHeightMult, 0.88 * u_waveHeightMult, vElevation);
+      float whitecapTrigger = smoothstep(0.16, 0.62, crestSteepness * peakElevation);
 
-      // Multi-scale cellular lace foam with turbulent stretching scrolled along current flow
+      // Multi-scale cellular lace foam with turbulent stretching
       vec2 flowFoamOffset = u_flowDir * (u_time * 0.024);
       vec2 foamUV1 = vWorldPosition.xz * 0.032 + flowFoamOffset;
       vec2 foamUV2 = vWorldPosition.xz * 0.075 - flowFoamOffset * 1.35 + vec2(-u_time * 0.005, u_time * 0.004);
       float foamLace1 = texture2D(u_foamMap, foamUV1).a;
       float foamLace2 = texture2D(u_foamMap, foamUV2).a;
-      float foamLace = smoothstep(0.22, 0.68, foamLace1 * 0.7 + foamLace2 * 0.3);
+      float foamLace = smoothstep(0.20, 0.65, foamLace1 * 0.7 + foamLace2 * 0.3);
 
       float whitecapFoam = whitecapTrigger * foamLace * u_foamIntensity * 0.85;
 
-      // Realistic hydrodynamic Kelvin trailing wake & contact collar around moving buoy hull
+      // Realistic hydrodynamic Kelvin trailing wake & contact meniscus around moving buoy hull
       vec2 relBuoy = vWorldPosition.xz - u_buoyPos;
       float hullDist = length(relBuoy);
       float downstream = dot(relBuoy, u_flowDir);
@@ -300,25 +343,26 @@ export function createOceanSurface(initialPhysics = {}) {
       float wakeDecay = step(0.0, downstream) * smoothstep(16.0, 1.0, downstream);
       float wakeTrailing = wakeSpread * wakeDecay;
 
-      // Collar around spar hull (radius ~0.85m)
-      float buoyCollar = smoothstep(1.35, 0.95, hullDist) * smoothstep(0.68, 0.95, hullDist);
-      float totalHullFoam = (buoyCollar * 0.78 + wakeTrailing * 0.38) * (foamLace1 * 0.6 + 0.4);
+      // Dynamic waterline meniscus tightly hugging spar hull radius (~0.84m)
+      float distToHull = abs(hullDist - 0.84);
+      float meniscusFoam = smoothstep(0.22, 0.02, distToHull) * (foamLace1 * 0.6 + 0.4);
 
-      float totalFoam = clamp(whitecapFoam + totalHullFoam, 0.0, 0.94);
-      vec3 polarFoamColor = vec3(0.95, 0.98, 1.0);
+      float totalHullFoam = (meniscusFoam * 0.85 + wakeTrailing * 0.42) * (foamLace1 * 0.6 + 0.4);
+      float totalFoam = clamp(whitecapFoam + totalHullFoam, 0.0, 0.95);
+      vec3 polarFoamColor = vec3(0.96, 0.98, 1.0);
 
       // Blend whitecap foam with underlying ocean
       finalColor = mix(finalColor, polarFoamColor, totalFoam);
 
       // Add crisp sun specular on top of water
-      finalColor += sunSpecular * (1.0 - totalFoam * 0.75);
+      finalColor += sunSpecular * (1.0 - totalFoam * 0.80);
 
-      // 7B. Contact Ambient Occlusion & Spar Buoy Hull Grounding Shadow (r < 2.0m)
-      float buoyAO = smoothstep(0.65, 1.85, hullDist);
+      // 7B. Contact Ambient Occlusion & Buoy Grounding Shadow (r < 2.0m)
+      float buoyAO = smoothstep(0.68, 1.85, hullDist);
       vec3 sunDirFlat = normalize(vec3(u_sunDirection.x, 0.0, u_sunDirection.z));
       float sunShadowProj = length(vWorldPosition.xz - (u_buoyPos - sunDirFlat.xz * 0.75));
       float buoySunShadow = smoothstep(0.55, 2.4, sunShadowProj);
-      float totalContactOcclusion = clamp(buoyAO * 0.62 + buoySunShadow * 0.38, 0.32, 1.0);
+      float totalContactOcclusion = clamp(buoyAO * 0.65 + buoySunShadow * 0.35, 0.35, 1.0);
       finalColor *= totalContactOcclusion;
 
       // 8. Exponential Polar Distance Fog (seamless horizon blending)
@@ -350,7 +394,7 @@ export function createOceanSurface(initialPhysics = {}) {
       u_waterDeep: { value: new THREE.Color(initialPhysics.waterDeepColor || 0x021329) },
       u_skyColor: { value: new THREE.Color(initialPhysics.skyColor || 0x113354) },
       u_subsurfaceColor: { value: new THREE.Color(initialPhysics.subsurfaceColor || 0x06b6d4) },
-      u_sunDirection: { value: new THREE.Vector3(1.2, 0.9, 0.8).normalize() },
+      u_sunDirection: { value: new THREE.Vector3(36, 16, 28).normalize() },
       u_sunSpecularPower: { value: initialPhysics.sunSpecularPower || 256.0 },
       u_fogColor: { value: new THREE.Color(initialPhysics.fogColor || 0x071526) },
       u_fogDensity: { value: initialPhysics.fogDensity || 0.0075 }
@@ -359,6 +403,7 @@ export function createOceanSurface(initialPhysics = {}) {
     side: THREE.DoubleSide, // Enables underwater Snell's window & surface view from beneath
     depthWrite: true
   });
+
 
   const mesh = new THREE.Mesh(geometry, material);
   mesh.receiveShadow = true;

@@ -84,7 +84,10 @@ export default function TopBar({
         <div className="brand-group">
           <div className="status-indicator-dot online" />
           <div className="brand-text-block">
-            <div className="brand-title">DHRUVA SETU</div>
+            <div className="brand-title">
+              <span className="desktop-brand-title">DHRUVA SETU</span>
+              <span className="mobile-brand-title">DHRUVA</span>
+            </div>
             <div className="brand-sub">SIH-26065 // POLAR OBSERVATORY</div>
           </div>
         </div>
@@ -240,7 +243,7 @@ export default function TopBar({
         )}
 
         {/* Step 2: Dynamic Watts Consumption (changes with actions) */}
-        <div className="hud-mini-pill power-chip" title={`Real-Time Dynamic Subsystem Power Draw: ${powerWatts.toFixed(1)}W | Solar Generation: ${solarWatts.toFixed(1)}W`}>
+        <div className="hud-mini-pill power-chip mobile-hide" title={`Real-Time Dynamic Subsystem Power Draw: ${powerWatts.toFixed(1)}W | Solar Generation: ${solarWatts.toFixed(1)}W`}>
           <Sun size={13} className="accent-amber" />
           <span className="mono-readout font-bold">{powerWatts.toFixed(1)}W</span>
         </div>
@@ -301,7 +304,7 @@ export default function TopBar({
         {/* Real-Time SCADA Quality Tier Toggle Pill */}
         <button
           type="button"
-          className="hud-mini-pill quality-tier-chip"
+          className="hud-mini-pill quality-tier-chip mobile-hide"
           onClick={onToggleQuality}
           title={`Active GPU Quality Tier: ${String(qualityTier).toUpperCase()} (Click to toggle LOW / MED / HIGH)`}
         >

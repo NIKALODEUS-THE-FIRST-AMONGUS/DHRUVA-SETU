@@ -1,0 +1,69 @@
+{
+  "timestamp": "2026-10-24T08:18:56.173Z",
+  "navTiming": {
+    "domContentLoaded": 1475.2,
+    "loadEvent": 22572.1,
+    "duration": 22572.1,
+    "firstContentfulPaint": 2260
+  },
+  "desktopMetrics": {
+    "frameCount": 75,
+    "avgFps": 15.6,
+    "fps1PercentLow": 5.1,
+    "avgFrameTimeMs": 64.21,
+    "p99FrameTimeMs": 196.9,
+    "maxFrameTimeMs": 196.9,
+    "minFrameTimeMs": 17.5,
+    "frameTimeStdDev": 21.86,
+    "drawCallsPerFrame": 569,
+    "trianglesPerFrame": 528048,
+    "pointsPerFrame": 8170,
+    "linesPerFrame": 1363,
+    "geometriesInMemory": 259,
+    "texturesInMemory": 38,
+    "programsCompiled": 41,
+    "heap": {
+      "usedJSHeapSizeMB": 62.44,
+      "totalJSHeapSizeMB": 119.9,
+      "jsHeapSizeLimitMB": 4081.75
+    },
+    "longTasksCount": 0,
+    "totalLongTaskDurationMs": 0
+  },
+  "mobileMetrics": {
+    "frameCount": 65,
+    "avgFps": 13.6,
+    "fps1PercentLow": 1.4,
+    "avgFrameTimeMs": 73.65,
+    "p99FrameTimeMs": 697.1,
+    "maxFrameTimeMs": 697.1,
+    "minFrameTimeMs": 17.6,
+    "frameTimeStdDev": 91.63,
+    "drawCallsPerFrame": 512,
+    "trianglesPerFrame": 519388,
+    "pointsPerFrame": 8020,
+    "linesPerFrame": 1299,
+    "geometriesInMemory": 213,
+    "texturesInMemory": 36,
+    "programsCompiled": 42,
+    "heap": {
+      "usedJSHeapSizeMB": 61.83,
+      "totalJSHeapSizeMB": 121.71,
+      "jsHeapSizeLimitMB": 4081.75
+    },
+    "longTasksCount": 0,
+    "totalLongTaskDurationMs": 0
+  },
+  "bundleStats": [
+    {
+      "file": "index-CNS7-Npz.js",
+      "sizeKB": 1031.69,
+      "type": "JavaScript"
+    },
+    {
+      "file": "index-R_rJrddq.css",
+      "sizeKB": 99.65,
+      "type": "CSS"
+    }
+  ]
+}

@@ -16,14 +16,16 @@ export function createCTDSonde() {
 
   const brushedMetal = generateBrushedMetalMap();
 
-  // 1. Titanium Cylindrical Pressure Housing
+  // 1. Titanium Cylindrical Pressure Housing (Grade 5 Ti-6Al-4V Marine Alloy)
   const bodyGeo = new THREE.CylinderGeometry(0.22, 0.22, 1.15, 32);
-  const bodyMat = new THREE.MeshStandardMaterial({
-    color: 0x94a3b8, // Brushed titanium
-    roughness: 0.22,
-    metalness: 0.92,
+  const bodyMat = new THREE.MeshPhysicalMaterial({
+    color: 0x94a3b8, // Electropolished marine titanium
+    roughness: 0.16,
+    metalness: 0.94,
+    clearcoat: 0.40,
+    clearcoatRoughness: 0.08,
     bumpMap: brushedMetal,
-    bumpScale: 0.008
+    bumpScale: 0.005
   });
   const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
   bodyMesh.name = "ctd_body";
@@ -275,7 +277,7 @@ export function createCTDSonde() {
   sondeGroup.add(leaderLine);
 
   // 3. Flexible Multi-Segment Winch Cable (Hydrodynamic Catenary under tension & current drag)
-  const cableSegments = 16;
+  const cableSegments = 32;
   const cablePoints = [];
   for (let ci = 0; ci <= cableSegments; ci++) {
     cablePoints.push(new THREE.Vector3(0, -ci * 0.25, 0));
@@ -285,7 +287,7 @@ export function createCTDSonde() {
     color: 0x38bdf8,
     linewidth: 2,
     transparent: true,
-    opacity: 0.85
+    opacity: 0.92
   });
   const cableMesh = new THREE.Line(cableGeo, cableMat);
 
@@ -416,6 +418,12 @@ export function createCTDSonde() {
   xducerMesh.position.set(0.35, -46.75, 0);
   abyssGroup.add(xducerMesh);
 
+  // Freeze static benthic abyss dropstones & anchor mooring matrices
+  abyssGroup.updateMatrixWorld(true);
+  abyssGroup.traverse(obj => {
+    if (obj.isMesh) obj.matrixAutoUpdate = false;
+  });
+
   // 5. CTD Depth Trail (Spheres representing historical CTD profile points)
   const trailGroup = new THREE.Group();
   const maxTrailPoints = 40;
@@ -444,6 +452,16 @@ export function createCTDSonde() {
   let sondeVelX = 0;
   let sondeVelZ = 0;
 
+  // Discretized Lumped-Mass Verlet / PBD Catenary Cable Physics State (33 nodes)
+  const NUM_NODES = cableSegments + 1; // 33
+  const nodePos = new Float32Array(NUM_NODES * 3);
+  const nodePrev = new Float32Array(NUM_NODES * 3);
+  let cableSimInitialized = false;
+
+  const _targetSondeQuat = new THREE.Quaternion();
+  const _cableTangent = new THREE.Vector3(0, 1, 0);
+  const _upVec = new THREE.Vector3(0, 1, 0);
+
   return {
     sondeGroup,
     cableMesh,
@@ -467,6 +485,17 @@ export function createCTDSonde() {
         dockedPos.set(0, -CONFIG.BUOY_RADIUS_3D - 2.70, 0);
       }
 
+      const dt = Math.min(Math.max(delta, 0.002), 0.05);
+
+      // Current flow vector & direction
+      const flow = currentFlow || { x: 0.45, z: 0.25 };
+      const cSpeed = Math.hypot(flow.x, flow.z);
+      const dirX = cSpeed > 1e-4 ? flow.x / cSpeed : 0;
+      const dirZ = cSpeed > 1e-4 ? flow.z / cSpeed : 0;
+      // Perpendicular unit vector for transverse VIV strumming
+      const perpX = -dirZ;
+      const perpZ = dirX;
+
       // 2. Docked state (0 m): sonde is seated in its cradle and moves rigidly with the buoy
       if (targetDepthMeters <= 0.05) {
         sondeGroup.position.copy(dockedPos);
@@ -477,20 +506,35 @@ export function createCTDSonde() {
         }
         sondeVelX = 0;
         sondeVelZ = 0;
+
+        sondeGroup.updateMatrixWorld(true);
+        _tempEyelet.set(0, 0.98, 0).applyMatrix4(sondeGroup.matrixWorld);
+
+        // Reset all nodes in straight line between exit and eyelet
+        for (let i = 0; i < NUM_NODES; i++) {
+          const s = i / (NUM_NODES - 1);
+          const nx = exitPos.x + (_tempEyelet.x - exitPos.x) * s;
+          const ny = exitPos.y + (_tempEyelet.y - exitPos.y) * s;
+          const nz = exitPos.z + (_tempEyelet.z - exitPos.z) * s;
+          nodePos[i * 3] = nx;
+          nodePos[i * 3 + 1] = ny;
+          nodePos[i * 3 + 2] = nz;
+          nodePrev[i * 3] = nx;
+          nodePrev[i * 3 + 1] = ny;
+          nodePrev[i * 3 + 2] = nz;
+        }
+        cableSimInitialized = true;
       } else {
         // 3. Deployed state (>0 m):
         // Depth (y) comes from the winch state
         const profilingDrop = (targetDepthMeters / CONFIG.MAX_DEPTH_METERS) * 38.0;
         const targetWorldY = dockedPos.y - profilingDrop;
+
+        // Decoupled vertical heave dynamics: sonde descends at winch payout speed, damped
         sondeGroup.position.y += (targetWorldY - sondeGroup.position.y) * 0.14;
 
-        // Hydrodynamic downstream lag bounded by tether length
-        const flow = currentFlow || { x: 0.45, z: 0.25 };
-        const cSpeed = Math.hypot(flow.x, flow.z);
-        const dirX = cSpeed > 1e-4 ? flow.x / cSpeed : 0;
-        const dirZ = cSpeed > 1e-4 ? flow.z / cSpeed : 0;
-
-        const tetherDeployed = Math.max(0.5, profilingDrop + 0.75);
+        // Decoupled trailing lag under current drag
+        const tetherDeployed = Math.max(0.75, profilingDrop + 0.85);
         const maxAllowedLag = tetherDeployed * 0.35;
         // Bounded lag: proportional to depth and current speed
         const trailOffset = Math.min(maxAllowedLag, targetDepthMeters * 0.025 * cSpeed);
@@ -498,9 +542,8 @@ export function createCTDSonde() {
         const targetX = exitPos.x + dirX * trailOffset;
         const targetZ = exitPos.z + dirZ * trailOffset;
 
-        // Critically damped smoothing (zeta = 1.0, no overshoot)
-        const dt = Math.min(Math.max(delta, 0.001), 0.05);
-        const omega = 4.5;
+        // Critically damped horizontal tracking (zeta = 1.0, no overshoot)
+        const omega = 4.2;
         const fX = -omega * omega * (sondeGroup.position.x - targetX) - 2 * omega * sondeVelX;
         const fZ = -omega * omega * (sondeGroup.position.z - targetZ) - 2 * omega * sondeVelZ;
         sondeVelX += fX * dt;
@@ -520,40 +563,164 @@ export function createCTDSonde() {
           sondeVelZ *= 0.5;
         }
 
-        // Sonde orientation follows tether drag angle
-        const tilt = Math.min(0.22, (trailOffset / tetherDeployed) * 0.5);
-        sondeGroup.rotation.x = dirZ * tilt;
-        sondeGroup.rotation.z = -dirX * tilt;
-        sondeGroup.rotation.y = Math.atan2(dirX, dirZ);
+        // Get eyelet world position
+        sondeGroup.updateMatrixWorld(true);
+        _tempEyelet.set(0, 0.98, 0).applyMatrix4(sondeGroup.matrixWorld);
+
+        // Initialize cable nodes if needed
+        if (!cableSimInitialized) {
+          for (let i = 0; i < NUM_NODES; i++) {
+            const s = i / (NUM_NODES - 1);
+            nodePos[i * 3] = exitPos.x + (_tempEyelet.x - exitPos.x) * s;
+            nodePos[i * 3 + 1] = exitPos.y + (_tempEyelet.y - exitPos.y) * s;
+            nodePos[i * 3 + 2] = exitPos.z + (_tempEyelet.z - exitPos.z) * s;
+            nodePrev[i * 3] = nodePos[i * 3];
+            nodePrev[i * 3 + 1] = nodePos[i * 3 + 1];
+            nodePrev[i * 3 + 2] = nodePos[i * 3 + 2];
+          }
+          cableSimInitialized = true;
+        }
+
+        // 4. Elastic Lumped-Mass Verlet Integration with Morison Hydrodynamic Drag & VIV Strumming
+        const segRestLen = tetherDeployed / (NUM_NODES - 1);
+        const cableDamping = 0.965; // Seawater viscous drag damping
+        const vivFreq = 2.65; // Strouhal shedding frequency (f = St * U / D ~ 0.20 * 0.16 / 0.012)
+        const vivPhase = time * Math.PI * 2 * vivFreq;
+
+        // Pin Node 0 to exitPos
+        nodePos[0] = exitPos.x;
+        nodePos[1] = exitPos.y;
+        nodePos[2] = exitPos.z;
+
+        // Pin Node 32 to eyeletPos
+        nodePos[(NUM_NODES - 1) * 3] = _tempEyelet.x;
+        nodePos[(NUM_NODES - 1) * 3 + 1] = _tempEyelet.y;
+        nodePos[(NUM_NODES - 1) * 3 + 2] = _tempEyelet.z;
+
+        // Verlet integration for internal nodes 1..31
+        for (let i = 1; i < NUM_NODES - 1; i++) {
+          const idx = i * 3;
+          const px = nodePos[idx];
+          const py = nodePos[idx + 1];
+          const pz = nodePos[idx + 2];
+          const oldPx = nodePrev[idx];
+          const oldPy = nodePrev[idx + 1];
+          const oldPz = nodePrev[idx + 2];
+
+          // Depth-stratified current flow attenuation (Ekman profile)
+          const depthRatio = Math.min(1.0, Math.max(0.0, -py / 40.0));
+          const currentFactor = 1.0 - depthRatio * 0.65; // Stronger at surface, slowing deeper
+          const curVx = flow.x * currentFactor;
+          const curVz = flow.z * currentFactor;
+
+          // Transverse Vortex-Induced Vibration (VIV strumming)
+          // Standing wave envelope: zero at endpoints (i=0, i=32), peak at middle
+          const standingWave = Math.sin((i / (NUM_NODES - 1)) * Math.PI);
+          const vivAmp = 0.032 * standingWave * Math.min(1.0, cSpeed * 2.0);
+          const vivOffset = Math.sin(vivPhase + i * 0.42) * vivAmp;
+
+          // Acceleration: Submerged negative buoyancy (-g_sub) + Morison current drag
+          const ax = curVx * 1.8;
+          const ay = -0.45; // Submerged cable weight in seawater (negative buoyancy)
+          const az = curVz * 1.8;
+
+          const nextX = px + (px - oldPx) * cableDamping + ax * dt * dt + perpX * vivOffset * dt;
+          const nextY = py + (py - oldPy) * cableDamping + ay * dt * dt;
+          const nextZ = pz + (pz - oldPz) * cableDamping + az * dt * dt + perpZ * vivOffset * dt;
+
+          nodePrev[idx] = px;
+          nodePrev[idx + 1] = py;
+          nodePrev[idx + 2] = pz;
+
+          nodePos[idx] = nextX;
+          nodePos[idx + 1] = nextY;
+          nodePos[idx + 2] = nextZ;
+        }
+
+        // PBD Distance Constraint Relaxation (3 iterations for stable catenary curve)
+        const PBD_ITERATIONS = 3;
+        for (let iter = 0; iter < PBD_ITERATIONS; iter++) {
+          // Re-enforce endpoints
+          nodePos[0] = exitPos.x;
+          nodePos[1] = exitPos.y;
+          nodePos[2] = exitPos.z;
+          nodePos[(NUM_NODES - 1) * 3] = _tempEyelet.x;
+          nodePos[(NUM_NODES - 1) * 3 + 1] = _tempEyelet.y;
+          nodePos[(NUM_NODES - 1) * 3 + 2] = _tempEyelet.z;
+
+          for (let i = 0; i < NUM_NODES - 1; i++) {
+            const idxA = i * 3;
+            const idxB = (i + 1) * 3;
+
+            const dx = nodePos[idxB] - nodePos[idxA];
+            const dy = nodePos[idxB + 1] - nodePos[idxA + 1];
+            const dz = nodePos[idxB + 2] - nodePos[idxA + 2];
+            const dist = Math.hypot(dx, dy, dz);
+
+            if (dist > 1e-5) {
+              const diff = (dist - segRestLen) / dist;
+              // If node A is pinned (index 0), node B takes all correction
+              if (i === 0) {
+                nodePos[idxB] -= dx * diff;
+                nodePos[idxB + 1] -= dy * diff;
+                nodePos[idxB + 2] -= dz * diff;
+              } else if (i === NUM_NODES - 2) {
+                // Node B is pinned (last node), node A takes all correction
+                nodePos[idxA] += dx * diff;
+                nodePos[idxA + 1] += dy * diff;
+                nodePos[idxA + 2] += dz * diff;
+              } else {
+                // Both internal nodes share correction equally
+                nodePos[idxA] += dx * diff * 0.5;
+                nodePos[idxA + 1] += dy * diff * 0.5;
+                nodePos[idxA + 2] += dz * diff * 0.5;
+                nodePos[idxB] -= dx * diff * 0.5;
+                nodePos[idxB + 1] -= dy * diff * 0.5;
+                nodePos[idxB + 2] -= dz * diff * 0.5;
+              }
+            }
+          }
+        }
+
+        // Re-enforce endpoints exactly
+        nodePos[0] = exitPos.x;
+        nodePos[1] = exitPos.y;
+        nodePos[2] = exitPos.z;
+        nodePos[(NUM_NODES - 1) * 3] = _tempEyelet.x;
+        nodePos[(NUM_NODES - 1) * 3 + 1] = _tempEyelet.y;
+        nodePos[(NUM_NODES - 1) * 3 + 2] = _tempEyelet.z;
+
+        // 5. Decouple Sonde Orientation: Align with Cable End Tangent Vector
+        // Compute tangent vector between Node 31 and Node 32 (pointing upwards along cable towards buoy)
+        const tIdxA = (NUM_NODES - 2) * 3;
+        const tIdxB = (NUM_NODES - 1) * 3;
+        _cableTangent.set(
+          nodePos[tIdxA] - nodePos[tIdxB],
+          nodePos[tIdxA + 1] - nodePos[tIdxB + 1],
+          nodePos[tIdxA + 2] - nodePos[tIdxB + 2]
+        );
+        if (_cableTangent.lengthSq() > 1e-4) {
+          _cableTangent.normalize();
+          // Sonde local +Y axis points towards cable tangent (upward into cable boot)
+          _targetSondeQuat.setFromUnitVectors(_upVec, _cableTangent);
+          sondeGroup.quaternion.slerp(_targetSondeQuat, 0.12);
+        }
+
+        // Recompute true eyelet world position with the updated orientation and pin final node
+        sondeGroup.updateMatrixWorld(true);
+        _tempEyelet.set(0, 0.98, 0).applyMatrix4(sondeGroup.matrixWorld);
+
+        nodePos[(NUM_NODES - 1) * 3] = _tempEyelet.x;
+        nodePos[(NUM_NODES - 1) * 3 + 1] = _tempEyelet.y;
+        nodePos[(NUM_NODES - 1) * 3 + 2] = _tempEyelet.z;
       }
 
-      // 4. Tether: top end at the winch port, bottom end at the sonde eyelet, existing catenary between them
-      sondeGroup.updateMatrixWorld(true);
-      _tempEyelet.set(0, 0.98, 0).applyMatrix4(sondeGroup.matrixWorld);
-
+      // Write direct node positions to cable geometry buffer
       const cablePositions = cableGeo.attributes.position.array;
-      const startX = exitPos.x;
-      const startY = exitPos.y;
-      const startZ = exitPos.z;
-      const endX = _tempEyelet.x;
-      const endY = _tempEyelet.y;
-      const endZ = _tempEyelet.z;
-
-      const flow = currentFlow || { x: 0.45, z: 0.25 };
-      const cSpeed = Math.hypot(flow.x, flow.z);
-      const dirX = cSpeed > 1e-4 ? flow.x / cSpeed : 0;
-      const dirZ = cSpeed > 1e-4 ? flow.z / cSpeed : 0;
-      const spanY = Math.abs(startY - endY);
-
-      for (let ci = 0; ci <= cableSegments; ci++) {
-        const t = ci / cableSegments;
-        const sag = Math.sin(t * Math.PI) * 0.18 * Math.min(1.0, spanY / 6.0);
-        const dragX = dirX * Math.sin(t * Math.PI) * 0.12 * Math.min(1.0, spanY / 6.0);
-        const dragZ = dirZ * Math.sin(t * Math.PI) * 0.12 * Math.min(1.0, spanY / 6.0);
-
-        cablePositions[ci * 3] = startX + (endX - startX) * t + dragX;
-        cablePositions[ci * 3 + 1] = startY + (endY - startY) * t - sag;
-        cablePositions[ci * 3 + 2] = startZ + (endZ - startZ) * t + dragZ;
+      for (let i = 0; i < NUM_NODES; i++) {
+        cablePositions[i * 3] = nodePos[i * 3];
+        cablePositions[i * 3 + 1] = nodePos[i * 3 + 1];
+        cablePositions[i * 3 + 2] = nodePos[i * 3 + 2];
       }
       cableGeo.attributes.position.needsUpdate = true;
 

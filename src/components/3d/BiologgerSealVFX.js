@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import { CONFIG } from '../../constants/config';
 import { generateSealSkinBumpMap, generateWeddellSealPelt } from './ProceduralTextures';
 
+const _tempSnoutWorldPos = new THREE.Vector3();
+const _tempBubbleOffset = new THREE.Vector3();
+
 /**
  * Photorealistic Wild Antarctic Weddell Seal Pod & Biologger Acoustic Telemetry Engine
  * 
@@ -583,8 +586,7 @@ export function createBiologgerSeal(splashSystem) {
       // Periodically exhale bubbles when swimming underwater
       if (primarySeal && primarySeal.sealRoot.position.y < -1.5 && (time - lastExhaleTime > 4.2)) {
         lastExhaleTime = time;
-        const snoutWorldPos = new THREE.Vector3(0, -0.05, 1.6);
-        snoutWorldPos.applyMatrix4(primarySeal.sealRoot.matrixWorld);
+        _tempSnoutWorldPos.set(0, -0.05, 1.6).applyMatrix4(primarySeal.sealRoot.matrixWorld);
 
         // Vent 3-5 bubbles in quick succession
         for (let b = 0; b < 4; b++) {
@@ -593,11 +595,12 @@ export function createBiologgerSeal(splashSystem) {
           pb.active = true;
           pb.age = -b * 0.12; // staggered release
           pb.maxAge = 3.2 + Math.random() * 1.5;
-          pb.pos.copy(snoutWorldPos).add(new THREE.Vector3(
+          _tempBubbleOffset.set(
             (Math.random() - 0.5) * 0.15,
             (Math.random() - 0.5) * 0.08,
             (Math.random() - 0.5) * 0.15
-          ));
+          );
+          pb.pos.copy(_tempSnoutWorldPos).add(_tempBubbleOffset);
           pb.vel.set(
             (Math.random() - 0.5) * 0.18,
             0.65 + Math.random() * 0.45, // Buoyant upward ascent
